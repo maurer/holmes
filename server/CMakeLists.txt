@@ -1,1 +1,5 @@
+find_package(Capnproto REQUIRED)
+include_directories(${CAPNPROTO_INCLUDE_DIRS})
 add_executable(holmes holmes.cpp)
+target_link_libraries(holmes ${CAPNPROTO_LIBRARIES})
+CAPNPROTO_ADD_CXXFLAGS()
