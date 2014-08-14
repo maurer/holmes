@@ -46,6 +46,7 @@ function(CAPNPROTO_GENERATE_CPP SRCS HDRS)
   foreach(FIL ${ARGN})
     get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
     get_filename_component(FIL_WE ${FIL} NAME_WE)
+    get_filename_component(FIL_DIR ${ABS_FIL} DIRECTORY)
 
     list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.capnp.c++")
     list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.capnp.h")
@@ -54,7 +55,7 @@ function(CAPNPROTO_GENERATE_CPP SRCS HDRS)
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.capnp.c++"
              "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.capnp.h"
       COMMAND  ${CAPNPROTO_CAPNPC_EXECUTABLE}
-      ARGS --cpp_out  ${CMAKE_CURRENT_BINARY_DIR} ${_capnproto_include_path} ${ABS_FIL}
+      ARGS ${_capnproto_include_path} ${ABS_FIL} --src-prefix=${FIL_DIR} -o c++:${CMAKE_CURRENT_BINARY_DIR}
       DEPENDS ${ABS_FIL}
       COMMENT "Running C++ Cap'n Proto compiler on ${FIL}"
       VERBATIM )
