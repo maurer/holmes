@@ -1,5 +1,4 @@
 find_package(Capnproto REQUIRED)
-find_package(Protobuf REQUIRED)
 include_directories(${CAPNPROTO_INCLUDE_DIRS})
 CAPNPROTO_GENERATE_CPP(CAPN_SRCS CAPN_HDRS holmes.capnp)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
