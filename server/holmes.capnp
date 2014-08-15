@@ -15,7 +15,7 @@ interface Holmes {
   newFactType @3 (factSig :FactSig) -> (freshFactTypeId :FactTypeId);
   
   interface Analysis {
-    analyze @0 (ctx :List(Asgn)) -> (derived :List(Fact));
+    analyze @0 (ctx :List(Asgn), premises :List(Fact)) -> (derived :List(Fact));
   }
   struct FactSig {
     modes @0 :List(ArgMode);

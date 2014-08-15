@@ -3,6 +3,7 @@
 #include <capnp/ez-rpc.h>
 #include "dal.h"
 #include <capnp/message.h>
+#include <map>
 
 using namespace std;
 using namespace capnp;
@@ -10,7 +11,33 @@ using namespace kj;
 
 class HolmesImpl final : public Holmes::Server {
   private:
+    class Analyzer {
+      MallocMessageBuilder premBuilder, analBuilder;
+      List<Holmes::FactTemplate>::Reader premises;
+      Holmes::Analysis::Client analysis;
+      uint64_t cache;
+      public:
+        Promise<void> run(DAL& dal) {
+          auto req = analysis.analyzeRequest();
+          //TODO: Give facts to it here
+          auto facts = req.send();
+          return facts.then([&](Holmes::Analysis::AnalyzeResults::Reader res){
+            auto dfs = res.getDerived();
+            for (auto f : dfs) {
+              dal.setFact(f);
+            }
+          });
+        }
+        Analyzer(List<Holmes::FactTemplate>::Reader oPremises, Holmes::Analysis::Client oAnalysis) :
+        premises(List<Holmes::FactTemplate>::Reader(oPremises)),
+        analysis(oAnalysis)
+        {
+          premBuilder.setRoot(oPremises);
+          premBuilder.getRoot<List<Holmes::FactTemplate> >();
+        }
+    };
     MemDAL dal;
+    vector<Analyzer*> analyzers;
   public:
     Promise<void> set(SetContext context) override {
       dal.setFact(context.getParams().getFact());
@@ -32,7 +59,10 @@ class HolmesImpl final : public Holmes::Server {
       return READY_NOW;
     }
     Promise<void> analyzer(AnalyzerContext context) override {
-      return READY_NOW;
+      auto params = context.getParams();
+      Analyzer* a = new Analyzer(params.getPremises(), params.getAnalysis());
+      analyzers.push_back(a);
+      return a->run(dal);
     }
     Promise<void> newFactType(NewFactTypeContext context) override {
       auto sig = context.getParams().getFactSig();

@@ -8,13 +8,14 @@ using namespace capnp;
 using namespace std;
 
 class DAL {
+  public:
   virtual void setFact(Holmes::Fact::Reader) = 0;
   virtual List<Holmes::Fact>::Builder getFacts(Holmes::FactTemplate::Reader, Holmes::DeriveResults::Builder) = 0;
   virtual uint32_t newFactType(Holmes::FactSig::Reader) = 0;
   //sync/export features?
 };
 
-class MemDAL : DAL {
+class MemDAL : public DAL {
   private:
     vector<Holmes::FactSig::Reader> factTypes;
     std::mutex mutex;
