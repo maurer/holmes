@@ -5,8 +5,8 @@ import inspect
 client = capnp.TwoPartyClient("localhost:" + sys.argv[1])
 holmes = client.ez_restore('holmes').cast_as(holmes_capnp.Holmes)
 nftReq = holmes.newFactType_request()
-fs = nftReq.factSig.init('modes', 2);
-fs[0].argType = 'string';
+fs = nftReq.factSig.init('modes', 2)
+fs[0].argType = 'string'
 fs[0].mode = 'equal'
 fs[1].argType = 'addr'
 fs[1].mode = 'ignore'
