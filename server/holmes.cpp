@@ -17,7 +17,6 @@ class HolmesImpl final : public Holmes::Server {
       return READY_NOW;
     }
     Promise<void> derive(DeriveContext context) override {
-      auto target = context.getParams().getTarget();
       //Trigger relevant analyses here
       //TODO:
       //Initially, we'll just trigger analyses, then check the db
@@ -29,7 +28,7 @@ class HolmesImpl final : public Holmes::Server {
       //    or say that there's no way to get more.
       //Interface #1 if present would get called when more was available on
       //the continuation.
-      dal.getFacts(target, context.getResults());
+      dal.getFacts(context.getParams().getTarget(), context.getResults());
       return READY_NOW;
     }
     Promise<void> analyzer(AnalyzerContext context) override {
