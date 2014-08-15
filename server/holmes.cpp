@@ -29,8 +29,7 @@ class HolmesImpl final : public Holmes::Server {
       //    or say that there's no way to get more.
       //Interface #1 if present would get called when more was available on
       //the continuation.
-      List<Holmes::Fact>::Builder facts = dal.getFacts(target);
-      context.getResults().setFacts(dal.getFacts(target));
+      dal.getFacts(target, context.getResults());
       return READY_NOW;
     }
     Promise<void> analyzer(AnalyzerContext context) override {

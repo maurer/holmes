@@ -12,21 +12,25 @@ interface Holmes {
   # Register a new fact type
   # Arity/join/etc go here eventually
   using FactTypeId = UInt32;
-  newFactType @3 (factSig :List(ArgMode)) -> (freshFactTypeId :FactTypeId);
+  newFactType @3 (factSig :FactSig) -> (freshFactTypeId :FactTypeId);
   
   interface Analysis {
     analyze @0 (ctx :List(Asgn)) -> (derived :List(Fact));
   }
-
+  struct FactSig {
+    modes @0 :List(ArgMode);
+  }
+  enum ArgType {
+    string @0;
+    addr   @1;
+  }
+  enum Mode {
+    equal @0;
+    ignore @1;
+  }
   struct ArgMode {
-    type :union {
-      string @0 :Void;
-      addr   @1 :Void;
-    }
-    mode :union {
-      equal  @2 :Void;
-      ignore @3 :Void;
-    }
+    argType @0 :ArgType;
+    mode @1 :Mode;
   }
 
   struct Val {
