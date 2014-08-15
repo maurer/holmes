@@ -40,6 +40,18 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
   facts.push_back(fs);
 }
 
+bool eq_val(Holmes::Val::Reader x, Holmes::Val::Reader y) {
+  if (x.which() != y.which()) {
+    return false;
+  }
+  switch (x.which()) {
+    case Holmes::Val::STRING_VAL:
+      return (x.getStringVal() == y.getStringVal());
+    case Holmes::Val::ADDR_VAL:
+      return (x.getAddrVal() == y.getAddrVal());
+  }
+}
+
 List<Holmes::Fact>::Builder MemDAL::getFacts(Holmes::FactTemplate::Reader query, Holmes::DeriveResults::Builder builder) {
   std::lock_guard<std::mutex> lock(mutex);
   auto resultIndex = 0;
@@ -48,7 +60,24 @@ List<Holmes::Fact>::Builder MemDAL::getFacts(Holmes::FactTemplate::Reader query,
     if (query.getTypeId() != f.getTypeId()) {
       continue;
     }
-    filtered_facts.push_back(f);
+    auto fa  = f.getArgs();
+    auto qa  = query.getArgs();
+    auto itf = fa.begin();
+    auto itq = qa.begin();
+    bool matched = true;
+    for (; (itf != fa.end()) && (itq != qa.end()); ++itf, ++itq) {
+      switch (itq->which()) {
+        case Holmes::TemplateVal::EXACT_VAL:
+	  matched &= eq_val(itq->getExactVal(), *itf);
+	  break;
+	case Holmes::TemplateVal::BOUND_VAR:
+	case Holmes::TemplateVal::UNBOUND:
+	  break;
+      }
+    }
+    if (matched) {
+      filtered_facts.push_back(f);
+    }
   };
   List<Holmes::Fact>::Builder resultBuilder = builder.initFacts(filtered_facts.size());
   for (auto fact : filtered_facts) {

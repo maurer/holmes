@@ -14,6 +14,13 @@ ftid = nftReq.send().wait()
 print("Created fact: " + str(ftid))
 holmes.set({'typeId' : ftid.freshFactTypeId,
             'args' : [{'stringVal' : "foo"}, {'addrVal' : 7}]}).wait()
+holmes.set({'typeId' : ftid.freshFactTypeId,
+            'args' : [{'stringVal' : "bar"}, {'addrVal' : 8}]}).wait()
 print("Fact submitted.")
-print(holmes.derive({'typeId' : ftid,
-                     'args' : [{'unbound' : None}, {'unbound' : None}]}).wait())
+derReq = holmes.derive_request()
+derReq.target.typeId = ftid.freshFactTypeId
+args = derReq.target.init('args', 2)
+args[0].unbound = None
+args[1].exactVal.addrVal = 8
+res = derReq.send().wait()
+print(res)
