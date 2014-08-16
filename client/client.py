@@ -11,12 +11,10 @@ fs[0].mode = 'equal'
 fs[1].argType = 'addr'
 fs[1].mode = 'ignore'
 ftid = nftReq.send().wait()
-print("Created fact: " + str(ftid))
 holmes.set({'typeId' : ftid.freshFactTypeId,
             'args' : [{'stringVal' : "foo"}, {'addrVal' : 7}]}).wait()
 holmes.set({'typeId' : ftid.freshFactTypeId,
             'args' : [{'stringVal' : "bar"}, {'addrVal' : 8}]}).wait()
-print("Fact submitted.")
 derReq = holmes.derive_request()
 derReq.target.typeId = ftid.freshFactTypeId
 args = derReq.target.init('args', 2)

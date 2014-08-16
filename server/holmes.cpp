@@ -15,7 +15,7 @@ class HolmesImpl final : public Holmes::Server {
       MallocMessageBuilder premBuilder, analBuilder;
       List<Holmes::FactTemplate>::Reader premises;
       Holmes::Analysis::Client analysis;
-      uint64_t cache;
+      atomic<uint64_t> cache;
       public:
         Promise<void> run(DAL& dal) {
           auto req = analysis.analyzeRequest();
@@ -24,18 +24,24 @@ class HolmesImpl final : public Holmes::Server {
 	    auto premFacts = dal.getFacts(premise);
 	    std::copy(premFacts.begin(), premFacts.end(), std::back_inserter(searchedFacts));
 	  }
-	  auto premBuilder = req.initPremises(searchedFacts.size());
-	  auto dex = 0;
-	  for (auto f : searchedFacts) {
-	    premBuilder.setWithCaveats(dex++, f);
-	  }
-          auto facts = req.send();
-          return facts.then([&](Holmes::Analysis::AnalyzeResults::Reader res){
-            auto dfs = res.getDerived();
-            for (auto f : dfs) {
-              dal.setFact(f);
+	  uint64_t expected = cache;
+	  while (expected < searchedFacts.size()) {
+	    if (cache.compare_exchange_weak(expected, searchedFacts.size())) {
+              auto premBuilder = req.initPremises(searchedFacts.size());
+              auto dex = 0;
+              for (auto f : searchedFacts) {
+                premBuilder.setWithCaveats(dex++, f);
+              }
+              auto facts = req.send();
+              return facts.then([&](Holmes::Analysis::AnalyzeResults::Reader res){
+                auto dfs = res.getDerived();
+                for (auto f : dfs) {
+                  dal.setFact(f);
+                }
+              }); 
             }
-          });
+	  }
+          return READY_NOW;
         }
         Analyzer(List<Holmes::FactTemplate>::Reader oPremises, Holmes::Analysis::Client oAnalysis) :
         premises(List<Holmes::FactTemplate>::Reader(oPremises)),
@@ -43,6 +49,7 @@ class HolmesImpl final : public Holmes::Server {
         {
           premBuilder.setRoot(oPremises);
           premBuilder.getRoot<List<Holmes::FactTemplate> >();
+          cache = 0;
         }
     };
     MemDAL dal;
@@ -50,6 +57,9 @@ class HolmesImpl final : public Holmes::Server {
   public:
     Promise<void> set(SetContext context) override {
       dal.setFact(context.getParams().getFact());
+      for (auto analyzer : analyzers) {
+        analyzer->run(dal);
+      }
       return READY_NOW;
     }
     Promise<void> derive(DeriveContext context) override {
