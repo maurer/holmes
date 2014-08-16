@@ -52,7 +52,7 @@ bool eq_val(Holmes::Val::Reader x, Holmes::Val::Reader y) {
   }
 }
 
-List<Holmes::Fact>::Builder MemDAL::getFacts(Holmes::FactTemplate::Reader query, Holmes::DeriveResults::Builder builder) {
+vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query) {
   std::lock_guard<std::mutex> lock(mutex);
   auto resultIndex = 0;
   vector<Holmes::Fact::Reader> filtered_facts;
@@ -79,11 +79,7 @@ List<Holmes::Fact>::Builder MemDAL::getFacts(Holmes::FactTemplate::Reader query,
       filtered_facts.push_back(f);
     }
   };
-  List<Holmes::Fact>::Builder resultBuilder = builder.initFacts(filtered_facts.size());
-  for (auto fact : filtered_facts) {
-    resultBuilder.setWithCaveats(resultIndex++, fact);
-  }
-  return resultBuilder;
+  return filtered_facts;
 }
 
 uint32_t MemDAL::newFactType(Holmes::FactSig::Reader modes) {

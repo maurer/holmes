@@ -19,7 +19,16 @@ class HolmesImpl final : public Holmes::Server {
       public:
         Promise<void> run(DAL& dal) {
           auto req = analysis.analyzeRequest();
-          //TODO: Give facts to it here
+	  vector<Holmes::Fact::Reader> searchedFacts;
+	  for (auto premise : premises) {
+	    auto premFacts = dal.getFacts(premise);
+	    std::copy(premFacts.begin(), premFacts.end(), std::back_inserter(searchedFacts));
+	  }
+	  auto premBuilder = req.initPremises(searchedFacts.size());
+	  auto dex = 0;
+	  for (auto f : searchedFacts) {
+	    premBuilder.setWithCaveats(dex++, f);
+	  }
           auto facts = req.send();
           return facts.then([&](Holmes::Analysis::AnalyzeResults::Reader res){
             auto dfs = res.getDerived();
@@ -55,7 +64,12 @@ class HolmesImpl final : public Holmes::Server {
       //    or say that there's no way to get more.
       //Interface #1 if present would get called when more was available on
       //the continuation.
-      dal.getFacts(context.getParams().getTarget(), context.getResults());
+      auto facts = dal.getFacts(context.getParams().getTarget());
+      auto builder = context.getResults().initFacts(facts.size());
+      auto dex = 0;
+      for (auto f : facts) {
+        builder.setWithCaveats(dex++, f);
+      }
       return READY_NOW;
     }
     Promise<void> analyzer(AnalyzerContext context) override {

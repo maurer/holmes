@@ -10,7 +10,7 @@ using namespace std;
 class DAL {
   public:
   virtual void setFact(Holmes::Fact::Reader) = 0;
-  virtual List<Holmes::Fact>::Builder getFacts(Holmes::FactTemplate::Reader, Holmes::DeriveResults::Builder) = 0;
+  virtual vector<Holmes::Fact::Reader> getFacts(Holmes::FactTemplate::Reader) = 0;
   virtual uint32_t newFactType(Holmes::FactSig::Reader) = 0;
   //sync/export features?
 };
@@ -23,6 +23,6 @@ class MemDAL : public DAL {
     MallocMessageBuilder mm;
   public:
     void setFact(Holmes::Fact::Reader);
-    List<Holmes::Fact>::Builder getFacts(Holmes::FactTemplate::Reader, Holmes::DeriveResults::Builder);
+    vector<Holmes::Fact::Reader> getFacts(Holmes::FactTemplate::Reader);
     uint32_t newFactType(Holmes::FactSig::Reader);
 };
