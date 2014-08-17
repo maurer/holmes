@@ -38,7 +38,6 @@ class HolmesImpl final : public Holmes::Server {
               return facts.then([&](Holmes::Analysis::AnalyzeResults::Reader res){
                 auto dfs = res.getDerived();
                 for (auto f : dfs) {
-                  std::cerr << kj::str(prettyPrint(f)).cStr() << std::endl;
                   dal.setFact(f);
                 }
               });
@@ -60,12 +59,11 @@ class HolmesImpl final : public Holmes::Server {
   public:
     Promise<void> set(SetContext context) override {
       dal.setFact(context.getParams().getFact());
-      //This is really dumb, but kj is still evolving
-      Array<Promise<int>> ap =
-        KJ_MAP(analyzer, analyzers) {
-          return analyzer->run(dal).then([](){return 0;});
-        };
-      return joinPromises(mv(ap)).then([](Array<int> x){return;});
+      Promise<void> x = READY_NOW;
+      for (auto analyzer : analyzers) {
+        x = analyzer->run(dal).then([x = mv(x)] () mutable {return mv(x);});
+      }
+      return x;
     }
     Promise<void> derive(DeriveContext context) override {
       //Trigger relevant analyses here
