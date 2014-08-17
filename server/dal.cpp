@@ -3,41 +3,12 @@
 #include <capnp/message.h>
 #include <iostream>
 
-bool checkTypes(List<Holmes::Val>::Reader vals, List<Holmes::ArgMode>::Reader modes) {
-  auto itv = vals.begin();
-  auto itm = modes.begin();
-  for (; (itv != vals.end()) && (itm != modes.end()); ++itv, ++itm) {
-    switch (itm->getArgType()) {
-      case Holmes::ArgType::ADDR:
-        if (itv->which() != Holmes::Val::ADDR_VAL) {
-	  return false;
-	}
-	break;
-      case Holmes::ArgType::STRING:
-        if (itv->which() != Holmes::Val::STRING_VAL) {
-          return false;
-        }
-        break;
-      default:
-        return false;
-    }
-  }
-  if ((itv != vals.end()) || (itm != modes.end())) {
-    return false;
-  }
-  return true;
-}
-
 void MemDAL::setFact(Holmes::Fact::Reader fact) {
   std::lock_guard<std::mutex> lock(mutex);
-  auto tid = fact.getTypeId();
-  assert(tid < factTypes.size());
-  auto modes = factTypes[tid];
-  assert(checkTypes(fact.getArgs(), modes.getModes()));
   MallocMessageBuilder *neverFree = new MallocMessageBuilder();
   neverFree->setRoot(fact);
   auto fs = neverFree->getRoot<Holmes::Fact>();
-  facts.push_back(fs);
+  facts.insert(fs);
 }
 
 bool eq_val(Holmes::Val::Reader x, Holmes::Val::Reader y) {
@@ -57,7 +28,7 @@ vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query
   auto resultIndex = 0;
   vector<Holmes::Fact::Reader> filtered_facts;
   for (auto f : facts) {
-    if (query.getTypeId() != f.getTypeId()) {
+    if (query.getFactName() != f.getFactName()) {
       continue;
     }
     auto fa  = f.getArgs();
@@ -70,7 +41,6 @@ vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query
         case Holmes::TemplateVal::EXACT_VAL:
 	  matched &= eq_val(itq->getExactVal(), *itf);
 	  break;
-	case Holmes::TemplateVal::BOUND_VAR:
 	case Holmes::TemplateVal::UNBOUND:
 	  break;
       }
@@ -80,14 +50,4 @@ vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query
     }
   };
   return filtered_facts;
-}
-
-uint32_t MemDAL::newFactType(Holmes::FactSig::Reader modes) {
-  std::lock_guard<std::mutex> lock(mutex);
-  auto tid = factTypes.size();
-  MallocMessageBuilder *neverFree = new MallocMessageBuilder();
-  neverFree->setRoot(modes);
-  auto fs = neverFree->getRoot<Holmes::FactSig>();
-  factTypes.push_back(fs);
-  return tid;
 }

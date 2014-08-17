@@ -4,7 +4,6 @@
 #include "dal.h"
 #include <capnp/message.h>
 #include <map>
-#include <capnp/pretty-print.h>
 
 using namespace std;
 using namespace capnp;
@@ -19,7 +18,6 @@ class HolmesImpl final : public Holmes::Server {
       atomic<uint64_t> cache;
       public:
         Promise<void> run(DAL& dal) {
-          std::cerr << "Run" << std::endl;
           auto req = analysis.analyzeRequest();
 	  vector<Holmes::Fact::Reader> searchedFacts;
 	  for (auto premise : premises) {
@@ -66,17 +64,6 @@ class HolmesImpl final : public Holmes::Server {
       return x;
     }
     Promise<void> derive(DeriveContext context) override {
-      //Trigger relevant analyses here
-      //TODO:
-      //Initially, we'll just trigger analyses, then check the db
-      //Later, we'll want to support long running stuff, and a good way might
-      //be:
-      //1.) Add an optional parameter of a notification interface
-      //2.) Return a pair of a fact list, and a continuation which will
-      //    either respond with more facts and another continuation
-      //    or say that there's no way to get more.
-      //Interface #1 if present would get called when more was available on
-      //the continuation.
       auto facts = dal.getFacts(context.getParams().getTarget());
       auto builder = context.getResults().initFacts(facts.size());
       auto dex = 0;
@@ -90,11 +77,6 @@ class HolmesImpl final : public Holmes::Server {
       Analyzer* a = new Analyzer(params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
       return a->run(dal).then([](){Promise<void> x = NEVER_DONE; return x;});
-    }
-    Promise<void> newFactType(NewFactTypeContext context) override {
-      auto sig = context.getParams().getFactSig();
-      context.getResults().setFreshFactTypeId(dal.newFactType(sig));
-      return READY_NOW;
     }
 };
 
