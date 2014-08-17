@@ -5,7 +5,37 @@
 
 #include "holmes.capnp.h"
 
+#define COMPARE_X_Y_VAL(accessor) \
+  if (x.get ## accessor ## Val() < y.get ## accessor ## Val()) { \
+    return true; \
+  } else if (x.get ## accessor ## Val() > y.get ## accessor ## Val()) { \
+    return false; \
+  } \
+  break;
+
 namespace holmes {
+
+class DataCompare {
+  public:
+    bool operator() (const capnp::Data::Reader& x,
+                     const capnp::Data::Reader& y) const {
+      if (x.size() < y.size()) {
+        return true;
+      } else if (x.size() > y.size()) {
+        return false;
+      }
+
+      for (size_t i = 0; i < x.size(); i++) {
+        if (x[i] < y[i]) {
+          return true;
+        } else if (x[i] > y[i]) {
+          return false;
+        }
+      }
+
+      return false;
+    }
+};
 
 class ValCompare {
   public:
@@ -17,19 +47,17 @@ class ValCompare {
         return false;
       }
 
+      DataCompare dc;
+
       switch (x.which()) {
         case Holmes::Val::STRING_VAL:
-          if (x.getStringVal() < y.getStringVal()) {
-            return true;
-          } else if (x.getStringVal() > y.getStringVal()) {
-            return false;
-          }
-          break;
-
+          COMPARE_X_Y_VAL(String);
         case Holmes::Val::ADDR_VAL:
-          if (x.getAddrVal() < y.getAddrVal()) {
+          COMPARE_X_Y_VAL(Addr);
+        case Holmes::Val::BLOB_VAL:
+          if (dc(x.getBlobVal(), y.getBlobVal())) {
             return true;
-          } else if (x.getAddrVal() > y.getAddrVal()) {
+          } else if (dc(y.getBlobVal(), x.getBlobVal())) {
             return false;
           }
           break;
@@ -51,7 +79,7 @@ class FactCompare {
       auto xs = x.getArgs();
       auto ys = y.getArgs();
       ValCompare compare;
-      for (auto i = 0; i < xs.size(); i++) {
+      for (uint32_t i = 0; i < xs.size(); i++) {
         if (compare(xs[i], ys[i])) {
           return true;
         } else if (compare(ys[i], xs[i])) {

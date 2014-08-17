@@ -20,7 +20,6 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
 
 std::vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query) {
   std::lock_guard<std::mutex> lock(mutex);
-  auto resultIndex = 0;
   std::vector<Holmes::Fact::Reader> filtered_facts;
   for (auto f : facts) {
     if (query.getFactName() != f.getFactName()) {

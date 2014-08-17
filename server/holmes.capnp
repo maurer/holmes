@@ -6,6 +6,7 @@ interface Holmes {
     union {
       stringVal @0 :Text;
       addrVal   @1 :UInt64;
+      blobVal   @2 :Data;
     }
   }
   
