@@ -37,8 +37,10 @@ interface Holmes {
 
   # Assert a fact to the server
   set @0 (fact :Fact);
+  
   # Ask the server to search for facts
   derive @1 (target :FactTemplate) -> (facts :List(Fact));
+  
   # Register as an analysis
   analyzer @2 (premises    :List(FactTemplate),
 	       analysis    :Analysis);
