@@ -4,6 +4,7 @@
 #include "dal.h"
 #include <capnp/message.h>
 #include <map>
+#include <capnp/pretty-print.h>
 
 using namespace std;
 using namespace capnp;
@@ -18,6 +19,7 @@ class HolmesImpl final : public Holmes::Server {
       atomic<uint64_t> cache;
       public:
         Promise<void> run(DAL& dal) {
+          std::cerr << "Run" << std::endl;
           auto req = analysis.analyzeRequest();
 	  vector<Holmes::Fact::Reader> searchedFacts;
 	  for (auto premise : premises) {
@@ -36,9 +38,10 @@ class HolmesImpl final : public Holmes::Server {
               return facts.then([&](Holmes::Analysis::AnalyzeResults::Reader res){
                 auto dfs = res.getDerived();
                 for (auto f : dfs) {
+                  std::cerr << kj::str(prettyPrint(f)).cStr() << std::endl;
                   dal.setFact(f);
                 }
-              }); 
+              });
             }
 	  }
           return READY_NOW;
@@ -57,10 +60,12 @@ class HolmesImpl final : public Holmes::Server {
   public:
     Promise<void> set(SetContext context) override {
       dal.setFact(context.getParams().getFact());
-      for (auto analyzer : analyzers) {
-        analyzer->run(dal);
-      }
-      return READY_NOW;
+      //This is really dumb, but kj is still evolving
+      Array<Promise<int>> ap =
+        KJ_MAP(analyzer, analyzers) {
+          return analyzer->run(dal).then([](){return 0;});
+        };
+      return joinPromises(mv(ap)).then([](Array<int> x){return;});
     }
     Promise<void> derive(DeriveContext context) override {
       //Trigger relevant analyses here
@@ -86,7 +91,7 @@ class HolmesImpl final : public Holmes::Server {
       auto params = context.getParams();
       Analyzer* a = new Analyzer(params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
-      return a->run(dal);
+      return a->run(dal).then([](){Promise<void> x = NEVER_DONE; return x;});
     }
     Promise<void> newFactType(NewFactTypeContext context) override {
       auto sig = context.getParams().getFactSig();
