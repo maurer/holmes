@@ -10,7 +10,7 @@ namespace holmes {
 
 void MemDAL::setFact(Holmes::Fact::Reader fact) {
   std::lock_guard<std::mutex> lock(mutex);
-  if (facts.count(fact) != 0) {
+  if (facts.count(fact) == 0) {
     capnp::MallocMessageBuilder *builder = new capnp::MallocMessageBuilder();
     builder->setRoot(fact);
     facts.insert(builder->getRoot<Holmes::Fact>());
