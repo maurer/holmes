@@ -1,4 +1,7 @@
 @0xaaef86128cdda946;
+using Cxx = import "/capnp/c++.capnp";
+
+$Cxx.namespace("holmes");
 
 interface Holmes {
   # Dynamic value type for use in facts
