@@ -12,14 +12,23 @@ class HolmesImpl final : public Holmes::Server {
   private:
     MemDAL dal;
     std::vector<Analyzer*> analyzers;
-  public:
-    kj::Promise<void> set(SetContext context) override {
-      dal.setFact(context.getParams().getFact());
+    kj::Promise<void> runAll() {
+      dal.clean();
       kj::Promise<void> x = kj::READY_NOW;
       for (auto analyzer : analyzers) {
         x = analyzer->run(dal).then([x = mv(x)] () mutable {return mv(x);});
       }
-      return x;
+      return x.then([&](){
+        if (dal.isDirty()) {
+          return runAll();
+        } else {
+          return static_cast<kj::Promise<void>>(kj::READY_NOW);
+        }});
+    }
+  public:
+    kj::Promise<void> set(SetContext context) override {
+      dal.setFact(context.getParams().getFact());
+      return runAll();
     }
     kj::Promise<void> derive(DeriveContext context) override {
       auto facts = dal.getFacts(context.getParams().getTarget());

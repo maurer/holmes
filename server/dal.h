@@ -14,6 +14,8 @@ class DAL {
     virtual ~DAL(){}
     virtual void setFact(Holmes::Fact::Reader) = 0;
     virtual std::vector<Holmes::Fact::Reader> getFacts(Holmes::FactTemplate::Reader) = 0;
+    virtual void clean() = 0;
+    virtual bool isDirty() = 0;
 };
 
 }

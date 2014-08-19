@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <set>
+#include <atomic>
 #include <mutex>
 
 #include <kj/common.h>
@@ -25,9 +26,12 @@ class MemDAL : public DAL {
     }
     void setFact(Holmes::Fact::Reader);
     std::vector<Holmes::Fact::Reader> getFacts(Holmes::FactTemplate::Reader);
+    void clean() {dirty = false;}
+    bool isDirty() { return dirty; }
 
   private:
     std::mutex mutex;
+    std::atomic<bool> dirty;
     std::set<Holmes::Fact::Reader, FactCompare> facts;
     std::vector<capnp::MessageBuilder*> mm;
     KJ_DISALLOW_COPY(MemDAL);

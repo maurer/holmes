@@ -1,7 +1,5 @@
 #include "memDal.h"
 
-#include <iostream>
-
 #include <capnp/message.h>
 
 #include "fact_util.h"
@@ -16,6 +14,7 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
     facts.insert(builder->getRoot<Holmes::Fact>());
     mm.push_back(builder);
   }
+  dirty = true;
 }
 
 std::vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query) {
