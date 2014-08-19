@@ -55,6 +55,6 @@ int main(int argc, const char* argv[]) {
 
   auto &waitScope = server.getWaitScope();
   uint port = server.getPort().wait(waitScope);
-  std::cout << "Listening on port " << port << std::endl;
+  std::cout << port << std::endl;
   kj::NEVER_DONE.wait(waitScope);
 }
