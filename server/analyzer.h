@@ -13,6 +13,8 @@
 #include "dal.h"
 #include "fact_util.h"
 
+#include <iostream>
+
 namespace holmes {
 
 class Analyzer {
@@ -24,6 +26,7 @@ class Analyzer {
     kj::Promise<void> run(DAL& dal);
 
   private:
+    std::mutex callMutex;
     class Cache {
       private:
         std::mutex mutex;

@@ -5,7 +5,6 @@
 namespace holmes {
 
 kj::Promise<void> Analyzer::run(DAL& dal) {
-  auto req = analysis.analyzeRequest();
   std::vector<Holmes::Fact::Reader> searchedFacts;
   std::vector<DAL::FactAssignment> fas;
   fas.push_back(DAL::FactAssignment());
@@ -23,6 +22,7 @@ kj::Promise<void> Analyzer::run(DAL& dal) {
   kj::Array<kj::Promise<int>> analResults =
     KJ_MAP(fa, fas) {
       if (cache.miss(fa)) {
+        auto req = analysis.analyzeRequest();
         auto premBuilder = req.initPremises(fa.facts.size());
         auto dex = 0;
         for (auto f : fa.facts) {
