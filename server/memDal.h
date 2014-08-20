@@ -25,7 +25,9 @@ class MemDAL : public DAL {
       }
     }
     void setFact(Holmes::Fact::Reader);
-    std::vector<Holmes::Fact::Reader> getFacts(Holmes::FactTemplate::Reader);
+    std::vector<FactAssignment> getFacts(
+      Holmes::FactTemplate::Reader,
+      Context ctx = Context());
     void clean() {dirty = false;}
     bool isDirty() { return dirty; }
 

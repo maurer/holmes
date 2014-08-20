@@ -1,9 +1,12 @@
 #ifndef HOLMES_SERVER_FACT_UTIL_H_
 #define HOLMES_SERVER_FACT_UTIL_H_
 
+#include <algorithm>
+
 #include <kj/common.h>
 
 #include "holmes.capnp.h"
+#include "dal.h"
 
 #define COMPARE_X_Y_VAL(accessor) \
   if (x.get ## accessor ## Val() < y.get ## accessor ## Val()) { \
@@ -87,6 +90,32 @@ class FactCompare {
         }
       }
       return false;
+    }
+};
+
+class AsgnCompare {
+  public:
+    typedef std::pair<std::string, Holmes::Val::Reader> Asgn;
+    bool operator() (const Asgn& x, const Asgn& y) {
+      if (x.first < y.first) {
+        return true;
+      } else if (x.first > y.first) {
+        return false;
+      }
+      ValCompare comp;
+      if (comp(x.second, y.second)) {
+        return true;
+      }
+      return false;
+    }
+};
+
+class ContextCompare {
+  public:
+    bool operator() (const DAL::Context& x, const DAL::Context& y) {
+      return std::lexicographical_compare(x.begin(), x.end(),
+                                          y.begin(), y.end(),
+                                          AsgnCompare());
     }
 };
 

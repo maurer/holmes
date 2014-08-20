@@ -1,5 +1,7 @@
 #include "memDal.h"
 
+#include <stack>
+
 #include <capnp/message.h>
 
 #include "fact_util.h"
@@ -17,9 +19,10 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
   dirty = true;
 }
 
-std::vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader query) {
+std::vector<DAL::FactAssignment> MemDAL::getFacts(Holmes::FactTemplate::Reader query, Context ctx) {
   std::lock_guard<std::mutex> lock(mutex);
-  std::vector<Holmes::Fact::Reader> filtered_facts;
+  std::map<Context, std::vector<Holmes::Fact::Reader>, ContextCompare> fam;
+
   for (auto f : facts) {
     if (query.getFactName() != f.getFactName()) {
       continue;
@@ -28,6 +31,7 @@ std::vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader 
     auto qa  = query.getArgs();
     auto itf = fa.begin();
     auto itq = qa.begin();
+    Context newCtx = ctx;
     bool matched = true;
     for (; matched && (itf != fa.end()) && (itq != qa.end()); ++itf, ++itq) {
       switch (itq->which()) {
@@ -36,15 +40,39 @@ std::vector<Holmes::Fact::Reader> MemDAL::getFacts(Holmes::FactTemplate::Reader 
 	  matched &= ~ (compare(itq->getExactVal(), *itf)
                      || compare(*itf, itq->getExactVal()));
           break;
+        case Holmes::TemplateVal::BOUND:
+          {
+            std::string var = itq->getBound();
+            auto itv = newCtx.find(var);
+            if (itv != newCtx.end()) {
+              //Variable is already bound, check that it matches
+              ValCompare compare;
+              matched &= ~ (compare(itv->second, *itf)
+                         || compare(*itf, itv->second));
+            } else {
+              //Variable is unbound, bind it
+              newCtx.insert(std::pair<std::string, Holmes::Val::Reader>(var, *itf));
+            }
+          }
+          break;
 	case Holmes::TemplateVal::UNBOUND:
 	  break;
       }
     }
     if (matched) {
-      filtered_facts.push_back(f);
+      auto itc = fam.find(newCtx);
+      if (itc != fam.end()) {
+        itc->second.push_back(f);
+      } else {
+        fam[newCtx] = {f};
+      }
     }
-  };
-  return filtered_facts;
+  }
+  std::vector<FactAssignment> fas;
+  for (auto fa : fam) {
+    fas.push_back(FactAssignment(fa.first, fa.second));
+  }
+  return fas;
 }
 
 }
