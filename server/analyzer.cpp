@@ -34,12 +34,12 @@ kj::Promise<void> Analyzer::run(DAL& dal) {
           ctxBuilder[dex].setVar(kv.first);
           ctxBuilder[dex++].setVal(kv.second);
         }
-        return req.send().then([&](Holmes::Analysis::AnalyzeResults::Reader res){
+        return req.send().then([&, fa = kj::mv(fa)](Holmes::Analysis::AnalyzeResults::Reader res){
           auto dfs = res.getDerived();
           for (auto f : dfs) {
             dal.setFact(f);
-            cache.add(fa);
           }
+          cache.add(fa);
           return 0;
         });
       }

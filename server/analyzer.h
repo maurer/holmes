@@ -43,8 +43,16 @@ class Analyzer {
             }
           }
         }
-        void add(DAL::FactAssignment) {
+        void add(DAL::FactAssignment fa) {
           std::lock_guard<std::mutex> lock(mutex);
+          auto iti = cache.find(fa.context);
+          if (iti == cache.end()) {
+            cache[fa.context] = fa.facts.size();
+          } else {
+            if (iti->second < fa.facts.size()) {
+              iti->second = fa.facts.size();
+            }
+          }
         }
     };
     capnp::List<Holmes::FactTemplate>::Reader premises;
