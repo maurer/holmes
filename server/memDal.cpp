@@ -19,6 +19,10 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
   dirty = true;
 }
 
+bool MemDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argTypes) {
+  return true;
+}
+
 std::vector<DAL::FactAssignment> MemDAL::getFacts(Holmes::FactTemplate::Reader query, Context ctx) {
   std::lock_guard<std::mutex> lock(mutex);
   std::map<Context, std::vector<Holmes::Fact::Reader>, ContextCompare> fam;

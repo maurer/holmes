@@ -13,6 +13,13 @@ interface Holmes {
     }
   }
   
+  # Type of a dynamic variable
+  enum HType {
+    string @0;
+    addr   @1;
+    blob   @2;
+  }
+
   # Variables
   # There is probably a good way to use numbers for space/speed, but
   # for now ease of debugging is more important
@@ -64,4 +71,10 @@ interface Holmes {
   # Register as an analysis
   analyzer @2 (premises    :List(FactTemplate),
 	       analysis    :Analysis);
+
+  # Register a fact type
+  # If it's not present, inform the DAL
+  # If it is present, check compatibility
+  registerType @3 (factName :Text,
+                   argTypes :List(HType)) -> (valid :Bool);
 }

@@ -30,7 +30,8 @@ class MemDAL : public DAL {
       Context ctx = Context());
     void clean() {dirty = false;}
     bool isDirty() { return dirty; }
-
+    bool addType(std::string name,
+                 capnp::List<Holmes::HType>::Reader argTypes);
   private:
     std::mutex mutex;
     std::atomic<bool> dirty;
