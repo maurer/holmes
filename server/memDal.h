@@ -37,6 +37,8 @@ class MemDAL : public DAL {
     std::atomic<bool> dirty;
     std::set<Holmes::Fact::Reader, FactCompare> facts;
     std::vector<capnp::MessageBuilder*> mm;
+    std::map<std::string, std::vector<Holmes::HType>> types;
+    bool typecheck(Holmes::Fact::Reader);
     KJ_DISALLOW_COPY(MemDAL);
 };
 

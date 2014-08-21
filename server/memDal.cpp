@@ -1,6 +1,6 @@
 #include "memDal.h"
 
-#include <stack>
+#include <assert.h>
 
 #include <capnp/message.h>
 
@@ -8,8 +8,41 @@
 
 namespace holmes {
 
+bool MemDAL::typecheck(Holmes::Fact::Reader fact) {
+  auto itt = types.find(fact.getFactName());
+  if (itt == types.end()) {
+    return false;
+  }
+  auto fa = fact.getArgs();
+  auto ts = itt->second;
+  if (fa.size() != ts.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < fa.size(); i++) {
+    switch (fa[i].which()) {
+      case Holmes::Val::STRING_VAL:
+        if (ts[i] != Holmes::HType::STRING) {
+          return false;
+        }
+        break;
+      case Holmes::Val::ADDR_VAL:
+        if (ts[i] != Holmes::HType::ADDR) {
+          return false;
+        }
+        break;
+      case Holmes::Val::BLOB_VAL:
+        if (ts[i] != Holmes::HType::BLOB) {
+          return false;
+        }
+        break;
+    }
+  }
+  return true;
+}
+
 void MemDAL::setFact(Holmes::Fact::Reader fact) {
   std::lock_guard<std::mutex> lock(mutex);
+  assert(typecheck(fact));
   if (facts.count(fact) == 0) {
     capnp::MallocMessageBuilder *builder = new capnp::MallocMessageBuilder();
     builder->setRoot(fact);
@@ -20,6 +53,25 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
 }
 
 bool MemDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argTypes) {
+  std::lock_guard<std::mutex> lock(mutex);
+  auto itt = types.find(name);
+  if (itt != types.end()) {
+    if (argTypes.size() != itt->second.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < argTypes.size(); i++) {
+      if (argTypes[i] != itt->second[i]) {
+        return false;
+      }
+    }
+    return true;
+  } else {
+    std::vector<Holmes::HType> store;
+    for (auto argType : argTypes) {
+      store.push_back(argType);
+    }
+    types[name] = store;
+  }
   return true;
 }
 
