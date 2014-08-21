@@ -2,16 +2,18 @@
 
 #include "dal.h"
 
+#include <iostream>
+
 namespace holmes {
 
-kj::Promise<void> Analyzer::run(DAL& dal) {
+kj::Promise<void> Analyzer::run(DAL *dal) {
   std::vector<Holmes::Fact::Reader> searchedFacts;
   std::vector<DAL::FactAssignment> fas;
   fas.push_back(DAL::FactAssignment());
   for (auto premise : premises) {
     std::vector<DAL::FactAssignment> newFas;
     for (auto fa : fas) {
-      auto resFas = dal.getFacts(premise, fa.context);
+      auto resFas = dal->getFacts(premise, fa.context);
       for (auto newFa : resFas) {
         newFa.combine(fa);
         newFas.push_back(newFa);
@@ -34,10 +36,10 @@ kj::Promise<void> Analyzer::run(DAL& dal) {
           ctxBuilder[dex].setVar(kv.first);
           ctxBuilder[dex++].setVal(kv.second);
         }
-        return req.send().then([&, fa = kj::mv(fa)](Holmes::Analysis::AnalyzeResults::Reader res){
+        return req.send().then([this, dal, fa = kj::mv(fa)](Holmes::Analysis::AnalyzeResults::Reader res){
           auto dfs = res.getDerived();
           for (auto f : dfs) {
-            dal.setFact(f);
+            dal->setFact(f);
           }
           cache.add(fa);
           return 0;

@@ -23,7 +23,7 @@ class Analyzer {
              Holmes::Analysis::Client analysis)
       : premises(premises)
       , analysis(analysis){} 
-    kj::Promise<void> run(DAL& dal);
+    kj::Promise<void> run(DAL *dal);
 
   private:
     std::mutex callMutex;
