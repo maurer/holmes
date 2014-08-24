@@ -40,7 +40,7 @@ bool MemDAL::typecheck(Holmes::Fact::Reader fact) {
   return true;
 }
 
-void MemDAL::setFact(Holmes::Fact::Reader fact) {
+bool MemDAL::setFact(Holmes::Fact::Reader fact) {
   std::lock_guard<std::mutex> lock(mutex);
   assert(typecheck(fact));
   if (facts.count(fact) == 0) {
@@ -48,8 +48,9 @@ void MemDAL::setFact(Holmes::Fact::Reader fact) {
     builder->setRoot(fact);
     facts.insert(builder->getRoot<Holmes::Fact>());
     mm.push_back(builder);
+    return true;
   }
-  dirty = true;
+  return false;
 }
 
 bool MemDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argTypes) {

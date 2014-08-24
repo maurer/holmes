@@ -24,12 +24,10 @@ class MemDAL : public DAL {
         delete b;
       }
     }
-    void setFact(Holmes::Fact::Reader);
+    bool setFact(Holmes::Fact::Reader);
     std::vector<FactAssignment> getFacts(
       Holmes::FactTemplate::Reader,
       Context ctx = Context());
-    void clean() {dirty = false;}
-    bool isDirty() { return dirty; }
     bool addType(std::string name,
                  capnp::List<Holmes::HType>::Reader argTypes);
   private:

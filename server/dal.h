@@ -26,13 +26,11 @@ class DAL {
       }
     };
     virtual ~DAL(){}
-    virtual void setFact(Holmes::Fact::Reader) = 0;
+    virtual bool setFact(Holmes::Fact::Reader) = 0;
     virtual bool addType(std::string, capnp::List<Holmes::HType>::Reader) = 0;
     virtual std::vector<FactAssignment> getFacts(
       Holmes::FactTemplate::Reader,
       Context ctx = Context()) = 0;
-    virtual void clean() = 0;
-    virtual bool isDirty() = 0;
 };
 
 }

@@ -16,13 +16,12 @@ class HolmesImpl final : public Holmes::Server {
     Own<DAL> dal;
     std::vector<Analyzer*> analyzers;
     kj::Promise<void> runAll() {
-      dal->clean();
-      kj::Promise<void> x = kj::READY_NOW;
+      kj::Promise<bool> x = kj::Promise<bool>(false);
       for (auto analyzer : analyzers) {
-        x = analyzer->run(dal.get()).then([x = mv(x)] () mutable {return mv(x);});
+        x = analyzer->run(dal.get()).then([x = mv(x)] (bool i) mutable {return mv(x).then([i = i](bool k){return i || k;});});
       }
-      return x.then([&](){
-        if (dal->isDirty()) {
+      return x.then([&](bool dirty){
+        if (dirty) {
           return runAll();
         } else {
           return static_cast<kj::Promise<void>>(kj::READY_NOW);
@@ -31,8 +30,10 @@ class HolmesImpl final : public Holmes::Server {
   public:
     HolmesImpl(Own<DAL> dal) : dal(mv(dal)) {}
     kj::Promise<void> set(SetContext context) override {
-      dal->setFact(context.getParams().getFact());
-      return runAll();
+      if (dal->setFact(context.getParams().getFact())) {
+        return runAll();
+      }
+      return kj::READY_NOW;
     }
     kj::Promise<void> derive(DeriveContext context) override {
       auto factAssigns = dal->getFacts(context.getParams().getTarget());
@@ -51,7 +52,7 @@ class HolmesImpl final : public Holmes::Server {
       auto params = context.getParams();
       Analyzer* a = new Analyzer(params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
-      return a->run(dal.get()).then([](){kj::Promise<void> x = kj::NEVER_DONE; return x;});
+      return a->run(dal.get()).then([](bool m){kj::Promise<void> x = kj::NEVER_DONE; return x;});
     }
     kj::Promise<void> registerType(RegisterTypeContext context) override {
       auto params = context.getParams();
