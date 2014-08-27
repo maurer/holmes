@@ -5,6 +5,7 @@
 #include <map>
 
 #include <kj/common.h>
+#include <capnp/message.h>
 
 #include "holmes.capnp.h"
 
@@ -25,10 +26,20 @@ class DAL {
         facts.insert(facts.begin(), x.facts.begin(), x.facts.end());
       }
     };
+    class FactResults {
+      public:
+        std::vector<FactAssignment> results;
+        std::vector<capnp::MallocMessageBuilder*> mbs;
+        ~FactResults() {
+          /*for (auto mb : mbs) {
+            delete mb;
+          }*/
+        }
+    };
     virtual ~DAL(){}
     virtual bool setFact(Holmes::Fact::Reader) = 0;
     virtual bool addType(std::string, capnp::List<Holmes::HType>::Reader) = 0;
-    virtual std::vector<FactAssignment> getFacts(
+    virtual FactResults getFacts(
       Holmes::FactTemplate::Reader,
       Context ctx = Context()) = 0;
 };

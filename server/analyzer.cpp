@@ -17,7 +17,7 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
     std::vector<DAL::FactAssignment> newFas;
     for (auto fa : fas) {
       auto resFas = dal->getFacts(premise, fa.context);
-      for (auto newFa : resFas) {
+      for (auto&& newFa : resFas.results) {
         newFa.combine(fa);
         newFas.push_back(newFa);
       }

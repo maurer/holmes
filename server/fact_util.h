@@ -119,6 +119,10 @@ class ContextCompare {
     }
 };
 
+bool typecheck(const std::map<std::string, std::vector<Holmes::HType>> &types,
+               Holmes::Fact::Reader fact);
+
+
 }
 
 #endif

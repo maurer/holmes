@@ -5,6 +5,7 @@
 #include <gflags/gflags.h>
 
 #include "holmes.capnp.h"
+#include "pgDal.h"
 #include "memDal.h"
 #include "analyzer.h"
 
@@ -44,7 +45,7 @@ class HolmesImpl final : public Holmes::Server {
     kj::Promise<void> derive(DeriveContext context) override {
       auto factAssigns = dal->getFacts(context.getParams().getTarget());
       std::vector<Holmes::Fact::Reader> facts;
-      for (auto factAssign : factAssigns) {
+      for (auto&& factAssign : factAssigns.results) {
         facts.insert(facts.end(), factAssign.facts.begin(), factAssign.facts.end());
       }
       auto builder = context.getResults().initFacts(facts.size());
@@ -58,7 +59,14 @@ class HolmesImpl final : public Holmes::Server {
       auto params = context.getParams();
       Analyzer* a = new Analyzer(params.getName(), params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
-      return a->run(dal.get()).then([](bool m){kj::Promise<void> x = kj::NEVER_DONE; return x;});
+      return a->run(dal.get()).then([this](bool m){
+        kj::Promise<void> x = kj::NEVER_DONE;
+        if (m) {
+          return runAll().then([](){
+            return static_cast<kj::Promise<void>>(kj::NEVER_DONE);});
+        } else {
+          return x;
+      }});
     }
     kj::Promise<void> registerType(RegisterTypeContext context) override {
       auto params = context.getParams();
@@ -76,7 +84,7 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   
   capnp::EzRpcServer server("*");
-  kj::Own<holmes::DAL> base = kj::heap<holmes::MemDAL>();
+  kj::Own<holmes::DAL> base = kj::heap<holmes::PgDAL>();
   server.exportCap("holmes", kj::heap<holmes::HolmesImpl>(kj::mv(base)));
 
   auto &waitScope = server.getWaitScope();

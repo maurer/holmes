@@ -8,41 +8,9 @@
 
 namespace holmes {
 
-bool MemDAL::typecheck(Holmes::Fact::Reader fact) {
-  auto itt = types.find(fact.getFactName());
-  if (itt == types.end()) {
-    return false;
-  }
-  auto fa = fact.getArgs();
-  auto ts = itt->second;
-  if (fa.size() != ts.size()) {
-    return false;
-  }
-  for (size_t i = 0; i < fa.size(); i++) {
-    switch (fa[i].which()) {
-      case Holmes::Val::STRING_VAL:
-        if (ts[i] != Holmes::HType::STRING) {
-          return false;
-        }
-        break;
-      case Holmes::Val::ADDR_VAL:
-        if (ts[i] != Holmes::HType::ADDR) {
-          return false;
-        }
-        break;
-      case Holmes::Val::BLOB_VAL:
-        if (ts[i] != Holmes::HType::BLOB) {
-          return false;
-        }
-        break;
-    }
-  }
-  return true;
-}
-
 bool MemDAL::setFact(Holmes::Fact::Reader fact) {
   std::lock_guard<std::mutex> lock(mutex);
-  assert(typecheck(fact));
+  assert(typecheck(types, fact));
   if (facts.count(fact) == 0) {
     capnp::MallocMessageBuilder *builder = new capnp::MallocMessageBuilder();
     builder->setRoot(fact);
@@ -76,7 +44,7 @@ bool MemDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argTyp
   return true;
 }
 
-std::vector<DAL::FactAssignment> MemDAL::getFacts(Holmes::FactTemplate::Reader query, Context ctx) {
+DAL::FactResults MemDAL::getFacts(Holmes::FactTemplate::Reader query, Context ctx) {
   std::lock_guard<std::mutex> lock(mutex);
   std::map<Context, std::vector<Holmes::Fact::Reader>, ContextCompare> fam;
 
@@ -129,7 +97,9 @@ std::vector<DAL::FactAssignment> MemDAL::getFacts(Holmes::FactTemplate::Reader q
   for (auto fa : fam) {
     fas.push_back(FactAssignment(fa.first, fa.second));
   }
-  return fas;
+  FactResults fr;
+  fr.results = fas;
+  return fr;
 }
 
 }

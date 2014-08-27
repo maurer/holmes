@@ -1,5 +1,5 @@
-#ifndef HOLMES_SERVER_MEMDAL_H_
-#define HOLMES_SERVER_MEMDAL_H_
+#ifndef HOLMES_SERVER_PGDAL_H_
+#define HOLMES_SERVER_PGDAL_H_
 
 #include "dal.h"
 
@@ -11,19 +11,17 @@
 #include <kj/common.h>
 #include <capnp/message.h>
 
+#include <pqxx/pqxx>
+
 #include "holmes.capnp.h"
 #include "fact_util.h"
 
 namespace holmes {
 
-class MemDAL : public DAL {
+class PgDAL : public DAL {
   public:
-    MemDAL(){}
-    ~MemDAL() {
-      for (auto b : mm) {
-        delete b;
-      }
-    }
+    PgDAL() : conn() {initDB();}
+    PgDAL(std::string connStr) : conn(connStr) {initDB();}
     bool setFact(Holmes::Fact::Reader);
     DAL::FactResults getFacts(
       Holmes::FactTemplate::Reader,
@@ -32,10 +30,11 @@ class MemDAL : public DAL {
                  capnp::List<Holmes::HType>::Reader argTypes);
   private:
     std::mutex mutex;
-    std::set<Holmes::Fact::Reader, FactCompare> facts;
-    std::vector<capnp::MessageBuilder*> mm;
+    pqxx::connection conn;
+    void initDB();
     std::map<std::string, std::vector<Holmes::HType>> types;
-    KJ_DISALLOW_COPY(MemDAL);
+    void registerPrepared(std::string, size_t);
+    KJ_DISALLOW_COPY(PgDAL);
 };
 
 }
