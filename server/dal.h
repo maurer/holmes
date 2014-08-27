@@ -38,6 +38,15 @@ class DAL {
     };
     virtual ~DAL(){}
     virtual bool setFact(Holmes::Fact::Reader) = 0;
+    virtual size_t setFacts(capnp::List<Holmes::Fact>::Reader facts) {
+      size_t f = 0;
+      for (auto fact : facts) {
+        if (setFact(fact)) {
+          f++;
+        }
+      }
+      return f;
+    }
     virtual bool addType(std::string, capnp::List<Holmes::HType>::Reader) = 0;
     virtual FactResults getFacts(
       Holmes::FactTemplate::Reader,

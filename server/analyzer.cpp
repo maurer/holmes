@@ -44,8 +44,8 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
         return req.send().then([this, dal, fa = kj::mv(fa)](Holmes::Analysis::AnalyzeResults::Reader res){
           auto dfs = res.getDerived();
           bool dirty = false;
-          for (auto f : dfs) {
-            dirty |= dal->setFact(f);
+          if (dal->setFacts(dfs) != 0) {
+            dirty = true;
           }
           cache.add(fa);
           return dirty;

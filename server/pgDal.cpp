@@ -79,6 +79,41 @@ bool PgDAL::setFact(Holmes::Fact::Reader fact) {
   return (res.affected_rows() != 0);
 }
 
+size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
+  std::lock_guard<std::mutex> lock(mutex);
+  pqxx::work work(conn);
+  std::vector<pqxx::result> res;
+  for (auto fact : facts) {
+    assert(typecheck(types, fact));
+    std::string name = fact.getFactName();
+    auto query = work.prepared(name + ".insert");
+    for (auto arg : fact.getArgs()) {
+      switch (arg.which()) {
+        case Holmes::Val::STRING_VAL:
+          query(std::string(arg.getStringVal()));
+          break;
+        case Holmes::Val::ADDR_VAL:
+        //PgSQL is bad, and only has a signed int type
+          query((int64_t)arg.getAddrVal());
+          break;
+        case Holmes::Val::BLOB_VAL:
+          capnp::Data::Reader data = arg.getBlobVal();
+          pqxx::binarystring blob(data.begin(), data.size());
+          query(blob);
+          break;
+      }
+    }
+    res.push_back(query.exec());
+  }
+  work.commit();
+  size_t affected = 0;
+  for (auto r : res) {
+    affected += r.affected_rows();
+  }
+  return affected;
+}
+
+
 std::string htype_to_sqltype(Holmes::HType hType) {
   switch (hType) {
     case Holmes::HType::STRING:
@@ -197,13 +232,11 @@ DAL::FactResults PgDAL::getFacts(
     }
   }
   auto q = "SELECT * FROM facts." + std::string(query.getFactName()) + whereStr;
-  std::cerr << q << std::endl;
   auto facts = work.exec(q);
   work.commit();
   std::map<Context, std::vector<Holmes::Fact::Reader>, ContextCompare> fam;
   std::vector<Holmes::Fact::Reader> hFacts;
   auto type = types[query.getFactName()];
-  std::cerr << "Found " << facts.size() << std::endl;
   for (auto f : facts) {
     capnp::MallocMessageBuilder *mb = new capnp::MallocMessageBuilder;
     auto builder = mb->initRoot<Holmes::Fact>();
@@ -231,7 +264,6 @@ DAL::FactResults PgDAL::getFacts(
     hFacts.push_back(builder.asReader());
     results.mbs.push_back(mb);
   }
-  std::cerr << "Converted " << hFacts.size() << std::endl;
   for (auto f : hFacts) {
     Context newCtx = ctx;
     auto fa = f.getArgs();
