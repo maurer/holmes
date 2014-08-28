@@ -32,7 +32,6 @@ class MemDAL : public DAL {
                  capnp::List<Holmes::HType>::Reader argTypes);
   private:
     std::mutex mutex;
-    std::atomic<bool> dirty;
     std::set<Holmes::Fact::Reader, FactCompare> facts;
     std::vector<capnp::MessageBuilder*> mm;
     std::map<std::string, std::vector<Holmes::HType>> types;
