@@ -2,6 +2,7 @@
 
 #include <capnp/ez-rpc.h>
 #include <glog/logging.h>
+#include <gflags/gflags.h>
 
 #include "holmes.capnp.h"
 #include "memDal.h"
@@ -70,8 +71,8 @@ class HolmesImpl final : public Holmes::Server {
 
 }
 
-int main(int argc, const char* argv[]) {
-  //Initialize glog
+int main(int argc, char* argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   
   capnp::EzRpcServer server("*");
