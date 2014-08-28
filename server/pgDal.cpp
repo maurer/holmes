@@ -255,8 +255,10 @@ DAL::FactResults PgDAL::getFacts(
         case Holmes::HType::BLOB:
           {
             pqxx::binarystring bs(arg);
-            capnp::Data::Reader dr(reinterpret_cast<const kj::byte*>(bs.get()), bs.size());
-            flb[i].setBlobVal(dr);
+            auto bb = flb[i].initBlobVal(bs.size());
+            for (size_t i = 0; i < bs.size(); i++) {
+              bb[i] = bs[i];
+            }
           }
           break;
       }
