@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <capnp/ez-rpc.h>
+#include <glog/logging.h>
 
 #include "holmes.capnp.h"
 #include "memDal.h"
@@ -16,20 +17,24 @@ class HolmesImpl final : public Holmes::Server {
     Own<DAL> dal;
     std::vector<Analyzer*> analyzers;
     kj::Promise<void> runAll() {
+      DLOG(INFO) << "runAll() entry";
       kj::Promise<bool> x = kj::Promise<bool>(false);
       for (auto analyzer : analyzers) {
         x = analyzer->run(dal.get()).then([x = mv(x)] (bool i) mutable {return mv(x).then([i = i](bool k){return i || k;});});
       }
       return x.then([&](bool dirty){
         if (dirty) {
+          DLOG(INFO) << "DAL dirty, runAll() recursing";
           return runAll();
         } else {
+          DLOG(INFO) << "DAL clean, runAll() returning";
           return static_cast<kj::Promise<void>>(kj::READY_NOW);
         }});
     }
   public:
     HolmesImpl(Own<DAL> dal) : dal(mv(dal)) {}
     kj::Promise<void> set(SetContext context) override {
+      DLOG(INFO) << "set()";
       if (dal->setFact(context.getParams().getFact())) {
         return runAll();
       }
@@ -66,12 +71,16 @@ class HolmesImpl final : public Holmes::Server {
 }
 
 int main(int argc, const char* argv[]) {
+  //Initialize glog
+  google::InitGoogleLogging(argv[0]);
+  
   capnp::EzRpcServer server("*");
   kj::Own<holmes::DAL> base = kj::heap<holmes::MemDAL>();
   server.exportCap("holmes", kj::heap<holmes::HolmesImpl>(kj::mv(base)));
 
   auto &waitScope = server.getWaitScope();
   uint port = server.getPort().wait(waitScope);
+  LOG(INFO) << "Running on port: " << port;
   std::cout << port << std::endl;
   kj::NEVER_DONE.wait(waitScope);
 }
