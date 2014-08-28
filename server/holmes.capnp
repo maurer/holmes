@@ -69,7 +69,8 @@ interface Holmes {
   derive @1 (target :FactTemplate) -> (facts :List(Fact));
   
   # Register as an analysis
-  analyzer @2 (premises    :List(FactTemplate),
+  analyzer @2 (name        :Text,
+               premises    :List(FactTemplate),
 	       analysis    :Analysis);
 
   # Register a fact type

@@ -2,11 +2,14 @@
 
 #include "dal.h"
 
+#include <glog/logging.h>
+
 #include <iostream>
 
 namespace holmes {
 
 kj::Promise<bool> Analyzer::run(DAL *dal) {
+  DLOG(INFO) << "Running analysis: " << name;
   std::vector<Holmes::Fact::Reader> searchedFacts;
   std::vector<DAL::FactAssignment> fas;
   fas.push_back(DAL::FactAssignment());
@@ -21,9 +24,11 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
     }
     fas = newFas;
   }
+  DLOG(INFO) << "Found " << fas.size() << " instances.";
   kj::Array<kj::Promise<bool>> analResults =
     KJ_MAP(fa, fas) {
       if (cache.miss(fa)) {
+        DLOG(INFO) << "Cache miss";
         auto req = analysis.analyzeRequest();
         auto premBuilder = req.initPremises(fa.facts.size());
         auto dex = 0;
@@ -45,6 +50,8 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
           cache.add(fa);
           return dirty;
         });
+      } else {
+        DLOG(INFO) << "Cache hit";
       }
       return kj::Promise<bool>(false);
     };

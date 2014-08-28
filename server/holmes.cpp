@@ -55,7 +55,7 @@ class HolmesImpl final : public Holmes::Server {
     }
     kj::Promise<void> analyzer(AnalyzerContext context) override {
       auto params = context.getParams();
-      Analyzer* a = new Analyzer(params.getPremises(), params.getAnalysis());
+      Analyzer* a = new Analyzer(params.getName(), params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
       return a->run(dal.get()).then([](bool m){kj::Promise<void> x = kj::NEVER_DONE; return x;});
     }

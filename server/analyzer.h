@@ -19,13 +19,16 @@ namespace holmes {
 
 class Analyzer {
   public:
-    Analyzer(capnp::List<Holmes::FactTemplate>::Reader premises,
+    Analyzer(std::string name,
+             capnp::List<Holmes::FactTemplate>::Reader premises,
              Holmes::Analysis::Client analysis)
-      : premises(premises)
+      : name(name)
+      , premises(premises)
       , analysis(analysis){} 
     kj::Promise<bool> run(DAL *dal);
 
   private:
+    std::string name;
     std::mutex callMutex;
     class Cache {
       private:
