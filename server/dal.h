@@ -28,13 +28,18 @@ class DAL {
     };
     class FactResults {
       public:
+        FactResults() {}
         std::vector<FactAssignment> results;
         std::vector<capnp::MallocMessageBuilder*> mbs;
         ~FactResults() {
-          /*for (auto mb : mbs) {
+          for (auto mb : mbs) {
             delete mb;
-          }*/
+          }
         }
+        FactResults(FactResults&&) = default;
+        FactResults& operator=(FactResults&&) = default;
+      private:
+        KJ_DISALLOW_COPY(FactResults);
     };
     virtual ~DAL(){}
     virtual bool setFact(Holmes::Fact::Reader) = 0;

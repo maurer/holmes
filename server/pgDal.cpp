@@ -309,7 +309,7 @@ DAL::FactResults PgDAL::getFacts(
   for (auto fa : fam) {
     results.results.push_back(FactAssignment(fa.first, fa.second));
   }
-  return results;
+  return std::move(results);
 }
 
 }
