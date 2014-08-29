@@ -9,16 +9,13 @@
 namespace holmes {
 
 kj::Promise<bool> Analyzer::run(DAL *dal) {
-  DLOG(INFO) << "Running analysis: " << name;
   std::vector<Holmes::Fact::Reader> searchedFacts;
   std::vector<DAL::FactAssignment> fas;
   fas.push_back(DAL::FactAssignment());
   DAL::FactResults frs = dal->getFacts(premises);
-  DLOG(INFO) << "Found " << frs.results.size() << " instances.";
   kj::Array<kj::Promise<bool>> analResults =
     KJ_MAP(fa, frs.results) {
       if (cache.miss(fa)) {
-        DLOG(INFO) << "Cache miss";
         auto req = analysis.analyzeRequest();
         auto premBuilder = req.initPremises(fa.facts.size());
         auto dex = 0;
@@ -40,12 +37,10 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
           cache.add(fa);
           return dirty;
         });
-      } else {
-        DLOG(INFO) << "Cache hit";
       }
       return kj::Promise<bool>(false);
     };
-  return kj::joinPromises(kj::mv(analResults)).then([frs=kj::mv(frs)](kj::Array<bool> x){
+  return kj::joinPromises(kj::mv(analResults)).then([frs=kj::mv(frs), this](kj::Array<bool> x){
     bool dirty = false;
     for (auto v : x) {
       dirty |= v;

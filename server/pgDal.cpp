@@ -203,7 +203,6 @@ DAL::FactResults PgDAL::getFacts(
   std::vector<std::string> whereClause; //Concrete values
   std::map<std::string, size_t> bindings;//Bound indices
   std::map<std::string, std::string> bindName;
-  DLOG(INFO) << "Entering getFacts";
   size_t argN = 0; // Current global arg number
   std::string query = "";
   for (auto itc = clauses.begin(); itc != clauses.end(); ++itc) {
@@ -219,7 +218,6 @@ DAL::FactResults PgDAL::getFacts(
       query += " ON ";
     }
     auto args = itc->getArgs();
-    DLOG(INFO) << "Generating for " << std::string(itc->getFactName()) << " with " << args.size() << " args.";
     bool onClause = true;
     for (size_t i = 0; i < args.size(); ++i, ++argN) {
       switch (args[i].which()) {
@@ -255,7 +253,6 @@ DAL::FactResults PgDAL::getFacts(
       }
     }
   }
-  DLOG(INFO) << "Generated.";
   for (auto itw = whereClause.begin(); itw != whereClause.end(); ++itw) {
     if (itw == whereClause.begin()) {
       query += " WHERE ";
@@ -264,6 +261,7 @@ DAL::FactResults PgDAL::getFacts(
     }
     query += *itw;
   }
+  DLOG(INFO) << "Executing join query: " << query;
   auto res = work.exec(query); 
   work.commit();
   DLOG(INFO) << "Query complete";
@@ -303,7 +301,6 @@ DAL::FactResults PgDAL::getFacts(
     }
     results.results.push_back(rfa);
   }
-  DLOG(INFO) << "Leaving getFacts";
   return results;
 }
 DAL::FactResults PgDAL::getFacts(
