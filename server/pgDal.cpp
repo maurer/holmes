@@ -196,6 +196,117 @@ std::string quoteVal(pqxx::work& w, Holmes::Val::Reader v) {
 }
 
 DAL::FactResults PgDAL::getFacts(
+  capnp::List<Holmes::FactTemplate>::Reader clauses) {
+  std::lock_guard<std::mutex> lock(mutex);
+  pqxx::work work(conn);
+  DAL::FactResults results;
+  std::vector<std::string> whereClause; //Concrete values
+  std::map<std::string, size_t> bindings;//Bound indices
+  std::map<std::string, std::string> bindName;
+  DLOG(INFO) << "Entering getFacts";
+  size_t argN = 0; // Current global arg number
+  std::string query = "";
+  for (auto itc = clauses.begin(); itc != clauses.end(); ++itc) {
+    std::string tableName = "facts.";
+    tableName += itc->getFactName();
+    if (itc == clauses.begin()) {
+      query += "SELECT * FROM ";
+    } else if (itc != clauses.end()) {
+      query += " JOIN ";
+    }
+    query += tableName;
+    if (itc != clauses.begin()) {
+      query += " ON ";
+    }
+    auto args = itc->getArgs();
+    DLOG(INFO) << "Generating for " << std::string(itc->getFactName()) << " with " << args.size() << " args.";
+    bool onClause = true;
+    for (size_t i = 0; i < args.size(); ++i, ++argN) {
+      switch (args[i].which()) {
+        case Holmes::TemplateVal::EXACT_VAL:
+          whereClause.push_back(tableName + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
+          break;
+        case Holmes::TemplateVal::BOUND:
+          {
+            auto var = args[i].getBound();
+            auto argName = tableName + ".arg" + std::to_string(i);
+            bindings[var] = argN;
+            auto ito = bindName.find(var);
+            if (ito == bindName.end()) {
+              bindName[var] = argName;
+            } else {
+              std::string cond = argName + "=" + ito->second;
+              if (itc == clauses.begin()) {
+                //First table has no on clause, stash these in the where clause
+                whereClause.push_back(cond);
+              } else {
+                if (onClause) {
+                  onClause = false;
+                } else {
+                  query += " AND ";
+                }
+                query += cond + " ";
+              }
+            }
+          }
+          break;
+        case Holmes::TemplateVal::UNBOUND:
+          break;
+      }
+    }
+  }
+  DLOG(INFO) << "Generated.";
+  for (auto itw = whereClause.begin(); itw != whereClause.end(); ++itw) {
+    if (itw == whereClause.begin()) {
+      query += " WHERE ";
+    } else {
+      query += " AND ";
+    }
+    query += *itw;
+  }
+  auto res = work.exec(query); 
+  work.commit();
+  DLOG(INFO) << "Query complete";
+  for (auto soln : res) {
+    int i = 0;
+    std::vector<Holmes::Fact::Reader> fs;
+    DAL::FactAssignment rfa;
+    for (auto clause : clauses) {
+      auto typ = types[clause.getFactName()];
+      capnp::MallocMessageBuilder *mb = new capnp::MallocMessageBuilder;
+      auto fb = mb->initRoot<Holmes::Fact>();
+      fb.setFactName(clause.getFactName());
+      auto args = clause.getArgs();
+      auto fa = fb.initArgs(typ.size());
+      for (size_t j = 0; j < typ.size(); ++j, ++i) {
+        switch (typ[j]) {
+          case Holmes::HType::ADDR:
+            fa[j].setAddrVal(soln[i].as<int64_t>());
+            break;
+          case Holmes::HType::STRING:
+            fa[j].setStringVal(soln[i].as<std::string>());
+            break;
+          case Holmes::HType::BLOB:
+            pqxx::binarystring bs(soln[i]);
+            auto bb = fa[j].initBlobVal(bs.size());
+            for (size_t k = 0; k < bs.size(); ++k) {
+              bb[k] = bs[k];
+            }
+            break;
+        }
+        if (args[j].which() == Holmes::TemplateVal::BOUND) {
+          rfa.context[std::string(args[j].getBound())] = fa[j];
+        }
+        results.mbs.insert(mb);
+        rfa.facts.push_back(fb);
+      }
+    }
+    results.results.push_back(rfa);
+  }
+  DLOG(INFO) << "Leaving getFacts";
+  return results;
+}
+DAL::FactResults PgDAL::getFacts(
   Holmes::FactTemplate::Reader query,
   Context ctx) {
   std::lock_guard<std::mutex> lock(mutex);

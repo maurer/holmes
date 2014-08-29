@@ -27,6 +27,7 @@ class PgDAL : public DAL {
     DAL::FactResults getFacts(
       Holmes::FactTemplate::Reader,
       Context ctx = Context());
+    DAL::FactResults getFacts(capnp::List<Holmes::FactTemplate>::Reader);
     bool addType(std::string name,
                  capnp::List<Holmes::HType>::Reader argTypes);
   private:
