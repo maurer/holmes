@@ -13,22 +13,10 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
   std::vector<Holmes::Fact::Reader> searchedFacts;
   std::vector<DAL::FactAssignment> fas;
   fas.push_back(DAL::FactAssignment());
-  std::vector<DAL::FactResults> frs;
-  for (auto premise : premises) {
-    std::vector<DAL::FactAssignment> newFas;
-    for (auto fa : fas) {
-      auto resFas = dal->getFacts(premise, fa.context);
-      for (auto&& newFa : resFas.results) {
-        newFa.combine(fa);
-        newFas.push_back(newFa);
-      }
-      frs.push_back(kj::mv(resFas));
-    }
-    fas = newFas;
-  }
-  DLOG(INFO) << "Found " << fas.size() << " instances.";
+  DAL::FactResults frs = dal->getFacts(premises);
+  DLOG(INFO) << "Found " << frs.results.size() << " instances.";
   kj::Array<kj::Promise<bool>> analResults =
-    KJ_MAP(fa, fas) {
+    KJ_MAP(fa, frs.results) {
       if (cache.miss(fa)) {
         DLOG(INFO) << "Cache miss";
         auto req = analysis.analyzeRequest();

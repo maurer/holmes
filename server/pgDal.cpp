@@ -256,15 +256,15 @@ DAL::FactResults PgDAL::getFacts(
           {
             pqxx::binarystring bs(arg);
             auto bb = flb[i].initBlobVal(bs.size());
-            for (size_t i = 0; i < bs.size(); i++) {
-              bb[i] = bs[i];
+            for (size_t j = 0; j < bs.size(); ++j) {
+              bb[j] = bs[j];
             }
           }
           break;
       }
     }
     hFacts.push_back(builder.asReader());
-    results.mbs.push_back(mb);
+    results.mbs.insert(mb);
   }
   for (auto f : hFacts) {
     Context newCtx = ctx;
@@ -303,7 +303,6 @@ DAL::FactResults PgDAL::getFacts(
       } else {
         fam[newCtx] = {f};
       }
-      //XXX: Merge in facts
     }
   }
   for (auto fa : fam) {
