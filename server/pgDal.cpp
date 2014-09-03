@@ -1,8 +1,7 @@
 #include "pgDal.h"
 
-#include <assert.h>
-
 #include <capnp/message.h>
+#include <capnp/pretty-print.h>
 #include <iostream>
 
 #include "fact_util.h"
@@ -54,7 +53,10 @@ void PgDAL::registerPrepared(std::string name, size_t n) {
 
 bool PgDAL::setFact(Holmes::Fact::Reader fact) {
   std::lock_guard<std::mutex> lock(mutex);
-  assert(typecheck(types, fact));
+  if (!typecheck(types, fact)) {
+    LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
+    throw "Fact Type Error";
+  }
   pqxx::work work(conn);
   std::string name = fact.getFactName();
   auto query = work.prepared(name + ".insert");
@@ -84,7 +86,10 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
   pqxx::work work(conn);
   std::vector<pqxx::result> res;
   for (auto fact : facts) {
-    assert(typecheck(types, fact));
+    if (!typecheck(types, fact)) {
+      LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
+      throw "Fact Type Error";
+    }
     std::string name = fact.getFactName();
     auto query = work.prepared(name + ".insert");
     for (auto arg : fact.getArgs()) {

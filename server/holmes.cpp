@@ -57,6 +57,7 @@ class HolmesImpl final : public Holmes::Server {
     }
     kj::Promise<void> analyzer(AnalyzerContext context) override {
       auto params = context.getParams();
+      DLOG(INFO) << "analyzer() " << std::string(params.getName());
       Analyzer* a = new Analyzer(params.getName(), params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
       return a->run(dal.get()).then([this](bool m){
@@ -70,6 +71,7 @@ class HolmesImpl final : public Holmes::Server {
     }
     kj::Promise<void> registerType(RegisterTypeContext context) override {
       auto params = context.getParams();
+      DLOG(INFO) << "registerType() " << std::string(params.getFactName());
       bool valid = dal->addType(std::string(params.getFactName()),
                                 params.getArgTypes());
       context.getResults().setValid(valid);
