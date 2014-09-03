@@ -53,6 +53,8 @@ class ValCompare {
       DataCompare dc;
 
       switch (x.which()) {
+        case Holmes::Val::JSON_VAL:
+          COMPARE_X_Y_VAL(Json);
         case Holmes::Val::STRING_VAL:
           COMPARE_X_Y_VAL(String);
         case Holmes::Val::ADDR_VAL:

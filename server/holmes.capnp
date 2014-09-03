@@ -10,6 +10,7 @@ interface Holmes {
       stringVal @0 :Text;
       addrVal   @1 :UInt64;
       blobVal   @2 :Data;
+      jsonVal   @3 :Text;
     }
   }
   
@@ -18,6 +19,7 @@ interface Holmes {
     string @0;
     addr   @1;
     blob   @2;
+    json   @3;
   }
 
   # Variables

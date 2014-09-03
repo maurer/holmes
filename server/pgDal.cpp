@@ -27,6 +27,8 @@ void PgDAL::initDB() {
       typ = Holmes::HType::STRING;
     } else if (type_string == "bytea") {
       typ = Holmes::HType::BLOB;
+    } else if (type_string == "jsonb") {
+      typ = Holmes::HType::JSON;
     } else {
       std::cerr << "Type parse failure: " << type_string << std::endl;
       exit(1);
@@ -62,6 +64,9 @@ bool PgDAL::setFact(Holmes::Fact::Reader fact) {
   auto query = work.prepared(name + ".insert");
   for (auto arg : fact.getArgs()) {
     switch (arg.which()) {
+      case Holmes::Val::JSON_VAL:
+        query(std::string(arg.getJsonVal()));
+        break;
       case Holmes::Val::STRING_VAL:
         query(std::string(arg.getStringVal()));
         break;
@@ -94,6 +99,9 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
     auto query = work.prepared(name + ".insert");
     for (auto arg : fact.getArgs()) {
       switch (arg.which()) {
+        case Holmes::Val::JSON_VAL:
+          query(std::string(arg.getJsonVal()));
+          break;
         case Holmes::Val::STRING_VAL:
           query(std::string(arg.getStringVal()));
           break;
@@ -121,6 +129,8 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
 
 std::string htype_to_sqltype(Holmes::HType hType) {
   switch (hType) {
+    case Holmes::HType::JSON:
+      return "jsonb";
     case Holmes::HType::STRING:
       return "varchar";
     case Holmes::HType::ADDR:
@@ -188,6 +198,8 @@ bool PgDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argType
 
 std::string quoteVal(pqxx::work& w, Holmes::Val::Reader v) {
   switch (v.which()) {
+    case Holmes::Val::JSON_VAL:
+      return w.quote(std::string(v.getJsonVal()));
     case Holmes::Val::STRING_VAL:
       return w.quote(std::string(v.getStringVal()));
     case Holmes::Val::BLOB_VAL:
@@ -283,6 +295,9 @@ DAL::FactResults PgDAL::getFacts(
       auto fa = fb.initArgs(typ.size());
       for (size_t j = 0; j < typ.size(); ++j, ++i) {
         switch (typ[j]) {
+          case Holmes::HType::JSON:
+            fa[j].setJsonVal(soln[i].as<std::string>());
+            break;
           case Holmes::HType::ADDR:
             fa[j].setAddrVal(soln[i].as<int64_t>());
             break;
@@ -358,6 +373,9 @@ DAL::FactResults PgDAL::getFacts(
     for (size_t i = 0; i < f.size(); i++) {
       pqxx::field arg = f[(int)i];
       switch (type[i]) {
+        case Holmes::HType::JSON:
+          flb[i].setJsonVal(arg.as<std::string>());
+          break;
         case Holmes::HType::ADDR:
           //Postgres has no uint64_t storage
           flb[i].setAddrVal(static_cast<uint64_t>(arg.as<int64_t>()));

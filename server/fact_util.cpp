@@ -18,6 +18,12 @@ bool typecheck(const std::map<std::string, std::vector<Holmes::HType>> &types,
   }
   for (size_t i = 0; i < fa.size(); i++) {
     switch (fa[i].which()) {
+      case Holmes::Val::JSON_VAL:
+        if (ts[i] != Holmes::HType::JSON) {
+          LOG(ERROR) << "Non-json value at position " << i << " in fact " << std::string(fact.getFactName());
+          return false;
+        }
+        break;
       case Holmes::Val::STRING_VAL:
         if (ts[i] != Holmes::HType::STRING) {
           LOG(ERROR) << "Non-string value at position " << i << " in fact " << std::string(fact.getFactName());
