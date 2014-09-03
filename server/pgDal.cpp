@@ -133,7 +133,7 @@ std::string htype_to_sqltype(Holmes::HType hType) {
 
 bool valid_name(std::string s) {
   for (auto c : s) {
-    if (c == '-') {
+    if (c == '_') {
       continue;
     }
     if ((c >= 'a') && (c <= 'z')) {
