@@ -6,7 +6,6 @@
 
 #include "holmes.capnp.h"
 #include "pgDal.h"
-#include "memDal.h"
 #include "analyzer.h"
 
 namespace holmes {
