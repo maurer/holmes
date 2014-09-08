@@ -58,14 +58,14 @@ interface Holmes {
   
   # Callback provided by an analysis
   interface Analysis {
-    analyze @0 (context :List(Asgn), premises :List(Fact)) -> (derived :List(Fact));
+    analyze @0 (context :List(Asgn)) -> (derived :List(Fact));
   }
 
   # Assert a fact to the server
   set @0 (facts :List(Fact));
   
   # Ask the server to search for facts
-  derive @1 (target :List(FactTemplate)) -> (facts :List(Fact));
+  derive @1 (target :List(FactTemplate)) -> (ctx :List(List(Asgn)));
   
   # Register as an analysis
   analyzer @2 (name        :Text,

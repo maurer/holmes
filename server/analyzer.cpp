@@ -17,13 +17,8 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
     KJ_MAP(fa, frs.results) {
       if (cache.miss(fa)) {
         auto req = analysis.analyzeRequest();
-        auto premBuilder = req.initPremises(fa.facts.size());
-        auto dex = 0;
-        for (auto f : fa.facts) {
-          premBuilder.setWithCaveats(dex++, f);
-        }
         auto ctxBuilder = req.initContext(fa.context.size());
-        dex = 0;
+        auto dex = 0;
         for (auto kv : fa.context) {
           ctxBuilder[dex].setVar(kv.first);
           ctxBuilder[dex++].setVal(kv.second);
