@@ -36,13 +36,13 @@ class HolmesImpl final : public Holmes::Server {
     HolmesImpl(Own<DAL> dal) : dal(mv(dal)) {}
     kj::Promise<void> set(SetContext context) override {
       DLOG(INFO) << "set()";
-      if (dal->setFact(context.getParams().getFact())) {
+      if (dal->setFacts(context.getParams().getFacts())) {
         return runAll();
       }
       return kj::READY_NOW;
     }
     kj::Promise<void> derive(DeriveContext context) override {
-      auto factAssigns = dal->getFacts(context.getParams().getTarget(), DAL::Context());
+      auto factAssigns = dal->getFacts(context.getParams().getTarget());
       std::vector<Holmes::Fact::Reader> facts;
       for (auto&& factAssign : factAssigns.results) {
         facts.insert(facts.end(), factAssign.facts.begin(), factAssign.facts.end());

@@ -62,13 +62,10 @@ interface Holmes {
   }
 
   # Assert a fact to the server
-  set @0 (fact :Fact);
+  set @0 (facts :List(Fact));
   
   # Ask the server to search for facts
-  # For now, variables don't do much (unless you want to unify two fields
-  # of the same fact), but once search queries are more complex we may
-  # return an Asgn structure.
-  derive @1 (target :FactTemplate) -> (facts :List(Fact));
+  derive @1 (target :List(FactTemplate)) -> (facts :List(Fact));
   
   # Register as an analysis
   analyzer @2 (name        :Text,

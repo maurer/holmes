@@ -101,46 +101,9 @@ class DAL {
         KJ_DISALLOW_COPY(FactResults);
     };
     virtual ~DAL(){}
-    virtual bool setFact(Holmes::Fact::Reader) = 0;
-    virtual size_t setFacts(capnp::List<Holmes::Fact>::Reader facts) {
-      size_t f = 0;
-      for (auto fact : facts) {
-        if (setFact(fact)) {
-          f++;
-        }
-      }
-      return f;
-    }
+    virtual size_t setFacts(capnp::List<Holmes::Fact>::Reader facts) = 0;
     virtual bool addType(std::string, capnp::List<Holmes::HType>::Reader) = 0;
-    virtual FactResults getFacts(
-      Holmes::FactTemplate::Reader,
-      Context ctx) = 0;
-    virtual FactResults getFacts(capnp::List<Holmes::FactTemplate>::Reader premises) {
-      std::vector<FactAssignment> fas;
-      fas.push_back(FactAssignment());
-      std::vector<FactResults> frs;
-      for (auto premise : premises) {
-        std::vector<FactAssignment> newFas;
-        for (auto&& fa : fas) {
-          auto newFr = getFacts(premise, fa.context);
-          DLOG(INFO) << "Search step got " << newFr.results.size() << " results.";
-          for (auto&& newFa : newFr.results) {
-            newFa.combine(fa);
-            newFas.push_back(newFa);
-          }
-          frs.push_back(kj::mv(newFr));
-        }
-        fas = kj::mv(newFas);
-      }
-      FactResults x;
-      for (auto&& fr : frs) {
-        x.mbs.insert(fr.mbs.begin(), fr.mbs.end());
-        fr.mbs.clear();
-      }
-      DLOG(INFO) << "Returning " << fas.size() << " results.";
-      x.results = kj::mv(fas);
-      return x;
-    }
+    virtual FactResults getFacts(capnp::List<Holmes::FactTemplate>::Reader premises) = 0;
 };
 
 }
