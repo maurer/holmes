@@ -42,13 +42,13 @@ class HolmesImpl final : public Holmes::Server {
       return kj::READY_NOW;
     }
     kj::Promise<void> derive(DeriveContext context) override {
-      auto factAssigns = dal->getFacts(context.getParams().getTarget());
-      auto builder = context.getResults().initCtx(factAssigns.results.size());
+      auto ctxs = dal->getFacts(context.getParams().getTarget());
+      auto builder = context.getResults().initCtx(ctxs.size());
       auto dex = 0;
-      for (auto&& factAssign : factAssigns.results) {
-        auto innerBuilder = builder.init(dex, factAssign.context.size());
+      for (auto&& ctx : ctxs) {
+        auto innerBuilder = builder.init(dex, ctx.size());
         auto dex2 = 0;
-        for (auto&& asgn : factAssign.context) {
+        for (auto&& asgn : ctx) {
           innerBuilder[dex2].setVar(asgn.first);
           innerBuilder[dex2++].setVal(asgn.second);
         }

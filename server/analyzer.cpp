@@ -10,32 +10,30 @@ namespace holmes {
 
 kj::Promise<bool> Analyzer::run(DAL *dal) {
   std::vector<Holmes::Fact::Reader> searchedFacts;
-  std::vector<DAL::FactAssignment> fas;
-  fas.push_back(DAL::FactAssignment());
-  DAL::FactResults frs = dal->getFacts(premises);
+  auto ctxs = dal->getFacts(premises);
   kj::Array<kj::Promise<bool>> analResults =
-    KJ_MAP(fa, frs.results) {
-      if (cache.miss(fa)) {
+    KJ_MAP(ctx, ctxs) {
+      if (cache.miss(ctx)) {
         auto req = analysis.analyzeRequest();
-        auto ctxBuilder = req.initContext(fa.context.size());
+        auto ctxBuilder = req.initContext(ctx.size());
         auto dex = 0;
-        for (auto kv : fa.context) {
+        for (auto kv : ctx) {
           ctxBuilder[dex].setVar(kv.first);
           ctxBuilder[dex++].setVal(kv.second);
         }
-        return req.send().then([this, dal, fa = kj::mv(fa)](Holmes::Analysis::AnalyzeResults::Reader res){
+        return req.send().then([this, dal, ctx = kj::mv(ctx)](Holmes::Analysis::AnalyzeResults::Reader res){
           auto dfs = res.getDerived();
           bool dirty = false;
           if (dal->setFacts(dfs) != 0) {
             dirty = true;
           }
-          cache.add(fa);
+          cache.add(ctx);
           return dirty;
         });
       }
       return kj::Promise<bool>(false);
     };
-  return kj::joinPromises(kj::mv(analResults)).then([frs=kj::mv(frs), this](kj::Array<bool> x){
+  return kj::joinPromises(kj::mv(analResults)).then([this](kj::Array<bool> x){
     bool dirty = false;
     for (auto v : x) {
       dirty |= v;

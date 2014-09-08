@@ -179,11 +179,10 @@ std::string quoteVal(pqxx::work& w, Holmes::Val::Reader v) {
   throw "Failed to quote value";
 }
 
-DAL::FactResults PgDAL::getFacts(
+std::vector<DAL::Context> PgDAL::getFacts(
   capnp::List<Holmes::FactTemplate>::Reader clauses) {
   std::lock_guard<std::mutex> lock(mutex);
   pqxx::work work(conn);
-  DAL::FactResults results;
   std::vector<std::string> whereClause; //Concrete values
   std::map<std::string, size_t> bindings;//Bound indices
   std::map<std::string, std::string> bindName;
@@ -249,46 +248,40 @@ DAL::FactResults PgDAL::getFacts(
   auto res = work.exec(query); 
   work.commit();
   DLOG(INFO) << "Query complete";
+  std::vector<Context> ctxs;
   for (auto soln : res) {
     int i = 0;
-    std::vector<Holmes::Fact::Reader> fs;
-    DAL::FactAssignment rfa;
+    Context ctx;
     for (auto clause : clauses) {
       auto typ = types[clause.getFactName()];
-      capnp::MallocMessageBuilder *mb = new capnp::MallocMessageBuilder;
-      auto fb = mb->initRoot<Holmes::Fact>();
-      fb.setFactName(clause.getFactName());
       auto args = clause.getArgs();
-      auto fa = fb.initArgs(typ.size());
       for (size_t j = 0; j < typ.size(); ++j, ++i) {
-        switch (typ[j]) {
-          case Holmes::HType::JSON:
-            fa[j].setJsonVal(soln[i].as<std::string>());
-            break;
-          case Holmes::HType::ADDR:
-            fa[j].setAddrVal(soln[i].as<int64_t>());
-            break;
-          case Holmes::HType::STRING:
-            fa[j].setStringVal(soln[i].as<std::string>());
-            break;
-          case Holmes::HType::BLOB:
-            pqxx::binarystring bs(soln[i]);
-            auto bb = fa[j].initBlobVal(bs.size());
-            for (size_t k = 0; k < bs.size(); ++k) {
-              bb[k] = bs[k];
-            }
-            break;
-        }
         if (args[j].which() == Holmes::TemplateVal::BOUND) {
-          rfa.context[std::string(args[j].getBound())] = fa[j];
+          auto val = ctx.init(std::string(args[j].getBound()));
+          switch (typ[j]) {
+            case Holmes::HType::JSON:
+              val.setJsonVal(soln[i].as<std::string>());
+              break;
+            case Holmes::HType::ADDR:
+              val.setAddrVal(soln[i].as<int64_t>());
+              break;
+            case Holmes::HType::STRING:
+              val.setStringVal(soln[i].as<std::string>());
+              break;
+            case Holmes::HType::BLOB:
+              pqxx::binarystring bs(soln[i]);
+              auto bb = val.initBlobVal(bs.size());
+              for (size_t k = 0; k < bs.size(); ++k) {
+                bb[k] = bs[k];
+              }
+              break;
+          }
         }
-        results.mbs.insert(mb);
-        rfa.facts.push_back(fb);
       }
     }
-    results.results.push_back(rfa);
+    ctxs.push_back(ctx);
   }
-  return results;
+  return ctxs;
 }
 
 }

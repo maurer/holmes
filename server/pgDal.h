@@ -23,7 +23,7 @@ class PgDAL : public DAL {
     PgDAL() : conn() {initDB();}
     PgDAL(std::string connStr) : conn(connStr) {initDB();}
     size_t setFacts(capnp::List<Holmes::Fact>::Reader);
-    DAL::FactResults getFacts(capnp::List<Holmes::FactTemplate>::Reader);
+    std::vector<DAL::Context> getFacts(capnp::List<Holmes::FactTemplate>::Reader);
     bool addType(std::string name,
                  capnp::List<Holmes::HType>::Reader argTypes);
   private:

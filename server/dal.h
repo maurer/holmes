@@ -34,6 +34,13 @@ class DAL {
         size_t size() const {
           return ctx.size();
         }
+        Holmes::Val::Builder init(const Ctx::key_type& k) {
+          kj::Own<MMB> mb = kj::heap<MMB>();
+          auto vb = mb->initRoot<Holmes::Val>();
+          ctx[k] = mb->getRoot<Holmes::Val>();
+          mbs.push_back(kj::mv(mb));
+          return vb;
+        }
         template <class InputIterator>
         void insert (InputIterator first, InputIterator last) {
           for (auto i = first; i != last; ++i) {
@@ -53,10 +60,10 @@ class DAL {
           return ctx[k];
         }
         Context(const Context& context) {
-          for (auto&& i : context.ctx) {
+          for (auto i = context.ctx.begin(); i != context.ctx.end(); ++i) {
             kj::Own<MMB> mb = kj::heap<MMB>();
-            mb->setRoot(i.second);
-            ctx[i.first] = mb->getRoot<Holmes::Val>();
+            mb->setRoot(i->second);
+            ctx[i->first] = mb->getRoot<Holmes::Val>();
             mbs.push_back(kj::mv(mb));
           }
         }
@@ -73,37 +80,10 @@ class DAL {
         }
         Context() = default;
     };
-    struct FactAssignment {
-      FactAssignment(){}
-      FactAssignment(Context ctx, std::vector<Holmes::Fact::Reader> facts)
-        : context(kj::mv(ctx))
-        , facts(facts) {}
-      Context context;
-      std::vector<Holmes::Fact::Reader> facts;
-      inline void combine(FactAssignment &x){
-        context.insert(x.context.begin(), x.context.end());
-        facts.insert(facts.begin(), x.facts.begin(), x.facts.end());
-      }
-    };
-    class FactResults {
-      public:
-        FactResults() {}
-        std::vector<FactAssignment> results;
-        std::set<capnp::MallocMessageBuilder*> mbs;
-        ~FactResults() {
-          for (auto mb : mbs) {
-            delete mb;
-          }
-        }
-        FactResults(FactResults&&) = default;
-        FactResults& operator=(FactResults&&) = default;
-      private:
-        KJ_DISALLOW_COPY(FactResults);
-    };
     virtual ~DAL(){}
     virtual size_t setFacts(capnp::List<Holmes::Fact>::Reader facts) = 0;
     virtual bool addType(std::string, capnp::List<Holmes::HType>::Reader) = 0;
-    virtual FactResults getFacts(capnp::List<Holmes::FactTemplate>::Reader premises) = 0;
+    virtual std::vector<Context> getFacts(capnp::List<Holmes::FactTemplate>::Reader premises) = 0;
 };
 
 }

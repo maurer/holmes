@@ -35,29 +35,24 @@ class Analyzer {
         std::mutex mutex;
         std::map<DAL::Context, size_t, ContextCompare> cache;
       public:
-        bool miss(DAL::FactAssignment fa) {
+        bool miss(DAL::Context ctx) {
           std::lock_guard<std::mutex> lock(mutex);
-          auto iti = cache.find(fa.context);
+          auto iti = cache.find(ctx);
           if (iti == cache.end()) {
             // No entry
             return true;
           } else {
-            if (iti->second >= fa.facts.size()) {
-              return false; //we've already seen these
-            } else {
-              return true; //We've seen this assignment, but new facts
-            }
+            return false;
           }
         }
-        void add(DAL::FactAssignment fa) {
+        void add(DAL::Context ctx) {
           std::lock_guard<std::mutex> lock(mutex);
-          auto iti = cache.find(fa.context);
+          auto iti = cache.find(ctx);
           if (iti == cache.end()) {
-            cache[fa.context] = fa.facts.size();
+            cache[ctx] = 1; //Leaving as a map, this will be where
+                                   //we add forall
           } else {
-            if (iti->second < fa.facts.size()) {
-              iti->second = fa.facts.size();
-            }
+            iti->second = 1;
           }
         }
     };
