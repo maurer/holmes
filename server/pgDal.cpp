@@ -187,13 +187,13 @@ std::vector<DAL::Context> PgDAL::getFacts(
   pqxx::work work(conn);
   std::vector<std::string> whereClause; //Concrete values
   std::vector<std::string> bindName;
-  size_t argN = 0; // Current global arg number
+  std::vector<Holmes::HType> bindType;
   std::string query = "";
   for (auto itc = clauses.begin(); itc != clauses.end(); ++itc) {
     std::string tableName = "facts.";
     tableName += itc->getFactName();
     if (itc == clauses.begin()) {
-      query += "SELECT * FROM ";
+      query += " FROM ";
     } else if (itc != clauses.end()) {
       query += " JOIN ";
     }
@@ -203,7 +203,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
     }
     auto args = itc->getArgs();
     bool onClause = true;
-    for (size_t i = 0; i < args.size(); ++i, ++argN) {
+    for (size_t i = 0; i < args.size(); ++i) {
       switch (args[i].which()) {
         case Holmes::TemplateVal::EXACT_VAL:
           whereClause.push_back(tableName + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
@@ -216,6 +216,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
             //The variable is mentioned for the first time, this is its
             //cannonical name
               bindName.push_back(argName);
+              bindType.push_back(types[itc->getFactName()][i]);
             } else {
             //This is a repeat, it needs to be unified
               std::string cond = argName + "=" + bindName[var];
@@ -246,42 +247,40 @@ std::vector<DAL::Context> PgDAL::getFacts(
     }
     query += *itw;
   }
+  std::string select = "SELECT ";
+  for (size_t i = 0; i < bindName.size(); i++) {
+    select += bindName[i];
+    if (i + 1 < bindName.size()) {
+      select += ", ";
+    }
+  }
+  query = select + query;
   DLOG(INFO) << "Executing join query: " << query;
   auto res = work.exec(query); 
   work.commit();
   DLOG(INFO) << "Query complete";
   std::vector<Context> ctxs;
   for (auto soln : res) {
-    int i = 0;
     Context ctx;
-    for (auto clause : clauses) {
-      auto typ = types[clause.getFactName()];
-      auto args = clause.getArgs();
-      for (size_t j = 0; j < typ.size(); ++j, ++i) {
-        if (args[j].which() == Holmes::TemplateVal::BOUND) {
-          if (args[j].getBound() == ctx.size()) {
-            auto val = ctx.init();
-            switch (typ[j]) {
-              case Holmes::HType::JSON:
-                val.setJsonVal(soln[i].as<std::string>());
-                break;
-              case Holmes::HType::ADDR:
-                val.setAddrVal(soln[i].as<int64_t>());
-                break;
-              case Holmes::HType::STRING:
-                val.setStringVal(soln[i].as<std::string>());
-                break;
-              case Holmes::HType::BLOB:
-                pqxx::binarystring bs(soln[i]);
-                auto bb = val.initBlobVal(bs.size());
-                for (size_t k = 0; k < bs.size(); ++k) {
-                  bb[k] = bs[k];
-                }
-                break;
-            }
+    for (int i = 0; i < bindType.size(); i++) {
+      auto val = ctx.init();
+      switch (bindType[i]) {
+        case Holmes::HType::JSON:
+          val.setJsonVal(soln[i].as<std::string>());
+          break;
+        case Holmes::HType::ADDR:
+          val.setAddrVal(soln[i].as<int64_t>());
+          break;
+        case Holmes::HType::STRING:
+          val.setStringVal(soln[i].as<std::string>());
+          break;
+        case Holmes::HType::BLOB:
+          pqxx::binarystring bs(soln[i]);
+          auto bb = val.initBlobVal(bs.size());
+          for (size_t k = 0; k < bs.size(); ++k) {
+            bb[k] = bs[k];
           }
-          KJ_REQUIRE(args[j].getBound() < ctx.size(), "arg must be bound");
-        }
+          break;
       }
     }
     ctxs.push_back(ctx);
