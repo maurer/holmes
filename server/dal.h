@@ -17,7 +17,7 @@ class DAL {
   public:
     class Context {
       typedef capnp::MallocMessageBuilder MMB;
-      typedef std::map<std::string, Holmes::Val::Reader> Ctx;
+      typedef std::vector<Holmes::Val::Reader> Ctx;
       private:
         std::vector<kj::Own<MMB>> mbs;
         Ctx ctx;
@@ -28,16 +28,13 @@ class DAL {
         Ctx::const_iterator end() const {
           return ctx.end();
         }
-        Ctx::const_iterator find(std::string k) const {
-          return ctx.find(k);
-        }
         size_t size() const {
           return ctx.size();
         }
-        Holmes::Val::Builder init(const Ctx::key_type& k) {
+        Holmes::Val::Builder init() {
           kj::Own<MMB> mb = kj::heap<MMB>();
           auto vb = mb->initRoot<Holmes::Val>();
-          ctx[k] = mb->getRoot<Holmes::Val>();
+          ctx.push_back(mb->getRoot<Holmes::Val>());
           mbs.push_back(kj::mv(mb));
           return vb;
         }
@@ -45,37 +42,21 @@ class DAL {
         void insert (InputIterator first, InputIterator last) {
           for (auto i = first; i != last; ++i) {
             kj::Own<MMB> mb = kj::heap<MMB>();
-            mb->setRoot(i->second);
-            ctx[i->first] = mb->getRoot<Holmes::Val>();
+            mb->setRoot(*i);
+            ctx.push_back(mb->getRoot<Holmes::Val>());
             mbs.push_back(kj::mv(mb));
           }
         }
-        void insert(std::pair<std::string, Holmes::Val::Reader> i) {
-          kj::Own<MMB> mb = kj::heap<MMB>();;
-          mb->setRoot(i.second);
-          ctx[i.first] = mb->getRoot<Holmes::Val>();
-          mbs.push_back(kj::mv(mb));
-        }
-        Ctx::mapped_type& operator[] (const Ctx::key_type& k) {
+        Holmes::Val::Reader operator[] (const size_t k) {
           return ctx[k];
         }
         Context(const Context& context) {
-          for (auto i = context.ctx.begin(); i != context.ctx.end(); ++i) {
-            kj::Own<MMB> mb = kj::heap<MMB>();
-            mb->setRoot(i->second);
-            ctx[i->first] = mb->getRoot<Holmes::Val>();
-            mbs.push_back(kj::mv(mb));
-          }
+          insert(context.ctx.begin(), context.ctx.end());
         }
         Context(Context&&) = default;
         Context& operator=(Context&&) = default;
         Context& operator=(const Context& context) {
-          for (auto&& i : context.ctx) {
-            kj::Own<MMB> mb = kj::heap<MMB>();
-            mb->setRoot(i.second);
-            ctx[i.first] = mb->getRoot<Holmes::Val>();
-            mbs.push_back(kj::mv(mb));
-          }
+          insert(context.ctx.begin(), context.ctx.end());
           return *this;
         }
         Context() = default;

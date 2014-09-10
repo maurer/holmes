@@ -17,9 +17,8 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
         auto req = analysis.analyzeRequest();
         auto ctxBuilder = req.initContext(ctx.size());
         auto dex = 0;
-        for (auto kv : ctx) {
-          ctxBuilder[dex].setVar(kv.first);
-          ctxBuilder[dex++].setVal(kv.second);
+        for (auto&& val : ctx) {
+          ctxBuilder.setWithCaveats(dex++, val);
         }
         return req.send().then([this, dal, ctx = kj::mv(ctx)](Holmes::Analysis::AnalyzeResults::Reader res){
           auto dfs = res.getDerived();

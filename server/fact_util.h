@@ -95,29 +95,12 @@ class FactCompare {
     }
 };
 
-class AsgnCompare {
-  public:
-    typedef std::pair<std::string, Holmes::Val::Reader> Asgn;
-    bool operator() (const Asgn& x, const Asgn& y) {
-      if (x.first < y.first) {
-        return true;
-      } else if (x.first > y.first) {
-        return false;
-      }
-      ValCompare comp;
-      if (comp(x.second, y.second)) {
-        return true;
-      }
-      return false;
-    }
-};
-
 class ContextCompare {
   public:
     bool operator() (const DAL::Context& x, const DAL::Context& y) {
       return std::lexicographical_compare(x.begin(), x.end(),
                                           y.begin(), y.end(),
-                                          AsgnCompare());
+                                          ValCompare());
     }
 };
 

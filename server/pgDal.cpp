@@ -2,6 +2,8 @@
 
 #include <capnp/message.h>
 #include <capnp/pretty-print.h>
+#include <kj/debug.h>
+
 #include <iostream>
 
 #include "fact_util.h"
@@ -184,8 +186,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
   std::lock_guard<std::mutex> lock(mutex);
   pqxx::work work(conn);
   std::vector<std::string> whereClause; //Concrete values
-  std::map<std::string, size_t> bindings;//Bound indices
-  std::map<std::string, std::string> bindName;
+  std::vector<std::string> bindName;
   size_t argN = 0; // Current global arg number
   std::string query = "";
   for (auto itc = clauses.begin(); itc != clauses.end(); ++itc) {
@@ -211,12 +212,13 @@ std::vector<DAL::Context> PgDAL::getFacts(
           {
             auto var = args[i].getBound();
             auto argName = tableName + ".arg" + std::to_string(i);
-            bindings[var] = argN;
-            auto ito = bindName.find(var);
-            if (ito == bindName.end()) {
-              bindName[var] = argName;
+            if (var >= bindName.size()) {
+            //The variable is mentioned for the first time, this is its
+            //cannonical name
+              bindName.push_back(argName);
             } else {
-              std::string cond = argName + "=" + ito->second;
+            //This is a repeat, it needs to be unified
+              std::string cond = argName + "=" + bindName[var];
               if (itc == clauses.begin()) {
                 //First table has no on clause, stash these in the where clause
                 whereClause.push_back(cond);
@@ -257,25 +259,28 @@ std::vector<DAL::Context> PgDAL::getFacts(
       auto args = clause.getArgs();
       for (size_t j = 0; j < typ.size(); ++j, ++i) {
         if (args[j].which() == Holmes::TemplateVal::BOUND) {
-          auto val = ctx.init(std::string(args[j].getBound()));
-          switch (typ[j]) {
-            case Holmes::HType::JSON:
-              val.setJsonVal(soln[i].as<std::string>());
-              break;
-            case Holmes::HType::ADDR:
-              val.setAddrVal(soln[i].as<int64_t>());
-              break;
-            case Holmes::HType::STRING:
-              val.setStringVal(soln[i].as<std::string>());
-              break;
-            case Holmes::HType::BLOB:
-              pqxx::binarystring bs(soln[i]);
-              auto bb = val.initBlobVal(bs.size());
-              for (size_t k = 0; k < bs.size(); ++k) {
-                bb[k] = bs[k];
-              }
-              break;
+          if (args[j].getBound() == ctx.size()) {
+            auto val = ctx.init();
+            switch (typ[j]) {
+              case Holmes::HType::JSON:
+                val.setJsonVal(soln[i].as<std::string>());
+                break;
+              case Holmes::HType::ADDR:
+                val.setAddrVal(soln[i].as<int64_t>());
+                break;
+              case Holmes::HType::STRING:
+                val.setStringVal(soln[i].as<std::string>());
+                break;
+              case Holmes::HType::BLOB:
+                pqxx::binarystring bs(soln[i]);
+                auto bb = val.initBlobVal(bs.size());
+                for (size_t k = 0; k < bs.size(); ++k) {
+                  bb[k] = bs[k];
+                }
+                break;
+            }
           }
+          KJ_REQUIRE(args[j].getBound() < ctx.size(), "arg must be bound");
         }
       }
     }

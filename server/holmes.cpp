@@ -49,8 +49,7 @@ class HolmesImpl final : public Holmes::Server {
         auto innerBuilder = builder.init(dex, ctx.size());
         auto dex2 = 0;
         for (auto&& asgn : ctx) {
-          innerBuilder[dex2].setVar(asgn.first);
-          innerBuilder[dex2++].setVal(asgn.second);
+          innerBuilder.setWithCaveats(dex2++, asgn);
         }
       }
       return kj::READY_NOW;

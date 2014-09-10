@@ -23,16 +23,7 @@ interface Holmes {
   }
 
   # Variables
-  # There is probably a good way to use numbers for space/speed, but
-  # for now ease of debugging is more important
-  using Var = Text;
-
-  # Assignments
-  # Used in instanced analyses/queries
-  struct Asgn {
-    var @0 :Var;
-    val @1 :Val;
-  }
+  using Var = UInt32;
 
   # Logical facts
   using FactName = Text;
@@ -51,6 +42,7 @@ interface Holmes {
   }
 
   # FactTemplate to be used as a search query
+  # Variables _must_ be used from 0+ sequentially.
   struct FactTemplate {
     factName @0 :FactName;
     args     @1 :List(TemplateVal);
@@ -58,14 +50,14 @@ interface Holmes {
   
   # Callback provided by an analysis
   interface Analysis {
-    analyze @0 (context :List(Asgn)) -> (derived :List(Fact));
+    analyze @0 (context :List(Val)) -> (derived :List(Fact));
   }
 
   # Assert a fact to the server
   set @0 (facts :List(Fact));
   
   # Ask the server to search for facts
-  derive @1 (target :List(FactTemplate)) -> (ctx :List(List(Asgn)));
+  derive @1 (target :List(FactTemplate)) -> (ctx :List(List(Val)));
   
   # Register as an analysis
   analyzer @2 (name        :Text,
