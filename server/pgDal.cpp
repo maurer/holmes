@@ -180,7 +180,26 @@ std::string quoteVal(pqxx::work& w, Holmes::Val::Reader v) {
   }
   throw "Failed to quote value";
 }
-
+void buildFromDB(Holmes::HType typ, Holmes::Val::Builder val, pqxx::result::field dbVal) {
+  switch (typ) {
+    case Holmes::HType::JSON:
+      val.setJsonVal(dbVal.as<std::string>());
+      break;
+    case Holmes::HType::ADDR:
+      val.setAddrVal(dbVal.as<int64_t>());
+      break;
+    case Holmes::HType::STRING:
+      val.setStringVal(dbVal.as<std::string>());
+      break;
+    case Holmes::HType::BLOB:
+      pqxx::binarystring bs(dbVal);
+      auto bb = val.initBlobVal(bs.size());
+      for (size_t k = 0; k < bs.size(); ++k) {
+        bb[k] = bs[k];
+      }
+  }
+}
+ 
 std::vector<DAL::Context> PgDAL::getFacts(
   capnp::List<Holmes::FactTemplate>::Reader clauses) {
   std::lock_guard<std::mutex> lock(mutex);
@@ -188,6 +207,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
   std::vector<std::string> whereClause; //Concrete values
   std::vector<std::string> bindName;
   std::vector<Holmes::HType> bindType;
+  std::vector<bool> bindAll;
   std::string query = "";
   for (auto itc = clauses.begin(); itc != clauses.end(); ++itc) {
     std::string tableName = "facts.";
@@ -209,14 +229,21 @@ std::vector<DAL::Context> PgDAL::getFacts(
           whereClause.push_back(tableName + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
           break;
         case Holmes::TemplateVal::BOUND:
+        case Holmes::TemplateVal::FORALL:
           {
-            auto var = args[i].getBound();
+            uint32_t var;
+            if (args[i].which() == Holmes::TemplateVal::BOUND) {
+              var = args[i].getBound();
+            } else {
+              var = args[i].getForall();
+            }
             auto argName = tableName + ".arg" + std::to_string(i);
             if (var >= bindName.size()) {
             //The variable is mentioned for the first time, this is its
             //cannonical name
               bindName.push_back(argName);
               bindType.push_back(types[itc->getFactName()][i]);
+              bindAll.push_back(args[i].which() == Holmes::TemplateVal::FORALL);
             } else {
             //This is a repeat, it needs to be unified
               std::string cond = argName + "=" + bindName[var];
@@ -248,13 +275,20 @@ std::vector<DAL::Context> PgDAL::getFacts(
     query += *itw;
   }
   std::string select = "SELECT ";
+  std::string groupBy = " GROUP BY ";
   for (size_t i = 0; i < bindName.size(); i++) {
-    select += bindName[i];
+    if (bindAll[i]) {
+      select += "array_agg(" + bindName[i] + ")";
+    } else {
+      select += bindName[i];
+      groupBy += bindName[i] + ",";
+    }
     if (i + 1 < bindName.size()) {
       select += ", ";
     }
   }
-  query = select + query;
+  groupBy.erase(groupBy.size()-1);
+  query = select + query + groupBy;
   DLOG(INFO) << "Executing join query: " << query;
   auto res = work.exec(query); 
   work.commit();
@@ -264,23 +298,12 @@ std::vector<DAL::Context> PgDAL::getFacts(
     Context ctx;
     for (int i = 0; i < bindType.size(); i++) {
       auto val = ctx.init();
-      switch (bindType[i]) {
-        case Holmes::HType::JSON:
-          val.setJsonVal(soln[i].as<std::string>());
-          break;
-        case Holmes::HType::ADDR:
-          val.setAddrVal(soln[i].as<int64_t>());
-          break;
-        case Holmes::HType::STRING:
-          val.setStringVal(soln[i].as<std::string>());
-          break;
-        case Holmes::HType::BLOB:
-          pqxx::binarystring bs(soln[i]);
-          auto bb = val.initBlobVal(bs.size());
-          for (size_t k = 0; k < bs.size(); ++k) {
-            bb[k] = bs[k];
-          }
-          break;
+      if (bindAll[i]) {
+        //This is an array, and we need to make a list and bind it all.
+        //For now, let's return a string just to show it working
+        buildFromDB(Holmes::HType::STRING, val, soln[i]);
+      } else {
+        buildFromDB(bindType[i], val, soln[i]);
       }
     }
     ctxs.push_back(ctx);

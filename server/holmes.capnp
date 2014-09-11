@@ -38,6 +38,7 @@ interface Holmes {
       exactVal @0 :Val;  #Argument must have this exact value
       unbound  @1 :Void; #Argument is unrestricted
       bound    @2 :Var;  #Argument is bound to a var and must be consistent
+      forall   @3 :Var;  #Argument will aggregate a list of all possibilities
     }
   }
 

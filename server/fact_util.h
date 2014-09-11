@@ -53,6 +53,24 @@ class ValCompare {
       DataCompare dc;
 
       switch (x.which()) {
+      /*
+        case Holmes::Val::LIST_VAL: {
+          auto xl = x.getListVal();
+          auto yl = y.getListVal();
+          if (xl.size() < yl.size()) {
+            return true;
+          } else if (xl.size() > yl.size()) {
+            return false;
+          }
+          for (size_t i = 0; i < xl.size(); i++) {
+            if (this->operator()(xl[i], yl[i])) {
+              return true;
+            } else if (this->operator()(yl[i], xl[i])) {
+              return false;
+            }
+          }
+        } break;
+       */ //This will come back soon
         case Holmes::Val::JSON_VAL:
           COMPARE_X_Y_VAL(Json);
         case Holmes::Val::STRING_VAL:
