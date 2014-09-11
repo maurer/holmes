@@ -209,15 +209,17 @@ std::vector<DAL::Context> PgDAL::getFacts(
   std::vector<Holmes::HType> bindType;
   std::vector<bool> bindAll;
   std::string query = "";
-  for (auto itc = clauses.begin(); itc != clauses.end(); ++itc) {
+  size_t clauseN = 0;
+  for (auto itc = clauses.begin(); itc != clauses.end(); ++itc, ++clauseN) {
     std::string tableName = "facts.";
     tableName += itc->getFactName();
+    std::string tableVar = "tbl" + std::to_string(clauseN);
     if (itc == clauses.begin()) {
       query += " FROM ";
     } else if (itc != clauses.end()) {
       query += " JOIN ";
     }
-    query += tableName;
+    query += tableName + " " + tableVar;
     if (itc != clauses.begin()) {
       query += " ON ";
     }
@@ -226,7 +228,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
     for (size_t i = 0; i < args.size(); ++i) {
       switch (args[i].which()) {
         case Holmes::TemplateVal::EXACT_VAL:
-          whereClause.push_back(tableName + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
+          whereClause.push_back(tableVar + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
           break;
         case Holmes::TemplateVal::BOUND:
         case Holmes::TemplateVal::FORALL:
@@ -237,7 +239,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
             } else {
               var = args[i].getForall();
             }
-            auto argName = tableName + ".arg" + std::to_string(i);
+            auto argName = tableVar + ".arg" + std::to_string(i);
             if (var >= bindName.size()) {
             //The variable is mentioned for the first time, this is its
             //cannonical name
