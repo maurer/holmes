@@ -11,15 +11,19 @@ interface Holmes {
       addrVal   @1 :UInt64;
       blobVal   @2 :Data;
       jsonVal   @3 :Text;
+      listVal   @4 :List(Val);
     }
   }
   
   # Type of a dynamic variable
-  enum HType {
-    string @0;
-    addr   @1;
-    blob   @2;
-    json   @3;
+  struct HType {
+    union {
+      string @0 :Void;
+      addr   @1 :Void;
+      blob   @2 :Void;
+      json   @3 :Void;
+      list   @4 :HType;
+   }
   }
 
   # Variables

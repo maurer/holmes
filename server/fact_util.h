@@ -53,7 +53,6 @@ class ValCompare {
       DataCompare dc;
 
       switch (x.which()) {
-      /*
         case Holmes::Val::LIST_VAL: {
           auto xl = x.getListVal();
           auto yl = y.getListVal();
@@ -70,7 +69,6 @@ class ValCompare {
             }
           }
         } break;
-       */ //This will come back soon
         case Holmes::Val::JSON_VAL:
           COMPARE_X_Y_VAL(Json);
         case Holmes::Val::STRING_VAL:
@@ -122,7 +120,9 @@ class ContextCompare {
     }
 };
 
-bool typecheck(const std::map<std::string, std::vector<Holmes::HType>> &types,
+bool type_eq(Holmes::HType::Reader a, Holmes::HType::Reader b);
+
+bool typecheck(const std::map<std::string, std::vector<Holmes::HType::Reader>> &types,
                Holmes::Fact::Reader fact);
 
 
