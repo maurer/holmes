@@ -72,11 +72,40 @@ template<class T> struct string_traits<std::vector<T>>
     while (str[i] != '}') {
       assert((str[i] == '{') || (str[i] == sep));
       ++i;
-      T elem;
-      string_traits<T>::from_string(&str[i], elem);
+      std::string elem;
+      bool elemDone = false;
+      bool quoted = false;
+      bool escaped = false;
+      while (!elemDone) {
+        if (escaped) {
+          escaped = false;
+          elem += str[i++];
+          continue;
+        }
+        switch (str[i]) {
+          case '"':
+            quoted = !quoted;
+            break;
+          case '\\':
+            escaped = true;
+            break;
+          case '}':
+          case ',':
+            if (!quoted) {
+              elemDone = true;
+              --i;
+            } else {
+              elem += str[i];
+            }
+            break;
+          default:
+            elem += str[i];
+            break;
+        }
+        ++i;
+      }
       v.push_back(elem);
       //Assume that there is a _unique_ string encoding (dohohohoho)
-      i += string_traits<T>::to_string(elem).length();
     }
   }
   static PGSTD::string to_string(subject_type obj) {
@@ -442,6 +471,9 @@ std::vector<DAL::Context> PgDAL::getFacts(
     }
   }
   groupBy.erase(groupBy.size()-1);
+  if (groupBy == " GROUP BY") {
+    groupBy = "";
+  }
   query = select + query + groupBy;
   DLOG(INFO) << "Executing join query: " << query;
   auto res = work.exec(query); 
