@@ -9,7 +9,10 @@ namespace holmes {
 
 kj::Promise<bool> Analyzer::run(DAL *dal) {
   std::vector<Holmes::Fact::Reader> searchedFacts;
+  DLOG(INFO) << "Starting analysis " << name;
+  DLOG(INFO) << "Getting facts for " << name;
   auto ctxs = dal->getFacts(premises);
+  DLOG(INFO) << "Got facts for " << name;
   kj::Array<kj::Promise<bool>> analResults =
     KJ_MAP(ctx, ctxs) {
       if (cache.miss(ctx)) {
@@ -36,6 +39,7 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
     for (auto v : x) {
       dirty |= v;
     }
+    DLOG(INFO) << "Finished analysis " << name;
     return dirty;
   });
 }
