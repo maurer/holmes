@@ -1,5 +1,5 @@
 #include "fact_util.h"
-#include <glog/logging.h>
+#include "glog.h"
 
 namespace holmes {
 

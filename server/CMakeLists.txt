@@ -1,7 +1,9 @@
 find_package(Capnproto REQUIRED)
 find_package(PQXX REQUIRED)
 find_package(PostgreSQL REQUIRED)
-find_package(Glog REQUIRED)
+if(USE_GLOG)
+  find_package(Glog REQUIRED)
+endif()
 include_directories(${CAPNPROTO_INCLUDE_DIRS}
         ${GLOG_INCLUDE_DIR} ${PQXX_INCLUDE_DIR})
 CAPNPROTO_GENERATE_CPP(CAPN_SRCS CAPN_HDRS holmes.capnp)

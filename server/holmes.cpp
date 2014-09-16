@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include <capnp/ez-rpc.h>
-#include <glog/logging.h>
 
+#include "glog.h"
 #include "holmes.capnp.h"
 #include "pgDal.h"
 #include "analyzer.h"
@@ -80,8 +80,9 @@ class HolmesImpl final : public Holmes::Server {
 }
 
 int main(int argc, char* argv[]) {
+  #if USE_GLOG
   google::InitGoogleLogging(argv[0]);
-  
+  #endif
   capnp::EzRpcServer server("*");
   kj::Own<holmes::DAL> base = kj::heap<holmes::PgDAL>();
   server.exportCap("holmes", kj::heap<holmes::HolmesImpl>(kj::mv(base)));

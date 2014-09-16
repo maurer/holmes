@@ -2,8 +2,7 @@
 
 #include "dal.h"
 
-#include <glog/logging.h>
-
+#include "glog.h"
 #include <iostream>
 
 namespace holmes {
