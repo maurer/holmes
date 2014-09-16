@@ -148,7 +148,7 @@ void PgDAL::initDB() {
       typ.setString();
     } else if (type_string == "bytea") {
       typ.setBlob();
-    } else if (type_string == "json") {
+    } else if (type_string == "text") {
       typ.setJson();
     } else {
       std::cerr << "Type parse failure: " << type_string << std::endl;
@@ -223,7 +223,7 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
 std::string htype_to_sqltype(Holmes::HType::Reader hType) {
   switch (hType.which()) {
     case Holmes::HType::JSON:
-      return "json";
+      return "text";
     case Holmes::HType::STRING:
       return "varchar";
     case Holmes::HType::ADDR:
