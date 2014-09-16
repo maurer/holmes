@@ -148,7 +148,7 @@ void PgDAL::initDB() {
       typ.setString();
     } else if (type_string == "bytea") {
       typ.setBlob();
-    } else if (type_string == "jsonb") {
+    } else if (type_string == "json") {
       typ.setJson();
     } else {
       std::cerr << "Type parse failure: " << type_string << std::endl;
@@ -223,7 +223,7 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
 std::string htype_to_sqltype(Holmes::HType::Reader hType) {
   switch (hType.which()) {
     case Holmes::HType::JSON:
-      return "jsonb";
+      return "json";
     case Holmes::HType::STRING:
       return "varchar";
     case Holmes::HType::ADDR:
@@ -482,15 +482,15 @@ std::vector<DAL::Context> PgDAL::getFacts(
   std::vector<Context> ctxs;
   for (auto soln : res) {
     Context ctx;
-    for (int i = 0; i < bindType.size(); i++) {
+    for (size_t i = 0; i < bindType.size(); i++) {
       auto val = ctx.init();
       if (bindAll[i]) {
         capnp::MallocMessageBuilder mb;
         auto lt = mb.initRoot<Holmes::HType>();
         lt.setList(bindType[i]);
-        buildFromDB(mb.getRoot<Holmes::HType>(), val, soln[i]);
+        buildFromDB(mb.getRoot<Holmes::HType>(), val, soln[(int)i]);
       } else {
-        buildFromDB(bindType[i], val, soln[i]);
+        buildFromDB(bindType[i], val, soln[(int)i]);
       }
     }
     ctxs.push_back(ctx);

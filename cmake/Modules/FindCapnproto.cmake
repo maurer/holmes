@@ -43,7 +43,7 @@ function(CAPNPROTO_GENERATE_CPP SRCS HDRS)
   foreach(FIL ${ARGN})
     get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
     get_filename_component(FIL_WE ${FIL} NAME_WE)
-    get_filename_component(FIL_DIR ${ABS_FIL} DIRECTORY)
+    get_filename_component(FIL_DIR ${ABS_FIL} PATH)
 
     list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.capnp.c++")
     list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.capnp.h")
@@ -94,7 +94,7 @@ mark_as_advanced(CAPNPROTO_INCLUDE_DIR)
 find_program(CAPNPROTO_CAPNPC_EXECUTABLE
     NAMES capnpc
     DOC "Cap'n Proto Compiler"
-    PATHS
+    PATHS /usr/bin /usr/local/bin
 )
 mark_as_advanced(CAPNPROTO_CAPNPC_EXECUTABLE)
 

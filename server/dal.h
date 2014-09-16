@@ -7,8 +7,8 @@
 
 #include <kj/common.h>
 #include <capnp/message.h>
-#include <glog/logging.h>
 
+#include "glog.h"
 #include "holmes.capnp.h"
 
 namespace holmes {
