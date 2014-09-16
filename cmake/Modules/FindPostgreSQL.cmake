@@ -75,12 +75,16 @@ set(PostgreSQL_ROOT_DIR_MESSAGE "Set the PostgreSQL_ROOT system variable to wher
 
 
 set(PostgreSQL_KNOWN_VERSIONS ${PostgreSQL_ADDITIONAL_VERSIONS}
-    "9.1" "9.0" "8.4" "8.3" "8.2" "8.1" "8.0")
+    "9.4" "9.3" "9.2" "9.1" "9.0" "8.4" "8.3" "8.2" "8.1" "8.0")
 
 # Define additional search paths for root directories.
 if ( WIN32 )
   foreach (suffix ${PostgreSQL_KNOWN_VERSIONS} )
     set(PostgreSQL_ADDITIONAL_SEARCH_PATHS ${PostgreSQL_ADDITIONAL_SEARCH_PATHS} "C:/Program Files/PostgreSQL/${suffix}" )
+  endforeach()
+else()
+  foreach (suffix ${PostgreSQL_KNOWN_VERSIONS} )
+    set(PostgreSQL_ADDITIONAL_SEARCH_PATHS ${PostgreSQL_ADDITIONAL_SEARCH_PATHS} "/usr/include/postgresql/${suffix}" "/usr/local/include/postgresql/${suffix}")
   endforeach()
 endif()
 set( PostgreSQL_ROOT_DIRECTORIES
