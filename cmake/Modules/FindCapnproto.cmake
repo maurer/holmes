@@ -94,7 +94,7 @@ mark_as_advanced(CAPNPROTO_INCLUDE_DIR)
 find_program(CAPNPROTO_CAPNPC_EXECUTABLE
     NAMES capnpc
     DOC "Cap'n Proto Compiler"
-    PATHS
+    PATHS /usr/bin /usr/local/bin
 )
 mark_as_advanced(CAPNPROTO_CAPNPC_EXECUTABLE)
 
