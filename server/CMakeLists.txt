@@ -14,4 +14,4 @@ target_link_libraries(holmes ${CAPNPROTO_LIBRARIES}
                       ${GLOG_LIBRARIES}
                       ${PostgreSQL_LIBRARIES} ${PQXX_LIBRARIES} pthread)
 CAPNPROTO_ADD_CXXFLAGS()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -DUSE_GLOG=${USE_GLOG}")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -DUSE_GLOG=${USE_GLOG} ${CMAKE_CXX_FLAGS}")
