@@ -175,16 +175,18 @@ void PgDAL::registerPrepared(std::string name, size_t n) {
   conn.prepare(name + ".insert", "INSERT INTO facts." + name + " VALUES " + argVals);
 }
 
-size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
+std::set<std::string> PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
   std::lock_guard<std::mutex> lock(mutex);
   pqxx::work work(conn);
   std::vector<pqxx::result> res;
+  std::set<std::string> fts;
   for (auto fact : facts) {
     if (!typecheck(types, fact)) {
       LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
       throw "Fact Type Error";
     }
     std::string name = fact.getFactName();
+    fts.insert(name);
     auto query = work.prepared(name + ".insert");
     for (auto arg : fact.getArgs()) {
       switch (arg.which()) {
@@ -216,7 +218,11 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
   for (auto r : res) {
     affected += r.affected_rows();
   }
-  return affected;
+  if (affected) {
+    return fts;
+  }
+  std::set<std::string> empty;
+  return empty;
 }
 
 

@@ -7,13 +7,22 @@
 
 namespace holmes {
 
-kj::Promise<bool> Analyzer::run(DAL *dal) {
+kj::Promise<std::set<std::string>> Analyzer::run(DAL *dal, std::set<std::string> olddirty) {
+  if (!olddirty.empty()) {
+    std::vector<std::string> intersect;
+    std::set_intersection(dependent.begin(), dependent.end(), olddirty.begin(), olddirty.end(), back_inserter(intersect));
+    if (intersect.empty()) {
+      //None of our stuff was updated, this is none of our business
+      std::set<std::string> empty;
+      return kj::Promise<std::set<std::string>>(empty);
+    }
+  }
   std::vector<Holmes::Fact::Reader> searchedFacts;
   DLOG(INFO) << "Starting analysis " << name;
   DLOG(INFO) << "Getting facts for " << name;
   auto ctxs = dal->getFacts(premises);
   DLOG(INFO) << "Got facts for " << name;
-  kj::Array<kj::Promise<bool>> analResults =
+  kj::Array<kj::Promise<std::set<std::string>>> analResults =
     KJ_MAP(ctx, ctxs) {
       if (cache.miss(ctx)) {
         auto req = analysis.analyzeRequest();
@@ -24,20 +33,18 @@ kj::Promise<bool> Analyzer::run(DAL *dal) {
         }
         return req.send().then([this, dal, ctx = kj::mv(ctx)](Holmes::Analysis::AnalyzeResults::Reader res){
           auto dfs = res.getDerived();
-          bool dirty = false;
-          if (dal->setFacts(dfs) != 0) {
-            dirty = true;
-          }
+          std::set<std::string> dirty = dal->setFacts(dfs);
           cache.add(ctx);
           return dirty;
         });
       }
-      return kj::Promise<bool>(false);
+      std::set<std::string> empty;
+      return kj::Promise<std::set<std::string>>(empty);
     };
-  return kj::joinPromises(kj::mv(analResults)).then([this](kj::Array<bool> x){
-    bool dirty = false;
+  return kj::joinPromises(kj::mv(analResults)).then([this](kj::Array<std::set<std::string>> x){
+    std::set<std::string> dirty;
     for (auto v : x) {
-      dirty |= v;
+      dirty.insert(v.begin(), v.end());
     }
     DLOG(INFO) << "Finished analysis " << name;
     return dirty;

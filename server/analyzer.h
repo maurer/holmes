@@ -7,6 +7,7 @@
 #include <kj/common.h>
 
 #include <map>
+#include <set>
 #include <mutex>
 
 #include "holmes.capnp.h"
@@ -24,8 +25,12 @@ class Analyzer {
              Holmes::Analysis::Client analysis)
       : name(name)
       , premises(premises)
-      , analysis(analysis){} 
-    kj::Promise<bool> run(DAL *dal);
+      , analysis(analysis){
+      for (auto&& premise : premises) {
+        dependent.insert(premise.getFactName());
+      }
+    } 
+    kj::Promise<std::set<std::string>> run(DAL *dal, std::set<std::string> dirty);
 
   private:
     std::string name;
@@ -56,6 +61,7 @@ class Analyzer {
           }
         }
     };
+    std::set<std::string> dependent;
     capnp::List<Holmes::FactTemplate>::Reader premises;
     Holmes::Analysis::Client analysis;
     Cache cache;
