@@ -515,9 +515,11 @@ std::vector<DAL::Context> PgDAL::getFacts(
   }
   std::string select = "SELECT ";
   std::string groupBy = " GROUP BY ";
+  bool anyAll = false;
   for (size_t i = 0; i < bindName.size(); i++) {
     if (bindAll[i]) {
       select += "array_agg(" + bindName[i] + ")";
+      anyAll = true;
     } else {
       select += bindName[i];
       groupBy += bindName[i] + ",";
@@ -530,7 +532,11 @@ std::vector<DAL::Context> PgDAL::getFacts(
   if (groupBy == " GROUP BY") {
     groupBy = "";
   }
-  query = select + query + groupBy;
+  if (anyAll) {
+    query = select + query + groupBy;
+  } else {
+    query = select + query;
+  }
   DLOG(INFO) << "Executing join query: " << query;
   auto res = work.exec(query); 
   work.commit();
