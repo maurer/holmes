@@ -175,6 +175,56 @@ void PgDAL::registerPrepared(std::string name, size_t n) {
   conn.prepare(name + ".insert", "INSERT INTO facts." + name + " VALUES " + argVals);
 }
 
+std::set<std::string> PgDAL::setFacts(std::vector<Holmes::Fact::Reader> facts) {
+  std::lock_guard<std::mutex> lock(mutex);
+  pqxx::work work(conn);
+  std::vector<pqxx::result> res;
+  std::set<std::string> fts;
+  for (auto fact : facts) {
+    if (!typecheck(types, fact)) {
+      LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
+      throw "Fact Type Error";
+    }
+    std::string name = fact.getFactName();
+    fts.insert(name);
+    auto query = work.prepared(name + ".insert");
+    for (auto arg : fact.getArgs()) {
+      switch (arg.which()) {
+        case Holmes::Val::JSON_VAL:
+          query(std::string(arg.getJsonVal()));
+          break;
+        case Holmes::Val::STRING_VAL:
+          query(std::string(arg.getStringVal()));
+          break;
+        case Holmes::Val::ADDR_VAL:
+        //PgSQL is bad, and only has a signed int type
+          query((int64_t)arg.getAddrVal());
+          break;
+        case Holmes::Val::BLOB_VAL: {
+          capnp::Data::Reader data = arg.getBlobVal();
+          pqxx::binarystring blob(data.begin(), data.size());
+          query(blob);
+          break;
+        }
+        case Holmes::Val::LIST_VAL:
+          throw "TODO: List values in facts not yet supported";
+          break;
+      }
+    }
+    res.push_back(query.exec());
+  }
+  work.commit();
+  size_t affected = 0;
+  for (auto r : res) {
+    affected += r.affected_rows();
+  }
+  if (affected) {
+    return fts;
+  }
+  std::set<std::string> empty;
+  return empty;
+}
+
 std::set<std::string> PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
   std::lock_guard<std::mutex> lock(mutex);
   pqxx::work work(conn);
