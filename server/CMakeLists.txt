@@ -18,3 +18,5 @@ set(CMAKE_CXX_FLAGS "-Wall -Werror ${CMAKE_CXX_FLAGS}")
 if(USE_GLOG)
         set(CMAKE_CXX_FLAGS "-DUSE_GLOG ${CMAKE_CXXFLAGS}")
 endif()
+install(TARGETS holmes
+        RUNTIME DESTINATION bin)
