@@ -86,7 +86,7 @@ class HolmesImpl final : public Holmes::Server {
 }
 
 int main(int argc, char* argv[]) {
-  #if USE_GLOG
+  #ifndef USE_GLOG
   google::InitGoogleLogging(argv[0]);
   #endif
   capnp::EzRpcServer server("*");
