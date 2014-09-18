@@ -16,16 +16,20 @@ class HolmesImpl final : public Holmes::Server {
   private:
     Own<DAL> dal;
     std::vector<Analyzer*> analyzers;
-    kj::Promise<void> runAll() {
+    kj::Promise<void> runAll(std::set<std::string> dirty) {
       DLOG(INFO) << "runAll() entry";
-      kj::Promise<bool> x = kj::Promise<bool>(false);
+      std::set<std::string> empty;
+      kj::Promise<std::set<std::string>> x = kj::Promise<std::set<std::string>>(empty);
       for (auto analyzer : analyzers) {
-        x = analyzer->run(dal.get()).then([x = mv(x)] (bool i) mutable {return mv(x).then([i = i](bool k){return i || k;});});
+        x = analyzer->run(dal.get(), dirty).then([x = mv(x)] (std::set<std::string> i) mutable {return mv(x).then([i = i](std::set<std::string> k){
+          k.insert(i.begin(), i.end());
+          return k;
+        });});
       }
-      return x.then([&](bool dirty){
-        if (dirty) {
+      return x.then([&](std::set<std::string> dirty){
+        if (!dirty.empty()) {
           DLOG(INFO) << "DAL dirty, runAll() recursing";
-          return runAll();
+          return runAll(dirty);
         } else {
           DLOG(INFO) << "DAL clean, runAll() returning";
           return static_cast<kj::Promise<void>>(kj::READY_NOW);
@@ -35,10 +39,11 @@ class HolmesImpl final : public Holmes::Server {
     HolmesImpl(Own<DAL> dal) : dal(mv(dal)) {}
     kj::Promise<void> set(SetContext context) override {
       DLOG(INFO) << "set()";
-      if (dal->setFacts(context.getParams().getFacts())) {
-        return runAll();
+      std::set<std::string> dirty = dal->setFacts(context.getParams().getFacts());
+      if (dirty.empty()) {
+        return kj::READY_NOW;
       }
-      return kj::READY_NOW;
+      return runAll(dirty);
     }
     kj::Promise<void> derive(DeriveContext context) override {
       auto ctxs = dal->getFacts(context.getParams().getTarget());
@@ -58,10 +63,11 @@ class HolmesImpl final : public Holmes::Server {
       DLOG(INFO) << "analyzer() " << std::string(params.getName());
       Analyzer* a = new Analyzer(params.getName(), params.getPremises(), params.getAnalysis());
       analyzers.push_back(a);
-      return a->run(dal.get()).then([this](bool m){
+      std::set<std::string> empty;
+      return a->run(dal.get(), empty).then([this](std::set<std::string> m){
         kj::Promise<void> x = kj::NEVER_DONE;
-        if (m) {
-          return runAll().then([](){
+        if (!m.empty()) {
+          return runAll(m).then([](){
             return static_cast<kj::Promise<void>>(kj::NEVER_DONE);});
         } else {
           return x;

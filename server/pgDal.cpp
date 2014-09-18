@@ -175,16 +175,18 @@ void PgDAL::registerPrepared(std::string name, size_t n) {
   conn.prepare(name + ".insert", "INSERT INTO facts." + name + " VALUES " + argVals);
 }
 
-size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
+std::set<std::string> PgDAL::setFacts(std::vector<Holmes::Fact::Reader> facts) {
   std::lock_guard<std::mutex> lock(mutex);
   pqxx::work work(conn);
   std::vector<pqxx::result> res;
+  std::set<std::string> fts;
   for (auto fact : facts) {
     if (!typecheck(types, fact)) {
       LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
       throw "Fact Type Error";
     }
     std::string name = fact.getFactName();
+    fts.insert(name);
     auto query = work.prepared(name + ".insert");
     for (auto arg : fact.getArgs()) {
       switch (arg.which()) {
@@ -216,7 +218,61 @@ size_t PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
   for (auto r : res) {
     affected += r.affected_rows();
   }
-  return affected;
+  if (affected) {
+    return fts;
+  }
+  std::set<std::string> empty;
+  return empty;
+}
+
+std::set<std::string> PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
+  std::lock_guard<std::mutex> lock(mutex);
+  pqxx::work work(conn);
+  std::vector<pqxx::result> res;
+  std::set<std::string> fts;
+  for (auto fact : facts) {
+    if (!typecheck(types, fact)) {
+      LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
+      throw "Fact Type Error";
+    }
+    std::string name = fact.getFactName();
+    fts.insert(name);
+    auto query = work.prepared(name + ".insert");
+    for (auto arg : fact.getArgs()) {
+      switch (arg.which()) {
+        case Holmes::Val::JSON_VAL:
+          query(std::string(arg.getJsonVal()));
+          break;
+        case Holmes::Val::STRING_VAL:
+          query(std::string(arg.getStringVal()));
+          break;
+        case Holmes::Val::ADDR_VAL:
+        //PgSQL is bad, and only has a signed int type
+          query((int64_t)arg.getAddrVal());
+          break;
+        case Holmes::Val::BLOB_VAL: {
+          capnp::Data::Reader data = arg.getBlobVal();
+          pqxx::binarystring blob(data.begin(), data.size());
+          query(blob);
+          break;
+        }
+        case Holmes::Val::LIST_VAL:
+          throw "TODO: List values in facts not yet supported";
+          break;
+      }
+    }
+    res.push_back(query.exec());
+  }
+  work.commit();
+  size_t affected = 0;
+  for (auto r : res) {
+    affected += r.affected_rows();
+  }
+  if (affected) {
+    return fts;
+  }
+  std::set<std::string> empty;
+  return empty;
 }
 
 
@@ -459,9 +515,11 @@ std::vector<DAL::Context> PgDAL::getFacts(
   }
   std::string select = "SELECT ";
   std::string groupBy = " GROUP BY ";
+  bool anyAll = false;
   for (size_t i = 0; i < bindName.size(); i++) {
     if (bindAll[i]) {
       select += "array_agg(" + bindName[i] + ")";
+      anyAll = true;
     } else {
       select += bindName[i];
       groupBy += bindName[i] + ",";
@@ -474,7 +532,11 @@ std::vector<DAL::Context> PgDAL::getFacts(
   if (groupBy == " GROUP BY") {
     groupBy = "";
   }
-  query = select + query + groupBy;
+  if (anyAll) {
+    query = select + query + groupBy;
+  } else {
+    query = select + query;
+  }
   DLOG(INFO) << "Executing join query: " << query;
   auto res = work.exec(query); 
   work.commit();

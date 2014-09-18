@@ -62,7 +62,8 @@ class DAL {
         Context() = default;
     };
     virtual ~DAL(){}
-    virtual size_t setFacts(capnp::List<Holmes::Fact>::Reader facts) = 0;
+    virtual std::set<std::string> setFacts(std::vector<Holmes::Fact::Reader> facts) = 0;
+    virtual std::set<std::string> setFacts(capnp::List<Holmes::Fact>::Reader facts) = 0;
     virtual bool addType(std::string, capnp::List<Holmes::HType>::Reader) = 0;
     virtual std::vector<Context> getFacts(capnp::List<Holmes::FactTemplate>::Reader premises) = 0;
 };
