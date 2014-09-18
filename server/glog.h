@@ -1,7 +1,7 @@
 #ifndef __HOLMES_GLOG__
 #define __HOLMES_GLOG__
 
-#if USE_GLOG
+#ifdef USE_GLOG
 #include <glog/logging.h>
 #else
 #include <iostream>
