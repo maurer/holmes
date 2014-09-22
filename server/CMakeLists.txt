@@ -14,9 +14,9 @@ target_link_libraries(holmes ${CAPNPROTO_LIBRARIES}
                       ${GLOG_LIBRARIES}
                       ${PostgreSQL_LIBRARIES} ${PQXX_LIBRARIES} pthread)
 CAPNPROTO_ADD_CXXFLAGS()
-set(CMAKE_CXX_FLAGS "-Wall -Werror ${CMAKE_CXX_FLAGS}")
+add_definitions("-Wall -Werror")
 if(USE_GLOG)
-        set(CMAKE_CXX_FLAGS "-DUSE_GLOG ${CMAKE_CXXFLAGS}")
+        add_definitions("-DUSE_GLOG")
 endif()
 install(TARGETS holmes
         RUNTIME DESTINATION bin)
