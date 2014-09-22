@@ -50,7 +50,7 @@ class HolmesImpl final : public Holmes::Server {
       auto builder = context.getResults().initCtx(ctxs.size());
       auto dex = 0;
       for (auto&& ctx : ctxs) {
-        auto innerBuilder = builder.init(dex, ctx.size());
+        auto innerBuilder = builder.init(dex++, ctx.size());
         auto dex2 = 0;
         for (auto&& asgn : ctx) {
           innerBuilder.setWithCaveats(dex2++, asgn);
