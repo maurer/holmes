@@ -1,0 +1,93 @@
+\documentclass{article}
+\usepackage{syntax}
+\usepackage{todonotes}
+\newcommand{\sysname}{Holmes}
+\begin{document}
+\title{\sysname: A Logic Language for Modular Analysis}
+\author{Matthew Maurer}
+\maketitle
+\section{Introduction}
+The decision to create \sysname\ arose from a dissatisfaction with the way in which program analyses are currently fused together in most software.
+
+Some software is released as a standalone, everything-in-one codebase package.
+This type of software is usually not cognizant of abstraction boundaries for sub-analyses.
+As a result, it is difficult to replace or augment pieces of the composition.
+For example, most decompiler offerings do not provide an easy way to replace their variable recovery or pointer analysis, despite these not being their primary feature.
+
+Other software is released using some existing code, but calls it through a native, non-abstract interface.
+This software is one step up - while still difficult to augment, replacing subcomponents is usually possible with appropriate adapter code.
+However, the replacement code is more or less bound to the original interface provided by the module it is replacing, and the resource consumption expectations thereof.
+An example of this style of design the disassembler usage in most open source reverse engineering toolkits.
+
+The more modern technique has been to release separate analyses as passes with dependencies, sometimes with abstraction of results.
+This method of expressing software prevents the need to explicitly schedule in the control flow when to call analyses, avoids running an analysis multiple times, and promotes clean boundaries between components and reusability of code.
+This approach is exemplified by the LLVM compiler toolkit.
+However, this approach still falls short.
+
+The pass oriented approach assumes that each pass is self contained - it can be run all at once, as long as its dependencies have run.
+This becomes problematic with modern decompilation approaches, as many recovery processes are necessarily incremental, and have cyclic dependencies.
+Most analyses depend in some way on the currently discovered control flow graph of the program.
+However, the control flow graph is extended as more potential targets for indirect jumps or function calls are discovered.
+As a result, code using this approach usually must manually structure a form of incremental analyses where a specific set of analyses are repeatedly called unto fixpoint, and these analyses must be aware of the particular type of incomplete information they are being fed.
+
+Additionally, none of the current approaches directly address the fusion of results of two analyses which purport to accomplish the same task.
+If two analyses determine an upper bound on a value, and their upper bounds are not identical, the intersection indicates a more refined upper bound, and would be useful to use.
+Notably, the determination of how to combine such results is at least in this case determined entirly by the output type of the algorithm, the structure of the code and the inputs do not actually come into play.
+
+Finally, existing analysis platforms usually make the assumptions about the resource consumption, termination behavior, and desirability of running analyses.
+Some analyses the user may want to run (such as randomized testing, or execution fuzzing) do not have a fundamental termination point.
+As analyses get more complex, even analyses which will eventually terminate (such as Balakrishnan's Value Set Analysis) are not necessarily a good idea to run, as they consume a large amount of memory and time for what they do, and frequently more imprecise measures will do.
+Additionally, if the user chooses to analyze a large set of inputs rather than just one, any non-negligible cost for an analysis means that a trade-off exists --- time spent running this analysis is time not spent running another.
+
+\section{Goals}
+To address these problems, I intend to create a logic language, modeled after datalog, with a few specific extensions:
+\begin{itemize}
+\item Extended External Predicates
+\item Resource-oriented scheduling
+\item Mixing Forwards and Backwards Chaining
+\item Custom Aggregation Functions + Datatypes
+\end{itemize}
+
+\section{Language}
+\begin{figure}
+\begin{grammar}
+
+<prog> ::= <rule>*
+
+<rule> ::= <head-constr> <sched-sym> [ <extern-func> ] <body-clause>
+
+<sched-sym> ::= $\leftarrow$
+\alt $\Leftarrow$
+
+<head-constr> ::= (<pred> `(' <arg>+ `)')+
+
+<body-clause>
+::=  `('<body-clause>`)' $\wedge$ `('<body-clause>`)'
+\alt `('<body-clause>`)' $\vee$ `('<body-clause>`)'
+\alt <pred> `(' <arg>* `)'
+
+<arg> ::= $\exists$ \alt <var> \alt <const>
+\end{grammar}
+\label{fig:holmesGrammar}
+\caption{\sysname\ Grammar}
+\end{figure}
+The grammar of the logic language portion of the Holmes system is described in  Figure \ref{fig:holmesGrammar}.
+In large part, this should seem very similar to other logic languages.
+As a minor notational note, when on the right hand side $\exists$ means that we do not bind this field, and when on the left, $\exists$ means that we do not constrain this field.
+
+The first major difference is in the use of external functions.
+Each rule may, if it chooses to do so, specify an external function to be used in the execution of the rule.
+All bound variables for the body clause of the rule are sent to the external function, and the function returns a list of facts satisfying the head constraint.
+The head constraint is much like the description of what fact is derived in a normal logic programming language, but it can leave fields unspecified, and have more than one potential output.
+If the rule does not have an external function, its head constraint must fully determine all facts in the head clause, and all facts are assumed to be produced.
+
+The scheduling symbol is used to denote whether a rule is to be forwards chaining ($\Leftarrow$) or backwards chaining ($\leftarrow$).
+While magic set optimization has removed this distinction from much of the logic language world, the interactive domain of our primary application suggests that some things being truly forwards chaining (e.g. parsing the binary, loading the symbol table), while others act in a fundamentally backwards chaining way (e.g. fuzzing, SMT queries) is important.
+Forwards and backwards chaining should not be taken to explicitly imply an execution order, but rather that forwards chaing rules will fire without presence of goals whenever they can, and backwards chaining queries require a goal.
+For example, backwards chaining rules might be executed via a magic set execution strategy, but would never be run without a query to the database.
+
+The biggest notable limitation is the absence of either negation or $\forall$ primitives.
+These are excluded because unbounded runtime of analyses being run by this system precludes traditional stratification.
+
+\todo{No aggregation yet. Haven't decided if I want a logic with judgements other than true and false for value-based aggregation, or if I want to do my positional aggregation scheme.}
+\end{document}
