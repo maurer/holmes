@@ -89,9 +89,8 @@ int main(int argc, char* argv[]) {
   #ifdef USE_GLOG
   google::InitGoogleLogging(argv[0]);
   #endif
-  capnp::EzRpcServer server("*");
   kj::Own<holmes::DAL> base = kj::heap<holmes::PgDAL>();
-  server.exportCap("holmes", kj::heap<holmes::HolmesImpl>(kj::mv(base)));
+  capnp::EzRpcServer server(kj::heap<holmes::HolmesImpl>(kj::mv(base)), "*");
 
   auto &waitScope = server.getWaitScope();
   uint port = server.getPort().wait(waitScope);
