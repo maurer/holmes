@@ -9,9 +9,9 @@
 #include "dal.h"
 
 #define COMPARE_X_Y_VAL(accessor) \
-  if (x.get ## accessor ## Val() < y.get ## accessor ## Val()) { \
+  if (x.get ## accessor() < y.get ## accessor()) { \
     return true; \
-  } else if (x.get ## accessor ## Val() > y.get ## accessor ## Val()) { \
+  } else if (x.get ## accessor() > y.get ## accessor()) { \
     return false; \
   } \
   break;
@@ -53,32 +53,14 @@ class ValCompare {
       DataCompare dc;
 
       switch (x.which()) {
-        case Holmes::Val::LIST_VAL: {
-          auto xl = x.getListVal();
-          auto yl = y.getListVal();
-          if (xl.size() < yl.size()) {
-            return true;
-          } else if (xl.size() > yl.size()) {
-            return false;
-          }
-          for (size_t i = 0; i < xl.size(); i++) {
-            if (this->operator()(xl[i], yl[i])) {
-              return true;
-            } else if (this->operator()(yl[i], xl[i])) {
-              return false;
-            }
-          }
-        } break;
-        case Holmes::Val::JSON_VAL:
-          COMPARE_X_Y_VAL(Json);
-        case Holmes::Val::STRING_VAL:
+        case Holmes::Val::STRING:
           COMPARE_X_Y_VAL(String);
-        case Holmes::Val::ADDR_VAL:
-          COMPARE_X_Y_VAL(Addr);
-        case Holmes::Val::BLOB_VAL:
-          if (dc(x.getBlobVal(), y.getBlobVal())) {
+        case Holmes::Val::UINT64:
+          COMPARE_X_Y_VAL(Uint64);
+        case Holmes::Val::BLOB:
+          if (dc(x.getBlob(), y.getBlob())) {
             return true;
-          } else if (dc(y.getBlobVal(), x.getBlobVal())) {
+          } else if (dc(y.getBlob(), x.getBlob())) {
             return false;
           }
           break;
@@ -120,9 +102,7 @@ class ContextCompare {
     }
 };
 
-bool type_eq(Holmes::HType::Reader a, Holmes::HType::Reader b);
-
-bool typecheck(const std::map<std::string, std::vector<Holmes::HType::Reader>> &types,
+bool typecheck(const std::map<std::string, std::vector<Holmes::HType>> &types,
                Holmes::Fact::Reader fact);
 
 

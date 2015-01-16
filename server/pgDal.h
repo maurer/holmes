@@ -31,9 +31,8 @@ class PgDAL : public DAL {
     std::mutex mutex;
     pqxx::connection conn;
     void initDB();
-    std::map<std::string, std::vector<Holmes::HType::Reader>> types;
+    std::map<std::string, std::vector<Holmes::HType>> types;
     typedef capnp::MallocMessageBuilder MMB;
-    std::vector<kj::Own<MMB>> mbs;
     void registerPrepared(std::string, size_t);
     KJ_DISALLOW_COPY(PgDAL);
 };

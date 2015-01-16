@@ -8,123 +8,7 @@
 
 #include "fact_util.h"
 
-//Hacks to port array power into pqxx
-#include <pqxx/strconv>
 #include <assert.h>
-namespace pqxx {
-
-template<> struct string_traits<std::vector<int64_t>>
-{
-  typedef std::vector<int64_t> subject_type;
-  static const char *name() { return typeid(std::vector<int64_t>).name(); }
-  static bool has_null() { return true; }
-  static bool is_null(subject_type v) { return v.empty(); }
-  static subject_type null () {
-    subject_type v;
-    return v;
-  }
-  static void from_string(const char str[], subject_type &v) {
-    assert(str[0] == '{'); //Make sure it's an array-like;
-    char sep = ','; // This should be loaded dynamically, but this is mostly
-                    // right for now.
-    size_t i = 0;
-    while (str[i] != '}') {
-      assert((str[i] == '{') || (str[i] == sep));
-      ++i;
-      int64_t elem;
-      sscanf(&str[i], "%ld", &elem);
-      v.push_back(elem);
-      //Assume that there is a _unique_ string encoding (dohohohoho)
-      i += string_traits<int64_t>::to_string(elem).length();
-    }
-  }
-  static PGSTD::string to_string(subject_type obj) {
-    PGSTD::string str;
-    str += "{";
-    for (auto elem : obj) {
-      str += string_traits<int64_t>::to_string(elem);
-      str += ",";
-    }
-    if (obj.empty()) {
-      str += "}";
-    } else {
-      str[str.length() - 1] = '}';
-    }
-    return str;
-  }
-};
-
-template<class T> struct string_traits<std::vector<T>>
-{
-  typedef std::vector<T> subject_type;
-  static const char *name() { return typeid(std::vector<T>).name(); }
-  static bool has_null() { return true; }
-  static bool is_null(subject_type v) { return v.empty(); }
-  static subject_type null () {
-    subject_type v;
-    return v;
-  }
-  static void from_string(const char str[], subject_type &v) {
-    assert(str[0] == '{'); //Make sure it's an array-like;
-    char sep = ','; // This should be loaded dynamically, but this is mostly
-                    // right for now.
-    size_t i = 0;
-    while (str[i] != '}') {
-      assert((str[i] == '{') || (str[i] == sep));
-      ++i;
-      std::string elem;
-      bool elemDone = false;
-      bool quoted = false;
-      bool escaped = false;
-      while (!elemDone) {
-        if (escaped) {
-          escaped = false;
-          elem += str[i++];
-          continue;
-        }
-        switch (str[i]) {
-          case '"':
-            quoted = !quoted;
-            break;
-          case '\\':
-            escaped = true;
-            break;
-          case '}':
-          case ',':
-            if (!quoted) {
-              elemDone = true;
-              --i;
-            } else {
-              elem += str[i];
-            }
-            break;
-          default:
-            elem += str[i];
-            break;
-        }
-        ++i;
-      }
-      v.push_back(elem);
-      //Assume that there is a _unique_ string encoding (dohohohoho)
-    }
-  }
-  static PGSTD::string to_string(subject_type obj) {
-    PGSTD::string str;
-    str += "{";
-    for (auto elem : obj) {
-      str += string_traits<T>::to_string(elem);
-      str += ",";
-    }
-    if (obj.empty()) {
-      str += "}";
-    } else {
-      str[str.length() - 1] = '}';
-    }
-    return str;
-  }
-};
-}
-//End hacks
 
 namespace holmes {
 
@@ -136,26 +20,22 @@ void PgDAL::initDB() {
   for (auto line : res) {
     std::string name = line[0].c_str();
     if (types.find(name) == types.end()) {
-      std::vector<Holmes::HType::Reader> sig;
+      std::vector<Holmes::HType> sig;
       types[name] = sig;
     }
-    kj::Own<MMB> mb = kj::heap<MMB>();
-    auto typ = mb->initRoot<Holmes::HType>();
+    auto typ = Holmes::HType::UINT64;
     std::string type_string = line[1].c_str();
     if (type_string == "int8") {
-      typ.setAddr();
+      typ = Holmes::HType::UINT64;
     } else if (type_string == "varchar") {
-      typ.setString();
+      typ = Holmes::HType::STRING;
     } else if (type_string == "bytea") {
-      typ.setBlob();
-    } else if (type_string == "text") {
-      typ.setJson();
+      typ = Holmes::HType::BLOB;
     } else {
       std::cerr << "Type parse failure: " << type_string << std::endl;
       exit(1);
     }
-    types[name].push_back(mb->getRoot<Holmes::HType>());
-    mbs.push_back(kj::mv(mb));
+    types[name].push_back(typ);
   }
   for (auto type : types) {
     registerPrepared(type.first, type.second.size());
@@ -190,25 +70,19 @@ std::set<std::string> PgDAL::setFacts(std::vector<Holmes::Fact::Reader> facts) {
     auto query = work.prepared(name + ".insert");
     for (auto arg : fact.getArgs()) {
       switch (arg.which()) {
-        case Holmes::Val::JSON_VAL:
-          query(std::string(arg.getJsonVal()));
+        case Holmes::Val::STRING:
+          query(std::string(arg.getString()));
           break;
-        case Holmes::Val::STRING_VAL:
-          query(std::string(arg.getStringVal()));
-          break;
-        case Holmes::Val::ADDR_VAL:
+        case Holmes::Val::UINT64:
         //PgSQL is bad, and only has a signed int type
-          query((int64_t)arg.getAddrVal());
+          query((int64_t)arg.getUint64());
           break;
-        case Holmes::Val::BLOB_VAL: {
-          capnp::Data::Reader data = arg.getBlobVal();
+        case Holmes::Val::BLOB: {
+          capnp::Data::Reader data = arg.getBlob();
           pqxx::binarystring blob(data.begin(), data.size());
           query(blob);
           break;
         }
-        case Holmes::Val::LIST_VAL:
-          throw "TODO: List values in facts not yet supported";
-          break;
       }
     }
     res.push_back(query.exec());
@@ -240,25 +114,19 @@ std::set<std::string> PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
     auto query = work.prepared(name + ".insert");
     for (auto arg : fact.getArgs()) {
       switch (arg.which()) {
-        case Holmes::Val::JSON_VAL:
-          query(std::string(arg.getJsonVal()));
+        case Holmes::Val::STRING:
+          query(std::string(arg.getString()));
           break;
-        case Holmes::Val::STRING_VAL:
-          query(std::string(arg.getStringVal()));
-          break;
-        case Holmes::Val::ADDR_VAL:
+        case Holmes::Val::UINT64:
         //PgSQL is bad, and only has a signed int type
-          query((int64_t)arg.getAddrVal());
+          query((int64_t)arg.getUint64());
           break;
-        case Holmes::Val::BLOB_VAL: {
-          capnp::Data::Reader data = arg.getBlobVal();
+        case Holmes::Val::BLOB: {
+          capnp::Data::Reader data = arg.getBlob();
           pqxx::binarystring blob(data.begin(), data.size());
           query(blob);
           break;
         }
-        case Holmes::Val::LIST_VAL:
-          throw "TODO: List values in facts not yet supported";
-          break;
       }
     }
     res.push_back(query.exec());
@@ -276,18 +144,14 @@ std::set<std::string> PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
 }
 
 
-std::string htype_to_sqltype(Holmes::HType::Reader hType) {
-  switch (hType.which()) {
-    case Holmes::HType::JSON:
-      return "text";
+std::string htype_to_sqltype(Holmes::HType hType) {
+  switch (hType) {
     case Holmes::HType::STRING:
       return "varchar";
-    case Holmes::HType::ADDR:
+    case Holmes::HType::UINT64:
       return "bigint";
     case Holmes::HType::BLOB:
       return "bytea";
-    case Holmes::HType::LIST:
-      return htype_to_sqltype(hType.getList()) + "[]";
   }
   return "unknown";
 }
@@ -320,20 +184,17 @@ bool PgDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argType
       return false;
     }
     for (size_t i = 0; i < argTypes.size(); i++) {
-      if (!type_eq(argTypes[i], itt->second[i])) {
+      if (argTypes[i] != itt->second[i]) {
         return false;
       }
     }
     return true;
   } else {
-    std::vector<Holmes::HType::Reader> sig;
+    std::vector<Holmes::HType> sig;
     std::string tableSpec = "(";
     for (size_t i = 0; i < argTypes.size(); i++) {
       tableSpec += "arg" + std::to_string(i) + " " + htype_to_sqltype(argTypes[i]);
-      kj::Own<MMB> mb = kj::heap<MMB>();
-      mb->setRoot<Holmes::HType::Reader>(argTypes[i]);
-      sig.push_back(mb->getRoot<Holmes::HType>());
-      mbs.push_back(kj::mv(mb));
+      sig.push_back(argTypes[i]);
       if (i == argTypes.size() - 1) {
         tableSpec += ")";
       } else {
@@ -352,87 +213,33 @@ bool PgDAL::addType(std::string name, capnp::List<Holmes::HType>::Reader argType
 
 std::string quoteVal(pqxx::work& w, Holmes::Val::Reader v) {
   switch (v.which()) {
-    case Holmes::Val::JSON_VAL:
-      return w.quote(std::string(v.getJsonVal()));
-    case Holmes::Val::STRING_VAL:
-      return w.quote(std::string(v.getStringVal()));
-    case Holmes::Val::BLOB_VAL:
+    case Holmes::Val::BLOB:
       //You probably don't want to do this... but for completeness sake
-      return w.quote_raw(v.getBlobVal().begin(), v.getBlobVal().size());
-    case Holmes::Val::ADDR_VAL:
+      return w.quote_raw(v.getBlob().begin(), v.getBlob().size());
+    case Holmes::Val::UINT64:
       //Postgres doesn't support uint64_t
-      return w.quote((int64_t)v.getAddrVal());
-    case Holmes::Val::LIST_VAL:
-      std::string base = "{";
-      for (auto e : v.getListVal()) {
-        base += quoteVal(w, e);
-        base += ",";
-      }
-      if (v.getListVal().size() == 0) {
-        base += "}";
-      } else {
-        base[base.length()-1] = '}';
-      }
-      return base;
+      return w.quote((int64_t)v.getUint64());
+    case Holmes::Val::STRING:
+      return w.quote(v.getString().cStr());
   }
   throw "Failed to quote value";
 }
 
-void buildFromDB(Holmes::HType::Reader typ, Holmes::Val::Builder val, pqxx::result::field dbVal) {
-  switch (typ.which()) {
-    case Holmes::HType::JSON:
-      val.setJsonVal(dbVal.as<std::string>());
-      break;
-    case Holmes::HType::ADDR:
-      val.setAddrVal(dbVal.as<int64_t>());
+void buildFromDB(Holmes::HType typ, Holmes::Val::Builder val, pqxx::result::field dbVal) {
+  switch (typ) {
+    case Holmes::HType::UINT64:
+      val.setUint64(dbVal.as<int64_t>());
       break;
     case Holmes::HType::STRING:
-      val.setStringVal(dbVal.as<std::string>());
+      val.setString(dbVal.as<std::string>());
       break;
     case Holmes::HType::BLOB: {
         pqxx::binarystring bs(dbVal);
-        auto bb = val.initBlobVal(bs.size());
+        auto bb = val.initBlob(bs.size());
         for (size_t k = 0; k < bs.size(); ++k) {
           bb[k] = bs[k];
         }
         break;
-      }
-    case Holmes::HType::LIST:
-      auto innerTyp = typ.getList();
-      //We're only going to support depth 1 lists for the moment
-      switch (innerTyp.which()) {
-        case Holmes::HType::JSON: {
-          auto l = dbVal.as<std::vector<std::string>>();
-          auto lb = val.initListVal(l.size());
-          for (size_t i = 0; i < l.size(); i++) {
-            lb[i].setJsonVal(l[i]);
-          }
-          break;
-        }
-        case Holmes::HType::ADDR: {
-          auto l = dbVal.as<std::vector<int64_t>>();
-          auto lb = val.initListVal(l.size());
-          for (size_t i = 0; i < l.size(); i++) {
-            lb[i].setAddrVal((uint64_t)l[i]);
-          }
-          break;
-        }
-        case Holmes::HType::STRING: {
-          auto l = dbVal.as<std::vector<std::string>>();
-          auto lb = val.initListVal(l.size());
-          for (size_t i = 0; i < l.size(); i++) {
-            lb[i].setStringVal(l[i]);
-          }
-          break;
-        }
-        case Holmes::HType::BLOB: {
-          throw "TODO: blobs in lists are not supported";
-          break;
-        }
-        case Holmes::HType::LIST: {
-          throw "TODO: Nested lists not yet supported";
-          break;
-        }
       }
   }
 }
@@ -443,8 +250,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
   pqxx::work work(conn);
   std::vector<std::string> whereClause; //Concrete values
   std::vector<std::string> bindName;
-  std::vector<Holmes::HType::Reader> bindType;
-  std::vector<bool> bindAll;
+  std::vector<Holmes::HType> bindType;
   std::string query = "";
   size_t clauseN = 0;
   for (auto itc = clauses.begin(); itc != clauses.end(); ++itc, ++clauseN) {
@@ -468,21 +274,15 @@ std::vector<DAL::Context> PgDAL::getFacts(
           whereClause.push_back(tableVar + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
           break;
         case Holmes::TemplateVal::BOUND:
-        case Holmes::TemplateVal::FORALL:
           {
             uint32_t var;
-            if (args[i].which() == Holmes::TemplateVal::BOUND) {
-              var = args[i].getBound();
-            } else {
-              var = args[i].getForall();
-            }
+            var = args[i].getBound();
             auto argName = tableVar + ".arg" + std::to_string(i);
             if (var >= bindName.size()) {
             //The variable is mentioned for the first time, this is its
             //cannonical name
               bindName.push_back(argName);
               bindType.push_back(types[itc->getFactName()][i]);
-              bindAll.push_back(args[i].which() == Holmes::TemplateVal::FORALL);
             } else {
             //This is a repeat, it needs to be unified
               std::string cond = argName + "=" + bindName[var];
@@ -517,13 +317,8 @@ std::vector<DAL::Context> PgDAL::getFacts(
   std::string groupBy = " GROUP BY ";
   bool anyAll = false;
   for (size_t i = 0; i < bindName.size(); i++) {
-    if (bindAll[i]) {
-      select += "array_agg(" + bindName[i] + ")";
-      anyAll = true;
-    } else {
-      select += bindName[i];
-      groupBy += bindName[i] + ",";
-    }
+    select += bindName[i];
+    groupBy += bindName[i] + ",";
     if (i + 1 < bindName.size()) {
       select += ", ";
     }
@@ -546,14 +341,7 @@ std::vector<DAL::Context> PgDAL::getFacts(
     Context ctx;
     for (size_t i = 0; i < bindType.size(); i++) {
       auto val = ctx.init();
-      if (bindAll[i]) {
-        capnp::MallocMessageBuilder mb;
-        auto lt = mb.initRoot<Holmes::HType>();
-        lt.setList(bindType[i]);
-        buildFromDB(mb.getRoot<Holmes::HType>(), val, soln[(int)i]);
-      } else {
-        buildFromDB(bindType[i], val, soln[(int)i]);
-      }
+      buildFromDB(bindType[i], val, soln[(int)i]);
     }
     ctxs.push_back(ctx);
   }

@@ -4,26 +4,19 @@ using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("holmes");
 
 interface Holmes {
-  # Dynamic value type for use in facts
+  # Values
   struct Val {
     union {
-      stringVal @0 :Text;
-      addrVal   @1 :UInt64;
-      blobVal   @2 :Data;
-      jsonVal   @3 :Text;
-      listVal   @4 :List(Val);
+      uint64 @0 :UInt64;
+      string @1 :Text;
+      blob   @2 :Data;
     }
   }
-  
-  # Type of a dynamic variable
-  struct HType {
-    union {
-      string @0 :Void;
-      addr   @1 :Void;
-      blob   @2 :Void;
-      json   @3 :Void;
-      list   @4 :HType;
-   }
+
+  enum HType {
+    uint64 @0;
+    string @1;
+    blob   @2;
   }
 
   # Variables
@@ -42,7 +35,6 @@ interface Holmes {
       exactVal @0 :Val;  #Argument must have this exact value
       unbound  @1 :Void; #Argument is unrestricted
       bound    @2 :Var;  #Argument is bound to a var and must be consistent
-      forall   @3 :Var;  #Argument will aggregate a list of all possibilities
     }
   }
 
