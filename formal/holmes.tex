@@ -52,14 +52,25 @@ To address these problems, I intend to create a logic language, modeled after da
 \begin{figure}
 \begin{grammar}
 
-<prog> ::= <rule>*
+<prog> ::= (<decl> | <rule>)*
 
-<rule> ::= <head-constr> <sched-sym> [ <extern-func> ] <body-clause>
+<decl> ::= <pred> `(' <argsig>+ `)'
+\alt <pred> `(' <var>* `)' `where' `(' <arg>* `)' `=' <expr>
+
+<argsig>
+::=  <type>(= : <func>)
+\alt <type>($\oplus$ : <func>)
+
+<rule> ::= <head-constr> <sched-sym> <body-clause>
 
 <sched-sym> ::= $\leftarrow$
 \alt $\Leftarrow$
 
-<head-constr> ::= (<pred> `(' <arg>+ `)')+
+<head-constr> ::= (<pred> `(' <expr>+ `)')+
+
+<expr> ::= <var>
+\alt <consnt>
+\alt <func> `(' <expr>* `)'
 
 <body-clause>
 ::=  `('<body-clause>`)' $\wedge$ `('<body-clause>`)'
@@ -73,9 +84,11 @@ To address these problems, I intend to create a logic language, modeled after da
 \end{figure}
 The grammar of the logic language portion of the Holmes system is described in  Figure \ref{fig:holmesGrammar}.
 In large part, this should seem very similar to other logic languages.
-As a minor notational note, when on the right hand side $\exists$ means that we do not bind this field, and when on the left, $\exists$ means that we do not constrain this field.
+As a minor notational note, when on the right hand side $\exists$ means that we do not bind this field, and cannot be used on the left.
 
 The first major difference is in the use of external functions.
+
+
 Each rule may, if it chooses to do so, specify an external function to be used in the execution of the rule.
 All bound variables for the body clause of the rule are sent to the external function, and the function returns a list of facts satisfying the head constraint.
 The head constraint is much like the description of what fact is derived in a normal logic programming language, but it can leave fields unspecified, and have more than one potential output.
@@ -89,5 +102,4 @@ For example, backwards chaining rules might be executed via a magic set executio
 The biggest notable limitation is the absence of either negation or $\forall$ primitives.
 These are excluded because unbounded runtime of analyses being run by this system precludes traditional stratification.
 
-\todo{No aggregation yet. Haven't decided if I want a logic with judgements other than true and false for value-based aggregation, or if I want to do my positional aggregation scheme.}
 \end{document}
