@@ -23,47 +23,43 @@ interface Holmes {
   using Var = UInt32;
 
   # Logical facts
-  using FactName = Text;
+  using PredName = Text;
+  using PredId   = UInt64;
   struct Fact {
-    factName @0 :FactName;
-    args     @1 :List(Val);
+    predicate @0 :PredId;
+    args      @1 :List(Val);
   }
 
-  # Argument restriction when searching
-  struct TemplateVal {
+  struct BodyExpr {
     union {
-      exactVal @0 :Val;  #Argument must have this exact value
-      unbound  @1 :Void; #Argument is unrestricted
-      bound    @2 :Var;  #Argument is bound to a var and must be consistent
+      unbound @0 :Void;
+      var     @1 :Var;
+      const   @2 :Val;
     }
   }
 
-  # FactTemplate to be used as a search query
-  # Variables _must_ be used from 0+ sequentially.
-  struct FactTemplate {
-    factName @0 :FactName;
-    args     @1 :List(TemplateVal);
-  }
-  
-  # Callback provided by an analysis
-  interface Analysis {
-    analyze @0 (context :List(Val)) -> (derived :List(Fact));
+  struct BodyClause {
+    predicate @0 :PredId;
+    args      @1 :List(BodyExpr);
   }
 
-  # Assert a fact to the server
-  set @0 (facts :List(Fact));
-  
-  # Ask the server to search for facts
-  derive @1 (target :List(FactTemplate)) -> (ctx :List(List(Val)));
-  
-  # Register as an analysis
-  analyzer @2 (name        :Text,
-               premises    :List(FactTemplate),
-	       analysis    :Analysis);
+  struct Rule {
+    head @0 :BodyClause;
+    body @1 :List(BodyClause);
+  }
 
-  # Register a fact type
-  # If it's not present, inform the DAL
-  # If it is present, check compatibility
-  registerType @3 (factName :Text,
-                   argTypes :List(HType)) -> (valid :Bool);
+  # Register a predicate
+  registerPredicate @0 (predName :PredName,
+                        argTypes :List(HType)) -> (predId :PredId);
+
+  # Add a fact to the extensional database
+  set @1 (fact :List(Fact));
+  
+  # Ask the server to search or expand the intensional database
+  # searching for a set of facts that matches a body clause
+  # Returns the list of satisfying assignments to the body clauses.
+  derive @2 (target :List(BodyClause)) -> (ctx :List(List(Val)));
+
+  # Add a rule to expand the intentional database
+  addRule @3 (rule :Rule) -> ();
 }

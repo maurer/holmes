@@ -6,8 +6,6 @@
 
 #include <iostream>
 
-#include "fact_util.h"
-
 #include <assert.h>
 
 namespace holmes {
@@ -56,89 +54,11 @@ void PgDAL::registerPrepared(std::string name, size_t n) {
 }
 
 std::set<std::string> PgDAL::setFacts(std::vector<Holmes::Fact::Reader> facts) {
-  std::lock_guard<std::mutex> lock(mutex);
-  pqxx::work work(conn);
-  std::vector<pqxx::result> res;
-  std::set<std::string> fts;
-  for (auto fact : facts) {
-    if (!typecheck(types, fact)) {
-      LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
-      throw "Fact Type Error";
-    }
-    std::string name = fact.getFactName();
-    fts.insert(name);
-    auto query = work.prepared(name + ".insert");
-    for (auto arg : fact.getArgs()) {
-      switch (arg.which()) {
-        case Holmes::Val::STRING:
-          query(std::string(arg.getString()));
-          break;
-        case Holmes::Val::UINT64:
-        //PgSQL is bad, and only has a signed int type
-          query((int64_t)arg.getUint64());
-          break;
-        case Holmes::Val::BLOB: {
-          capnp::Data::Reader data = arg.getBlob();
-          pqxx::binarystring blob(data.begin(), data.size());
-          query(blob);
-          break;
-        }
-      }
-    }
-    res.push_back(query.exec());
-  }
-  work.commit();
-  size_t affected = 0;
-  for (auto r : res) {
-    affected += r.affected_rows();
-  }
-  if (affected) {
-    return fts;
-  }
   std::set<std::string> empty;
   return empty;
 }
 
 std::set<std::string> PgDAL::setFacts(capnp::List<Holmes::Fact>::Reader facts) {
-  std::lock_guard<std::mutex> lock(mutex);
-  pqxx::work work(conn);
-  std::vector<pqxx::result> res;
-  std::set<std::string> fts;
-  for (auto fact : facts) {
-    if (!typecheck(types, fact)) {
-      LOG(ERROR) << "Bad fact: " << kj::str(capnp::prettyPrint(fact)).cStr();
-      throw "Fact Type Error";
-    }
-    std::string name = fact.getFactName();
-    fts.insert(name);
-    auto query = work.prepared(name + ".insert");
-    for (auto arg : fact.getArgs()) {
-      switch (arg.which()) {
-        case Holmes::Val::STRING:
-          query(std::string(arg.getString()));
-          break;
-        case Holmes::Val::UINT64:
-        //PgSQL is bad, and only has a signed int type
-          query((int64_t)arg.getUint64());
-          break;
-        case Holmes::Val::BLOB: {
-          capnp::Data::Reader data = arg.getBlob();
-          pqxx::binarystring blob(data.begin(), data.size());
-          query(blob);
-          break;
-        }
-      }
-    }
-    res.push_back(query.exec());
-  }
-  work.commit();
-  size_t affected = 0;
-  for (auto r : res) {
-    affected += r.affected_rows();
-  }
-  if (affected) {
-    return fts;
-  }
   std::set<std::string> empty;
   return empty;
 }
@@ -244,108 +164,4 @@ void buildFromDB(Holmes::HType typ, Holmes::Val::Builder val, pqxx::result::fiel
   }
 }
  
-std::vector<DAL::Context> PgDAL::getFacts(
-  capnp::List<Holmes::FactTemplate>::Reader clauses) {
-  std::lock_guard<std::mutex> lock(mutex);
-  pqxx::work work(conn);
-  std::vector<std::string> whereClause; //Concrete values
-  std::vector<std::string> bindName;
-  std::vector<Holmes::HType> bindType;
-  std::string query = "";
-  size_t clauseN = 0;
-  for (auto itc = clauses.begin(); itc != clauses.end(); ++itc, ++clauseN) {
-    std::string tableName = "facts.";
-    tableName += itc->getFactName();
-    std::string tableVar = "tbl" + std::to_string(clauseN);
-    if (itc == clauses.begin()) {
-      query += " FROM ";
-    } else if (itc != clauses.end()) {
-      query += " JOIN ";
-    }
-    query += tableName + " " + tableVar;
-    if (itc != clauses.begin()) {
-      query += " ON ";
-    }
-    auto args = itc->getArgs();
-    bool onClause = true;
-    for (size_t i = 0; i < args.size(); ++i) {
-      switch (args[i].which()) {
-        case Holmes::TemplateVal::EXACT_VAL:
-          whereClause.push_back(tableVar + ".arg" + std::to_string(i) + "=" + quoteVal(work, args[i].getExactVal()));
-          break;
-        case Holmes::TemplateVal::BOUND:
-          {
-            uint32_t var;
-            var = args[i].getBound();
-            auto argName = tableVar + ".arg" + std::to_string(i);
-            if (var >= bindName.size()) {
-            //The variable is mentioned for the first time, this is its
-            //cannonical name
-              bindName.push_back(argName);
-              bindType.push_back(types[itc->getFactName()][i]);
-            } else {
-            //This is a repeat, it needs to be unified
-              std::string cond = argName + "=" + bindName[var];
-              if (itc == clauses.begin()) {
-                //First table has no on clause, stash these in the where clause
-                whereClause.push_back(cond);
-              } else {
-                if (onClause) {
-                  onClause = false;
-                } else {
-                  query += " AND ";
-                }
-                query += cond + " ";
-              }
-            }
-          }
-          break;
-        case Holmes::TemplateVal::UNBOUND:
-          break;
-      }
-    }
-  }
-  for (auto itw = whereClause.begin(); itw != whereClause.end(); ++itw) {
-    if (itw == whereClause.begin()) {
-      query += " WHERE ";
-    } else {
-      query += " AND ";
-    }
-    query += *itw;
-  }
-  std::string select = "SELECT ";
-  std::string groupBy = " GROUP BY ";
-  bool anyAll = false;
-  for (size_t i = 0; i < bindName.size(); i++) {
-    select += bindName[i];
-    groupBy += bindName[i] + ",";
-    if (i + 1 < bindName.size()) {
-      select += ", ";
-    }
-  }
-  groupBy.erase(groupBy.size()-1);
-  if (groupBy == " GROUP BY") {
-    groupBy = "";
-  }
-  if (anyAll) {
-    query = select + query + groupBy;
-  } else {
-    query = select + query;
-  }
-  DLOG(INFO) << "Executing join query: " << query;
-  auto res = work.exec(query); 
-  work.commit();
-  DLOG(INFO) << "Query complete";
-  std::vector<Context> ctxs;
-  for (auto soln : res) {
-    Context ctx;
-    for (size_t i = 0; i < bindType.size(); i++) {
-      auto val = ctx.init();
-      buildFromDB(bindType[i], val, soln[(int)i]);
-    }
-    ctxs.push_back(ctx);
-  }
-  return ctxs;
-}
-
 }
