@@ -8,15 +8,15 @@ license = "MIT"
 description = "Holmes Inference System"
 repository = "https://github.com/maurer/holmes"
 
-[bin]
+[[bin]]
 
 name = "holmes"
 path = "src/main.rs"
 
 [build-dependencies]
-capnp-rpc = "0.1.1"
 capnpc = "0.1.1"
-postgres="0.5.2"
 
 [dependencies]
 capnp = "0.1.1"
+capnp-rpc = "0.1.1"
+postgres = "0.5.2"
