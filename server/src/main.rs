@@ -1,7 +1,7 @@
 extern crate capnp;
 extern crate "capnp-rpc" as capnp_rpc;
 
-mod server;
+pub mod server;
 mod fact_db;
 mod pg_db;
 

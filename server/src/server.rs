@@ -10,6 +10,7 @@ use capnp_rpc::capability::{InitRequest, LocalClient, WaitForContent};
 use holmes_capnp::holmes;
 
 use fact_db::FactDB;
+use fact_db::PredResponse;
 
 pub struct HolmesImpl {
   fact_db : Box<FactDB + Send>
@@ -23,6 +24,14 @@ impl HolmesImpl {
 
 impl holmes::Server for HolmesImpl {
   fn new_predicate(&mut self, mut context : holmes::NewPredicateContext) {
+    let (params, mut results) = context.get();
+    let res = self.fact_db.new_predicate(params.get_pred_name(), params.get_arg_types());
+    let pred_id = 
+      match res {
+        PredResponse::PredicateInvalid(_) => 42,
+        _ => 5
+      };
+    results.set_pred_id(pred_id);
     context.done();
   }
 
