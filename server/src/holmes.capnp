@@ -22,9 +22,8 @@ interface Holmes {
 
   # Logical facts
   using PredName = Text;
-  using PredId   = UInt64;
   struct Fact {
-    predicate @0 :PredId;
+    predicate @0 :PredName;
     args      @1 :List(Val);
   }
 
@@ -37,7 +36,7 @@ interface Holmes {
   }
 
   struct BodyClause {
-    predicate @0 :PredId;
+    predicate @0 :PredName;
     args      @1 :List(BodyExpr);
   }
 
@@ -48,7 +47,7 @@ interface Holmes {
 
   # Register a predicate
   newPredicate @0 (predName :PredName,
-                   argTypes :List(HType)) -> (predId :PredId);
+                   argTypes :List(HType)) -> (valid :Bool);
 
   # Add a fact to the extensional database
   newFact @1 (fact :List(Fact));

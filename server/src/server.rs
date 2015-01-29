@@ -22,13 +22,17 @@ impl holmes::Server for HolmesImpl {
     let pred_res = self.fact_db.new_predicate(params.get_pred_name(),
                                               params.get_arg_types());
     match pred_res {
-        PredicateCreated(pred_id)
-      | PredicateExists(pred_id) => {
-          results.set_pred_id(pred_id);
+        PredicateCreated
+      | PredicateExists => {
+          results.set_valid(true);
           context.done();
         }
-        PredicateTypeMismatch
-      | PredicateInvalid(_) => {
+        PredicateTypeMismatch => {
+          results.set_valid(false);
+          context.done();
+        }
+        PredicateInvalid(m) => {
+          panic!(m);
           context.fail();
         }
     }

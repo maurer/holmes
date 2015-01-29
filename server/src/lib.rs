@@ -9,3 +9,5 @@ pub mod pg_db;
 pub mod holmes_capnp {
   include!(concat!(env!("OUT_DIR"), "/holmes_capnp.rs"));
 }
+
+mod native_types;

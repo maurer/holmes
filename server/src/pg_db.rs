@@ -1,27 +1,151 @@
-use fact_db::{FactDB, PredResponse};
+use native_types::*;
+use std::*;
 
+use std::error::FromError;
+use std::fmt::{Debug, Formatter};
+use fact_db::{FactDB, PredResponse};
 use holmes_capnp::holmes;
 use capnp::list::{struct_list};
+use std::str::FromStr;
 
-use postgres::{Connection, ConnectError, SslMode};
+use postgres::{Connection, ConnectError, Error, SslMode};
 
-pub struct PgDB {
-  connection : Connection
+use std::collections::hash_map::{HashMap};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
+
+pub enum DBError {
+  ConnectError(ConnectError),
+  Error(Error),
+  TypeParseError
+}
+use pg_db::DBError::TypeParseError;
+
+impl FromError<Error> for DBError {
+  fn from_error(x : Error) -> DBError {DBError::Error(x)}
+}
+impl FromError<ConnectError> for DBError {
+  fn from_error(x : ConnectError) -> DBError {DBError::ConnectError(x)}
 }
 
-impl PgDB {
-  pub fn new(conn_str : &str) -> Result<PgDB, ConnectError> {
-    let conn = try!(Connection::connect(conn_str, &SslMode::None));
-    Ok(PgDB {
-      connection : conn
-    })
+impl Debug for DBError {
+  fn fmt (&self, fmt : &mut Formatter) -> fmt::Result {
+    match *self {
+      DBError::ConnectError(ref x) => {x.fmt(fmt)}
+      DBError::Error(ref x) => {x.fmt(fmt)}
+      DBError::TypeParseError => {fmt::Debug::fmt("Could not parse db types", fmt)}
+    }
   }
 }
 
+impl ::postgres::ToSql for HType {
+  fn to_sql(&self, ty: &::postgres::types::Type) -> Result<Option<Vec<u8>>, Error> {
+    self.to_string().to_sql(ty)
+  }
+}
+
+pub struct PgDB {
+  conn : Connection,
+  predByName : HashMap<String, Predicate>,
+}
+
+impl PgDB {
+  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
+    let conn = try!(Connection::connect(conn_str, &SslMode::None));
+    try!(conn.execute("create schema if not exists facts", &[]));
+    try!(conn.execute("create table if not exists predicates (pred_name varchar, ordinal int4, type varchar)", &[]));
+    let mut predByName : HashMap<String, Predicate> = HashMap::new();
+    {
+      let pred_stmt = try!(conn.prepare("select (pred_name, type) from predicates ORDER BY pred_name, ordinal"));
+      let mut pred_types = try!(pred_stmt.query(&[]));
+      for type_entry in pred_types {
+        let name : String = type_entry.get(0);
+        let h_type_str : String = type_entry.get(1);
+        let h_type : HType = match FromStr::from_str(h_type_str.as_slice()) {
+            Some(ty) => {ty}
+            None => {return Err(TypeParseError);}
+          };
+        match predByName.entry(name.clone()) {
+          Vacant(entry) => {
+            let mut types = Vec::new();
+            types.push(h_type);
+            entry.insert(Predicate {
+              name  : name.clone(),
+              types : types
+            });
+          }
+          Occupied(mut entry) => {
+            entry.get_mut().types.push(h_type);
+          }
+        }
+      }
+    }
+    Ok(PgDB {
+      conn : conn,
+      predByName : predByName,
+    })
+  }
+
+  fn insert_predicate(&self, pred : &Predicate) -> Result<(), DBError> {
+    let &Predicate {ref name, ref types} = pred;
+    let mut ordinal = 0;
+    for h_type in types.iter() {
+      try!(self.conn.execute("insert into predicates \
+                              (pred_name, type, ordinal) \
+                              values ($1, $2, $3)",
+                             &[name,
+                               h_type,
+                               &ordinal]));
+      ordinal += 1;
+    }
+    return Ok(());
+  }
+}
+
+fn valid_name(name : &String) -> bool {
+  name.chars().all( |ch| match ch { 'a'...'z' | '_' => true, _ => false } )
+}
+
 impl FactDB for PgDB {
-  fn new_predicate(&self, name : &str,
-                   types : struct_list::Reader<holmes::h_type::Reader>)
+  fn new_predicate<'a>(&mut self, name : &str,
+                   types : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
                    -> PredResponse {
-    PredResponse::PredicateCreated(42)
+    use fact_db::PredResponse::*;
+    let name = String::from_str(name);
+    
+    if !valid_name(&name) {
+      return PredicateInvalid("Invalid name: Use lowercase and underscores only".to_string());
+    }
+    
+    let types = convert_types(types);
+    
+    if types.len() == 0 {
+      return PredicateInvalid("Predicates must have at least one argument.".to_string());
+    }
+    //Check if we already have a predicate by this name
+    match self.predByName.get(&name) {
+      Some(p) => {
+        if types == p.types {
+          //Types match, we're legal
+          return PredicateExists;
+        } else {
+          //Types don't match, throw error
+          return PredicateTypeMismatch;
+        }
+      }
+      None => ()
+    }
+    
+    let predicate = Predicate {
+      name  : name.clone(),
+      types : types
+    };
+    
+    match self.insert_predicate(&predicate) {
+      Ok(()) => {}
+      Err(e) => {return PredicateInvalid(format!("{:?}", e));}
+    }
+
+    self.predByName.insert(name.clone(), predicate);
+    PredResponse::PredicateCreated
   }
 }
