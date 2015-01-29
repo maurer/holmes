@@ -1,20 +1,11 @@
+extern crate "holmes" as holmes_crate;
 extern crate capnp;
 extern crate "capnp-rpc" as capnp_rpc;
-extern crate postgres;
 
-pub mod server;
-mod fact_db;
-mod pg_db;
-
-pub mod holmes_capnp {
-  include!(concat!(env!("OUT_DIR"), "/holmes_capnp.rs"));
-}
-
-use server::HolmesImpl;
-use pg_db::PgDB;
-use holmes_capnp::holmes;
-
+use holmes_crate::pg_db::PgDB;
 use capnp_rpc::ez_rpc::EzRpcServer;
+use holmes_crate::holmes_capnp::holmes;
+use holmes_crate::server::HolmesImpl;
 
 pub fn main () {
   let rpc_server = EzRpcServer::new("127.0.0.1:8080").unwrap();

@@ -11,7 +11,6 @@ repository = "https://github.com/maurer/holmes"
 [[bin]]
 
 name = "holmes"
-path = "src/main.rs"
 
 [build-dependencies]
 capnpc = "0.1.1"
