@@ -1,11 +1,4 @@
-use std;
-use std::vec::Vec;
-
-use capnp::capability::{FromServer, Server};
-use capnp::list::{primitive_list};
-use capnp::{MallocMessageBuilder, MessageBuilder};
-
-use capnp_rpc::capability::{InitRequest, LocalClient, WaitForContent};
+use capnp::capability::Server;
 
 use holmes_capnp::holmes;
 
@@ -35,15 +28,15 @@ impl holmes::Server for HolmesImpl {
     context.done();
   }
 
-  fn new_fact(&mut self, mut context : holmes::NewFactContext) {
+  fn new_fact(&mut self, context : holmes::NewFactContext) {
     context.done();
   }
 
-  fn derive_fact(&mut self, mut context : holmes::DeriveFactContext) {
+  fn derive_fact(&mut self, context : holmes::DeriveFactContext) {
     context.done();
   }
 
-  fn new_rule(&mut self, mut context : holmes::NewRuleContext) {
+  fn new_rule(&mut self, context : holmes::NewRuleContext) {
     context.done();
   }
 }
