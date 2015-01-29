@@ -22,6 +22,6 @@ impl FactDB for PgDB {
   fn new_predicate(&self, name : &str,
                    types : struct_list::Reader<holmes::h_type::Reader>)
                    -> PredResponse {
-    PredResponse::PredicateInvalid("unimplemented")
+    PredResponse::PredicateCreated(42)
   }
 }

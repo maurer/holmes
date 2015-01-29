@@ -17,17 +17,23 @@ impl HolmesImpl {
 
 impl holmes::Server for HolmesImpl {
   fn new_predicate(&mut self, mut context : holmes::NewPredicateContext) {
+    use fact_db::PredResponse::*;
     let (params, mut results) = context.get();
-    let res = self.fact_db.new_predicate(params.get_pred_name(), params.get_arg_types());
-    let pred_id = 
-      match res {
-        PredResponse::PredicateInvalid(_) => 42,
-        _ => 5
-      };
-    results.set_pred_id(pred_id);
-    context.done();
+    let pred_res = self.fact_db.new_predicate(params.get_pred_name(),
+                                              params.get_arg_types());
+    match pred_res {
+        PredicateCreated(pred_id)
+      | PredicateExists(pred_id) => {
+          results.set_pred_id(pred_id);
+          context.done();
+        }
+        PredicateTypeMismatch
+      | PredicateInvalid(_) => {
+          context.fail();
+        }
+    }
   }
-
+  
   fn new_fact(&mut self, context : holmes::NewFactContext) {
     context.done();
   }
