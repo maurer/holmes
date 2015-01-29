@@ -1,5 +1,6 @@
 extern crate capnp;
 extern crate "capnp-rpc" as capnp_rpc;
+extern crate postgres;
 
 pub mod server;
 pub mod fact_db;

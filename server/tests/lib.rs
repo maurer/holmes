@@ -13,10 +13,11 @@ use std::thread::Thread;
 #[test]
 pub fn dummy_rpc_check() {
   let addr = "127.0.0.1:8080";
+  let pg_db = PgDB::new("postgresql://maurer@localhost").unwrap();
   //Deploy server
   let rpc_server = EzRpcServer::new(addr).unwrap();
   let holmes = Box::new(holmes::ServerDispatch {
-      server : Box::new(HolmesImpl::new(Box::new(PgDB)))
+      server : Box::new(HolmesImpl::new(Box::new(pg_db)))
           });
   rpc_server.export_cap("holmes", holmes);
   let serve_thread = rpc_server.serve();
