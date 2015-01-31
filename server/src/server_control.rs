@@ -108,8 +108,8 @@ impl<'a> Server<'a> {
   }
   pub fn shutdown(&mut self) -> ::std::thread::Result<()> {
     let shutdown = self.shutdown.take();
-    TcpStream::connect(self.addr);
     shutdown.expect("Tried to shut down non-running server").store(true,Ordering::Release);
+    TcpStream::connect(self.addr);
     self.join()
   }
   pub fn destroy(&mut self) -> ::std::thread::Result<()> {

@@ -90,9 +90,7 @@ impl RpcServer {
       let mut server = self;
       let shutdown = server.shutdown.clone();
       for res in server.incoming() {
-        println!("New connection!");
         if shutdown.load(Ordering::Acquire) {
-          println!("Aborting!");
           break;
         }
         match res {
