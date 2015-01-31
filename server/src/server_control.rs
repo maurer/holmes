@@ -46,9 +46,23 @@ impl DB {
       &DB::Postgres(str) => { 
         let mut params = try!(str.into_connect_params());
         let old_db = try!(params.database.ok_or(NoDB));
-        params.database = Some("postgresql".to_string());
+        params.database = Some("postgres".to_string());
         let conn = try!(Connection::connect(params, &SslMode::None));
-        try!(conn.execute("DROP DATABASE $1", &[&old_db]));
+        let drop_query = format!("DROP DATABASE {}", &old_db);
+        try!(conn.execute(drop_query.as_slice(), &[]));
+      }
+    }
+    Ok(())
+  }
+  fn create(&self) -> Result<(), Box<Error>> {
+    match self {
+      &DB::Postgres(str) => {
+        let mut params = try!(str.into_connect_params());
+        let old_db = try!(params.database.ok_or(NoDB));
+        params.database = Some("postgres".to_string());
+        let conn = try!(Connection::connect(params, &SslMode::None));
+        let create_query = format!("CREATE DATABASE {}", &old_db);
+        try!(conn.execute(create_query.as_slice(), &[]));
       }
     }
     Ok(())
@@ -70,6 +84,7 @@ impl<'a> Server<'a> {
     }
   }
   pub fn boot(&mut self) -> Result<(), Box<Error+'a>> {
+    self.db.create();
     let rpc_server = try!(EzRpcServer::new(self.addr));
     let db = match self.db {
       DB::Postgres(s) => {try!(PgDB::new(s))}
