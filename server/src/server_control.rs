@@ -93,10 +93,7 @@ impl<'a> Server<'a> {
       server : Box::new(HolmesImpl::new(Box::new(db)))
       });
     rpc_server.export_cap("holmes", holmes);
-    let thread = Thread::scoped(move || {
-      let _ = rpc_server.serve().join();
-    });
-    self.thread = Some(thread);
+    self.thread = Some(rpc_server.serve());
     Ok(())
   }
   pub fn join(&mut self) -> ::std::thread::Result<()> {
