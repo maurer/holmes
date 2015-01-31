@@ -63,10 +63,10 @@ impl PgDB {
   pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
     let conn = try!(Connection::connect(conn_str, &SslMode::None));
     try!(conn.execute("create schema if not exists facts", &[]));
-    try!(conn.execute("create table if not exists predicates (pred_name varchar, ordinal int4, type varchar)", &[]));
+    try!(conn.execute("create table if not exists predicates (pred_name varchar not null, ordinal int4 not null, type varchar not null)", &[]));
     let mut predByName : HashMap<String, Predicate> = HashMap::new();
     {
-      let pred_stmt = try!(conn.prepare("select (pred_name, type) from predicates ORDER BY pred_name, ordinal"));
+      let pred_stmt = try!(conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
       let mut pred_types = try!(pred_stmt.query(&[]));
       for type_entry in pred_types {
         let name : String = type_entry.get(0);
