@@ -10,6 +10,8 @@ pub mod holmes_capnp {
   include!(concat!(env!("OUT_DIR"), "/holmes_capnp.rs"));
 }
 
-mod native_types;
+pub mod native_types;
 mod rpc_server;
 pub mod server_control;
+
+pub mod client;
