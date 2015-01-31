@@ -2,7 +2,7 @@ use native_types::*;
 use std::*;
 
 use std::error::FromError;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Formatter};
 use fact_db::{FactDB, PredResponse};
 use holmes_capnp::holmes;
 use capnp::list::{struct_list};
@@ -13,6 +13,7 @@ use postgres::{Connection, ConnectError, Error, SslMode};
 use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DBError {
   ConnectError(ConnectError),
   Error(Error),
@@ -27,12 +28,22 @@ impl FromError<ConnectError> for DBError {
   fn from_error(x : ConnectError) -> DBError {DBError::ConnectError(x)}
 }
 
-impl Debug for DBError {
+impl ::std::fmt::Display for DBError {
   fn fmt (&self, fmt : &mut Formatter) -> fmt::Result {
     match *self {
       DBError::ConnectError(ref x) => {x.fmt(fmt)}
       DBError::Error(ref x) => {x.fmt(fmt)}
-      DBError::TypeParseError => {fmt::Debug::fmt("Could not parse db types", fmt)}
+      DBError::TypeParseError => {::std::fmt::Debug::fmt("Could not parse db types", fmt)}
+    }
+  }
+}
+
+impl ::std::error::Error for DBError {
+  fn description(&self) -> &str {
+    match *self {
+      DBError::ConnectError(ref x) => {x.description()}
+      DBError::Error(ref x) => {x.description()}
+      DBError::TypeParseError => {"Could not parse db types"}
     }
   }
 }
