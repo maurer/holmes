@@ -1,11 +1,14 @@
 use pg_db::PgDB;
-use capnp_rpc::ez_rpc::EzRpcServer;
 use holmes_capnp::holmes;
 use server::HolmesImpl;
 use std::error::Error;
 use postgres::{SslMode, Connection, IntoConnectParams};
 use std::fmt::{Formatter, Display};
 use std::thread::{Thread, JoinGuard};
+use rpc_server::*;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::old_io::TcpStream;
 
 pub fn unwrap<T, E : Display>(r : &Result<T,E>) -> &T {
   match r {
@@ -72,20 +75,22 @@ impl DB {
 pub struct Server<'a> {
   addr : &'a str,
   db : DB,
-  thread : Option<JoinGuard<'a, ()>>
+  thread : Option<JoinGuard<'a, ()>>,
+  shutdown : Option<Arc<AtomicBool>>
 }
 
 impl<'a> Server<'a> {
   pub fn new(addr : &str, db : DB) -> Server {
     Server {
-      addr   : addr,
-      db     : db,
-      thread : None
+      addr     : addr,
+      db       : db,
+      thread   : None,
+      shutdown : None
     }
   }
   pub fn boot(&mut self) -> Result<(), Box<Error+'a>> {
     self.db.create();
-    let rpc_server = try!(EzRpcServer::new(self.addr));
+    let rpc_server = try!(RpcServer::new(self.addr));
     let db = match self.db {
       DB::Postgres(s) => {try!(PgDB::new(s))}
     };
@@ -93,6 +98,7 @@ impl<'a> Server<'a> {
       server : Box::new(HolmesImpl::new(Box::new(db)))
       });
     rpc_server.export_cap("holmes", holmes);
+    self.shutdown.clone_from(&Some(rpc_server.shutdown.clone()));
     self.thread = Some(rpc_server.serve());
     Ok(())
   }
@@ -101,7 +107,9 @@ impl<'a> Server<'a> {
     thread.expect("Tried to join non-running server").join()
   }
   pub fn shutdown(&mut self) -> ::std::thread::Result<()> {
-    //TODO: Send message to thread that destroys it
+    let shutdown = self.shutdown.take();
+    TcpStream::connect(self.addr);
+    shutdown.expect("Tried to shut down non-running server").store(true,Ordering::Release);
     self.join()
   }
   pub fn destroy(&mut self) -> ::std::thread::Result<()> {

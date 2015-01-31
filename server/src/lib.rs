@@ -11,4 +11,5 @@ pub mod holmes_capnp {
 }
 
 mod native_types;
+mod rpc_server;
 pub mod server_control;
