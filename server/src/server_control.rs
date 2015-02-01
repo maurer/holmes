@@ -18,7 +18,7 @@ pub fn unwrap<T, E : Display>(r : &Result<T,E>) -> &T {
 }
 
 pub enum DB {
-  Postgres(&'static str)
+  Postgres(String)
 }
 
 pub enum DBError {
@@ -43,10 +43,10 @@ impl Error for DBError {
   }
 } 
 
-impl DB {
+impl<'a> DB {
   fn destroy(&self) -> Result<(), Box<Error>> {
     match self {
-      &DB::Postgres(str) => { 
+      &DB::Postgres(ref str) => { 
         let mut params = try!(str.into_connect_params());
         let old_db = try!(params.database.ok_or(NoDB));
         params.database = Some("postgres".to_string());
@@ -59,13 +59,13 @@ impl DB {
   }
   fn create(&self) -> Result<(), Box<Error>> {
     match self {
-      &DB::Postgres(str) => {
+      &DB::Postgres(ref str) => {
         let mut params = try!(str.into_connect_params());
         let old_db = try!(params.database.ok_or(NoDB));
         params.database = Some("postgres".to_string());
         let conn = try!(Connection::connect(params, &SslMode::None));
         let create_query = format!("CREATE DATABASE {}", &old_db);
-        try!(conn.execute(create_query.as_slice(), &[]));
+        conn.execute(create_query.as_slice(), &[]);
       }
     }
     Ok(())
@@ -88,11 +88,11 @@ impl<'a> Server<'a> {
       shutdown : None
     }
   }
-  pub fn boot(&mut self) -> Result<(), Box<Error+'a>> {
-    self.db.create();
+  pub fn boot(&mut self) -> Result<(), Box<Error>> {
+    try!(self.db.create());
     let rpc_server = try!(RpcServer::new(self.addr));
     let db = match self.db {
-      DB::Postgres(s) => {try!(PgDB::new(s))}
+      DB::Postgres(ref s) => {try!(PgDB::new(s.as_slice()))}
     };
     let holmes = Box::new(holmes::ServerDispatch {
       server : Box::new(HolmesImpl::new(Box::new(db)))
@@ -117,7 +117,7 @@ impl<'a> Server<'a> {
     self.db.destroy();
     res
   }
-  pub fn reboot(&mut self) -> Result<(), Box<Error+'a>> {
+  pub fn reboot(&mut self) -> Result<(), Box<Error>> {
     self.shutdown();
     try!(self.boot());
     Ok(())

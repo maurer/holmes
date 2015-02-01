@@ -4,19 +4,27 @@ use holmes::server_control::*;
 use holmes::client::*;
 use holmes::native_types::*;
 use holmes::native_types::HType::*;
+use std::sync::atomic::{AtomicInt, ATOMIC_INT_INIT};
+use std::sync::atomic::Ordering::SeqCst;
+
+static port : AtomicInt = ATOMIC_INT_INIT;
 
 fn server_wrap(test : Vec<&Fn(&mut Client) -> ()>) {
-  let addr = "127.0.0.1:8080";
-  let mut server = 
-      Server::new(addr,
-                  DB::Postgres("postgresql://maurer@localhost/holmes_test"));
-  unwrap(&server.boot());
-  for action in test.iter() {
-    let mut client = Client::new(addr).unwrap();
-    action(&mut client);
-    unwrap(&server.reboot());
+  let port_num = port.fetch_add(1, SeqCst);
+  let addr = format!("127.0.0.1:{}", 13370 + port_num);
+  let db_addr = format!("postgresql://maurer@localhost/holmes_test{}", port_num);
+  {
+    let mut server = 
+        Server::new(addr.as_slice(),
+                    DB::Postgres(db_addr));
+    unwrap(&server.boot());
+    for action in test.iter() {
+      let mut client = Client::new(addr.as_slice()).unwrap();
+      action(&mut client);
+      unwrap(&server.reboot());
+    }
+    &server.destroy();
   }
-  &server.destroy();
 }
 
 fn server_single(test : &Fn(&mut Client) -> ()) {
@@ -26,9 +34,56 @@ fn server_single(test : &Fn(&mut Client) -> ()) {
 #[test]
 pub fn new_predicate_basic() {
   server_single(&|&: client : &mut Client| {
-    &client.new_predicate(&Predicate {
+    assert!(&client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
-    });
+    }));
   })
+}
+
+#[test]
+pub fn double_register() {
+  server_single(&|&: client : &mut Client| {
+    let pred1 = &client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, Blob, UInt64]      
+    });
+    let pred2 = &client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, Blob, UInt64]            
+    });
+    assert_eq!(pred1, &true);
+    assert_eq!(pred2, &true);
+  })
+}
+
+#[test]
+pub fn double_register_incompat() {
+  server_single(&|&: client : &mut Client| {
+    let pred1 = &client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, Blob, UInt64]            
+    });
+    let pred2 = &client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, HString, UInt64]
+    });
+    assert_eq!(pred1, &true);
+    assert_eq!(pred2, &false);
+  })
+}
+
+#[test]
+pub fn pred_persist() {
+  server_wrap(vec![&|&: client : &mut Client| {
+    assert!(&client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, Blob, UInt64]
+    }));
+  }, &|&: client : &mut Client| {
+    assert!(!&client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, HString, UInt64]
+    }));
+  }]);
 }
