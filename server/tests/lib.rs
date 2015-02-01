@@ -12,7 +12,7 @@ static port : AtomicInt = ATOMIC_INT_INIT;
 fn server_wrap(test : Vec<&Fn(&mut Client) -> ()>) {
   let port_num = port.fetch_add(1, SeqCst);
   let addr = format!("127.0.0.1:{}", 13370 + port_num);
-  let db_addr = format!("postgresql://maurer@localhost/holmes_test{}", port_num);
+  let db_addr = format!("postgresql://postgres@localhost/holmes_test{}", port_num);
   {
     let mut server = 
         Server::new(addr.as_slice(),

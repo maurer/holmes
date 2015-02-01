@@ -1,0 +1,22 @@
+language: rust
+rust: nightly
+addons:
+  postgresql: 9.3
+
+before_install:
+  - yes | sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update
+install:
+  - sudo apt-get install g++-4.8 gcc-4.8 git
+  - git clone https://github.com/kentonv/capnproto.git
+  - export CC=gcc-4.8
+  - export CXX=g++-4.8
+  - cd capnproto/c++
+  - ./setup-autotools.sh
+  - autoreconf -i
+  - ./configure && make -j5 && sudo make install && cd ../..
+
+script:
+  - cd server
+  - cargo build --verbose
+  - cargo test --verbose
