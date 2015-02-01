@@ -32,8 +32,7 @@ impl holmes::Server for HolmesImpl {
           context.done();
         }
         PredicateInvalid(m) => {
-          panic!(m);
-          context.fail();
+          context.fail(m);
         }
     }
   }
