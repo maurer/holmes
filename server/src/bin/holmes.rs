@@ -1,4 +1,3 @@
-#![feature(collections)]
 extern crate holmes;
 
 use holmes::server_control::*;

@@ -15,12 +15,13 @@ pub enum HType {
 use native_types::HType::*;
 
 impl FromStr for HType {
-  fn from_str(s : &str) -> Option<HType> {
+  type Err = String;
+  fn from_str(s : &str) -> Result<HType, String> {
     match s {
-      "uint64" => {Some(UInt64)}
-      "string" => {Some(HString)}
-      "blob"   => {Some(Blob)}
-      _ => {None}
+      "uint64" => Ok(UInt64),
+      "string" => Ok(HString),
+      "blob"   => Ok(Blob),
+      _ => Err(s.to_string())
     }
   }
 }

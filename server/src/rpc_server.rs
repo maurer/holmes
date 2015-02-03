@@ -2,6 +2,7 @@
 use std::old_io::Acceptor;
 use std::collections::hash_map::HashMap;
 use capnp::any_pointer;
+use capnp::message::ReaderOptions;
 use capnp::capability::{ClientHook, Server};
 use capnp_rpc::rpc::{RpcConnectionState, SturdyRefRestorer};
 use capnp_rpc::capability::{LocalClient};
@@ -71,7 +72,7 @@ impl RpcServer {
   pub fn new(bind_address : &str) -> std::old_io::IoResult<RpcServer> {
     use std::old_io::net::{ip, tcp};
     use std::old_io::Listener;
-    let addr : ip::SocketAddr = std::str::FromStr::from_str(bind_address).expect("bad bind address");
+    let addr : ip::SocketAddr = std::str::FromStr::from_str(bind_address).ok().expect("bad bind address");
     let tcp_listener = try!(tcp::TcpListener::bind(addr));
     let tcp_acceptor = try!(tcp_listener.listen());
     let sender = ExportedCaps::new();
@@ -104,9 +105,12 @@ impl std::old_io::Acceptor<()> for RpcServer {
   fn accept(&mut self) -> std::old_io::IoResult<()> {
     let sender2 = self.sender.clone();
     let tcp = try!(self.tcp_acceptor.accept());
+    let reader_options : ReaderOptions =
+      *ReaderOptions::new()
+      .fail_fast(false);
     Thread::spawn(move || {
       let connection_state = RpcConnectionState::new();
-      let _rpc_chan = connection_state.run(tcp.clone(), tcp, Restorer::new(sender2));
+      let _rpc_chan = connection_state.run(tcp.clone(), tcp, Restorer::new(sender2), reader_options);
     });
     Ok(())
   }

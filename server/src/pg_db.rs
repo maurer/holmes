@@ -17,7 +17,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 pub enum DBError {
   ConnectError(ConnectError),
   Error(Error),
-  TypeParseError
+  TypeParseError(String)
 }
 use pg_db::DBError::TypeParseError;
 
@@ -31,9 +31,10 @@ impl FromError<ConnectError> for DBError {
 impl ::std::fmt::Display for DBError {
   fn fmt (&self, fmt : &mut Formatter) -> fmt::Result {
     match *self {
-      DBError::ConnectError(ref x) => {x.fmt(fmt)}
-      DBError::Error(ref x) => {x.fmt(fmt)}
-      DBError::TypeParseError => {::std::fmt::Debug::fmt("Could not parse db types", fmt)}
+      DBError::ConnectError(ref x) => x.fmt(fmt),
+      DBError::Error(ref x) => x.fmt(fmt),
+      DBError::TypeParseError(ref s) =>
+        fmt.write_str(format!("Could not parse db type: {}", s.clone()).as_slice())
     }
   }
 }
@@ -41,9 +42,9 @@ impl ::std::fmt::Display for DBError {
 impl ::std::error::Error for DBError {
   fn description(&self) -> &str {
     match *self {
-      DBError::ConnectError(ref x) => {x.description()}
-      DBError::Error(ref x) => {x.description()}
-      DBError::TypeParseError => {"Could not parse db types"}
+      DBError::ConnectError(ref x) => x.description(),
+      DBError::Error(ref x) => x.description(),
+      DBError::TypeParseError(_) => "Could not parse db types"
     }
   }
 }
@@ -67,13 +68,13 @@ impl PgDB {
     let mut pred_by_name : HashMap<String, Predicate> = HashMap::new();
     {
       let pred_stmt = try!(conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
-      let mut pred_types = try!(pred_stmt.query(&[]));
+      let pred_types = try!(pred_stmt.query(&[]));
       for type_entry in pred_types {
         let name : String = type_entry.get(0);
         let h_type_str : String = type_entry.get(1);
         let h_type : HType = match FromStr::from_str(h_type_str.as_slice()) {
-            Some(ty) => {ty}
-            None => {return Err(TypeParseError);}
+            Ok(ty) => ty,
+            Err(e) => return Err(TypeParseError(e))
           };
         match pred_by_name.entry(name.clone()) {
           Vacant(entry) => {
