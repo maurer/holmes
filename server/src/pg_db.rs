@@ -55,8 +55,8 @@ impl ::postgres::ToSql for HType {
 }
 
 pub struct PgDB {
-  conn : Connection,
-  predByName : HashMap<String, Predicate>,
+  conn         : Connection,
+  pred_by_name : HashMap<String, Predicate>,
 }
 
 impl PgDB {
@@ -64,7 +64,7 @@ impl PgDB {
     let conn = try!(Connection::connect(conn_str, &SslMode::None));
     try!(conn.execute("create schema if not exists facts", &[]));
     try!(conn.execute("create table if not exists predicates (pred_name varchar not null, ordinal int4 not null, type varchar not null)", &[]));
-    let mut predByName : HashMap<String, Predicate> = HashMap::new();
+    let mut pred_by_name : HashMap<String, Predicate> = HashMap::new();
     {
       let pred_stmt = try!(conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
       let mut pred_types = try!(pred_stmt.query(&[]));
@@ -75,7 +75,7 @@ impl PgDB {
             Some(ty) => {ty}
             None => {return Err(TypeParseError);}
           };
-        match predByName.entry(name.clone()) {
+        match pred_by_name.entry(name.clone()) {
           Vacant(entry) => {
             let mut types = Vec::new();
             types.push(h_type);
@@ -92,7 +92,7 @@ impl PgDB {
     }
     Ok(PgDB {
       conn : conn,
-      predByName : predByName,
+      pred_by_name : pred_by_name,
     })
   }
 
@@ -133,7 +133,7 @@ impl FactDB for PgDB {
       return PredicateInvalid("Predicates must have at least one argument.".to_string());
     }
     //Check if we already have a predicate by this name
-    match self.predByName.get(&name) {
+    match self.pred_by_name.get(&name) {
       Some(p) => {
         if types == p.types {
           //Types match, we're legal
@@ -156,7 +156,7 @@ impl FactDB for PgDB {
       Err(e) => {return PredicateInvalid(format!("{:?}", e));}
     }
 
-    self.predByName.insert(name.clone(), predicate);
+    self.pred_by_name.insert(name.clone(), predicate);
     PredResponse::PredicateCreated
   }
 }

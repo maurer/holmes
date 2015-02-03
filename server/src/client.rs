@@ -2,12 +2,12 @@ use holmes_capnp::holmes;
 use capnp_rpc::ez_rpc::EzRpcClient;
 use std::old_io::IoResult;
 use native_types::*;
-use capnp_rpc::capability::{InitRequest, LocalClient, WaitForContent};
+use capnp_rpc::capability::{InitRequest, WaitForContent};
 use std::num::{ToPrimitive, FromPrimitive};
 
 pub struct Client {
-  rpc_client : EzRpcClient,
-  holmes : holmes::Client
+  holmes : holmes::Client,
+  pub rpc_client : EzRpcClient
 }
 
 impl Client {
@@ -15,8 +15,8 @@ impl Client {
     let mut rpc_client = try!(EzRpcClient::new(addr));
     let holmes : holmes::Client = rpc_client.import_cap("holmes");
     Ok(Client {
-      rpc_client : rpc_client,
-      holmes     : holmes
+      holmes     : holmes,
+      rpc_client : rpc_client
     })
   }
   //TODO: figure out how to represent the output type for a pipelinable promise

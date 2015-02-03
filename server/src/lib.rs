@@ -1,3 +1,4 @@
+#![feature(core,collections,std_misc,io)]
 extern crate capnp;
 extern crate "capnp-rpc" as capnp_rpc;
 extern crate postgres;

@@ -3,7 +3,6 @@ use capnp::capability::Server;
 use holmes_capnp::holmes;
 
 use fact_db::FactDB;
-use fact_db::PredResponse;
 
 pub struct HolmesImpl {
   fact_db : Box<FactDB + Send>

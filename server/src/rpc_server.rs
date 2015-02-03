@@ -1,16 +1,12 @@
 // This code heavily derived from capnp-rpc-rust's EzRpcServer
-use std::str::FromStr;
-
-use capnp_rpc::rpc_capnp::{message, return_};
 use std::old_io::Acceptor;
 use std::collections::hash_map::HashMap;
-use capnp::{any_pointer, MessageBuilder, MallocMessageBuilder};
-use capnp::capability::{ClientHook, FromClientHook, Server};
-use capnp_rpc::rpc::{RpcConnectionState, RpcEvent, SturdyRefRestorer};
+use capnp::any_pointer;
+use capnp::capability::{ClientHook, Server};
+use capnp_rpc::rpc::{RpcConnectionState, SturdyRefRestorer};
 use capnp_rpc::capability::{LocalClient};
 use std;
 use std::sync::Arc;
-use std::ops::Deref;
 use std::thread::{Thread, JoinGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
 
