@@ -4,7 +4,7 @@ use std::*;
 
 use std::error::FromError;
 use std::fmt::{Formatter};
-use fact_db::{FactDB, PredResponse};
+use fact_db::{FactDB, PredResponse, FactResponse};
 use std::str::FromStr;
 
 use postgres::{Connection, ConnectError, Error, SslMode};
@@ -159,5 +159,10 @@ impl FactDB for PgDB {
 
     self.pred_by_name.insert(pred.name.clone(), pred);
     PredResponse::PredicateCreated
+  }
+
+  fn new_fact(&mut self, _fact : Fact) -> FactResponse {
+    use fact_db::FactResponse::*;
+    FactCreated
   }
 }

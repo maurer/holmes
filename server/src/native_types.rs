@@ -14,6 +14,13 @@ pub enum HType {
 }
 use native_types::HType::*;
 
+#[derive(PartialEq,Clone)]
+pub enum HValue<'a> {
+  Uint64V(u64),
+  HStringV(String),
+  Blob(&'a [u8])
+}
+
 impl FromStr for HType {
   type Err = String;
   fn from_str(s : &str) -> Result<HType, String> {
@@ -40,6 +47,12 @@ impl ToString for HType {
 pub struct Predicate {
   pub name  : String,
   pub types : Vec<HType>
+}
+
+#[derive(PartialEq,Clone)]
+pub struct Fact<'a> {
+  pub pred_name : String,
+  pub args : Vec<HValue<'a>>
 }
 
 pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
