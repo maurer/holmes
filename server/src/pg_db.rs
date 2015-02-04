@@ -5,8 +5,6 @@ use std::*;
 use std::error::FromError;
 use std::fmt::{Formatter};
 use fact_db::{FactDB, PredResponse};
-use holmes_capnp::holmes;
-use capnp::list::{struct_list};
 use std::str::FromStr;
 
 use postgres::{Connection, ConnectError, Error, SslMode};
@@ -131,25 +129,19 @@ fn h_type_to_sql_type(h_type : &HType) -> String {
 }
 
 impl FactDB for PgDB {
-  fn new_predicate<'a>(&mut self, name : &str,
-                   types : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
-                   -> PredResponse {
+  fn new_predicate(&mut self, pred : Predicate) -> PredResponse {
     use fact_db::PredResponse::*;
-    let name = String::from_str(name);
-    
-    if !valid_name(&name) {
+    if !valid_name(&pred.name) {
       return PredicateInvalid("Invalid name: Use lowercase and underscores only".to_string());
     }
     
-    let types = convert_types(types);
-    
-    if types.len() == 0 {
+    if pred.types.len() == 0 {
       return PredicateInvalid("Predicates must have at least one argument.".to_string());
     }
     //Check if we already have a predicate by this name
-    match self.pred_by_name.get(&name) {
+    match self.pred_by_name.get(&pred.name) {
       Some(p) => {
-        if types == p.types {
+        if pred.types == p.types {
           //Types match, we're legal
           return PredicateExists;
         } else {
@@ -160,17 +152,12 @@ impl FactDB for PgDB {
       None => ()
     }
     
-    let predicate = Predicate {
-      name  : name.clone(),
-      types : types
-    };
-    
-    match self.insert_predicate(&predicate) {
+    match self.insert_predicate(&pred) {
       Ok(()) => {}
       Err(e) => {return PredicateInvalid(format!("{:?}", e));}
     }
 
-    self.pred_by_name.insert(name.clone(), predicate);
+    self.pred_by_name.insert(pred.name.clone(), pred);
     PredResponse::PredicateCreated
   }
 }
