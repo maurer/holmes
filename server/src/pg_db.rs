@@ -1,4 +1,5 @@
 use native_types::*;
+use native_types::HType::*;
 use std::*;
 
 use std::error::FromError;
@@ -99,22 +100,34 @@ impl PgDB {
 
   fn insert_predicate(&self, pred : &Predicate) -> Result<(), DBError> {
     let &Predicate {ref name, ref types} = pred;
-    let mut ordinal = 0;
-    for h_type in types.iter() {
+    let mut table_str = "(".to_string();
+    for (ordinal, h_type) in types.iter().enumerate() {
       try!(self.conn.execute("insert into predicates \
                               (pred_name, type, ordinal) \
                               values ($1, $2, $3)",
                              &[name,
                                h_type,
-                               &ordinal]));
-      ordinal += 1;
+                               &(ordinal as i32)]));
+
+      table_str.push_str(format!("arg{} {},", ordinal, h_type_to_sql_type(h_type)).as_slice());
     }
+    table_str.pop();
+    table_str.push(')');
+    try!(self.conn.execute(format!("create table facts.{} {}", name, table_str).as_slice(), &[]));
     return Ok(());
   }
 }
 
 fn valid_name(name : &String) -> bool {
   name.chars().all( |ch| match ch { 'a'...'z' | '_' => true, _ => false } )
+}
+
+fn h_type_to_sql_type(h_type : &HType) -> String {
+  match h_type {
+    &HString => "varchar".to_string(),
+    &Blob    => "bytea".to_string(),
+    &UInt64  => "int8".to_string(),
+  }
 }
 
 impl FactDB for PgDB {
