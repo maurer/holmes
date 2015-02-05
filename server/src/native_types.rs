@@ -16,9 +16,19 @@ use native_types::HType::*;
 
 #[derive(PartialEq,Clone)]
 pub enum HValue<'a> {
-  Uint64V(u64),
-  HStringV(String),
-  Blob(&'a [u8])
+  UInt64V(u64),
+  HStringV(&'a str),
+  BlobV(&'a [u8])
+}
+use native_types::HValue::*;
+
+pub fn type_check<'a>(vty : (&HValue<'a>, &HType)) -> bool {
+  match vty {
+      (&UInt64V(_),  &UInt64)
+    | (&HStringV(_), &HString)
+    | (&BlobV(_),    &Blob) => true,
+    _ => false
+  }
 }
 
 impl FromStr for HType {
@@ -67,4 +77,18 @@ pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type:
     }
   }
   types
+}
+
+pub fn convert_vals<'a> (args_reader : struct_list::Reader<'a, holmes::val::Reader<'a>>)
+  -> Vec<HValue<'a>> {
+  let mut args = Vec::new();
+  for arg_reader in args_reader.iter() {
+    match arg_reader.which() {
+      Some(holmes::val::Uint64(v)) => args.push(UInt64V(v)),
+      Some(holmes::val::String(s)) => args.push(HStringV(s)),
+      Some(holmes::val::Blob(b))   => args.push(BlobV(b)),
+      None => () //TODO what should we do if there's an unknown value?
+    }
+  }
+  args
 }

@@ -34,7 +34,8 @@ impl holmes::Server for HolmesImpl {
           results.set_valid(false);
           context.done();
         }
-        PredicateInvalid(m) => {
+        PredicateInvalid(m)
+      | PredFail(m) => {
           context.fail(m);
         }
     }

@@ -4,17 +4,19 @@ pub enum PredResponse {
   PredicateCreated,
   PredicateExists,
   PredicateTypeMismatch,
-  PredicateInvalid(String)
+  PredicateInvalid(String),
+  PredFail(String)
 }
 
 pub enum FactResponse {
   FactCreated,
   FactExists,
-  FactTypeMismatch(String),
-  FactPredUnreg(String)
+  FactTypeMismatch,
+  FactPredUnreg(String),
+  FactFail(String)
 }
 
 pub trait FactDB: Send {
   fn new_predicate(&mut self, pred : Predicate) -> PredResponse;
-  fn new_fact(&mut self, fact : Fact) -> FactResponse;
+  fn new_fact(&mut self, fact : &Fact) -> FactResponse;
 }
