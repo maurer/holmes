@@ -37,7 +37,7 @@ impl Client {
     pred_req.send().wait().unwrap().get_valid()
   }
 
-  pub fn new_fact(&mut self, fact : &Fact) -> () {
+  pub fn new_fact(&mut self, fact : &Fact) -> Result<(), String> {
     use native_types::HValue::*;
     let mut resp = {
       let mut fact_req = self.holmes.new_fact_request();
@@ -56,6 +56,6 @@ impl Client {
       }
       fact_req.send()
     };
-    resp.wait().unwrap();
+    resp.wait().map(|_|{()})
   }
 }
