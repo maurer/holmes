@@ -14,6 +14,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use postgres::ToSql;
 use std::iter::IteratorExt;
+use std::slice::SliceConcatExt;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DBError {
@@ -125,13 +126,12 @@ impl PgDB {
   }
 
   fn gen_insert_stmt(&mut self, pred : &Predicate) {
-    let mut args = pred.types.iter().enumerate().map(|(k,_)|{
-      format!("${}, ", k)
-    }).fold("".to_string(), |ext, s| {s + ext.as_slice()});
-    args.pop(); args.pop();
+    let args : Vec<String> = pred.types.iter().enumerate().map(|(k,_)|{
+      format!("${}", k + 1)
+    }).collect();
     let stmt = format!("insert into facts.{} values ({})",
                        pred.name,
-                       args.as_slice());
+                       args.connect(", "));
     self.insert_by_name.insert(pred.name.clone(), stmt);
   }
 

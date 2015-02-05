@@ -5,6 +5,7 @@ use holmes::server_control::*;
 use holmes::client::*;
 use holmes::native_types::*;
 use holmes::native_types::HType::*;
+use holmes::native_types::HValue::*;
 use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 
@@ -88,3 +89,22 @@ pub fn pred_persist() {
     }));
   }]);
 }
+
+#[test]
+pub fn new_fact_basic() {
+  server_single(&|&: client : &mut Client| {
+    assert!(&client.new_predicate(&Predicate {
+      name  : "test_pred".to_string(),
+      types : vec![HString, Blob, UInt64]
+    }));
+    &client.new_fact(&Fact {
+      pred_name : "test_pred".to_string(),
+      args : vec![HStringV("foo"),
+                  BlobV(&[3;3]),
+                  UInt64V(7)
+                 ]
+    });
+  })
+}
+
+
