@@ -36,4 +36,26 @@ impl Client {
     }
     pred_req.send().wait().unwrap().get_valid()
   }
+
+  pub fn new_fact(&mut self, fact : &Fact) -> () {
+    use native_types::HValue::*;
+    let mut resp = {
+      let mut fact_req = self.holmes.new_fact_request();
+      let req_data = fact_req.init();
+      let mut fact_data = req_data.init_fact();
+      fact_data.set_predicate(fact.pred_name.as_slice());
+      let arg_len = fact.args.len().to_u32().unwrap();
+      let mut arg_data = fact_data.borrow().init_args(arg_len);
+      for (i, val) in fact.args.iter().enumerate() {
+        let i = i as u32;
+        match val {
+          &HStringV(x) => {arg_data.borrow().get(i).set_string(x)}
+          &BlobV(x)    => {arg_data.borrow().get(i).set_blob(x)}
+          &UInt64V(x)  => {arg_data.borrow().get(i).set_uint64(x)}
+        }
+      }
+      fact_req.send()
+    };
+    resp.wait().unwrap();
+  }
 }

@@ -50,7 +50,7 @@ interface Holmes {
                    argTypes :List(HType)) -> (valid :Bool);
 
   # Add a fact to the extensional database
-  newFact @1 (fact :List(Fact));
+  newFact @1 (fact :Fact);
   
   # Ask the server to search or expand the intensional database
   # searching for a set of facts that matches a body clause

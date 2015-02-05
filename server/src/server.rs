@@ -41,8 +41,24 @@ impl holmes::Server for HolmesImpl {
     }
   }
   
-  fn new_fact(&mut self, context : holmes::NewFactContext) {
-    context.done();
+  fn new_fact(&mut self, mut context : holmes::NewFactContext) {
+    use fact_db::FactResponse::*;
+    let (params, _) = context.get();
+    let fact_data = params.get_fact();
+    let fact = Fact {
+      pred_name : fact_data.get_predicate().to_string(),
+      args : convert_vals(fact_data.get_args())
+    };
+    match self.fact_db.new_fact(&fact) {
+        FactCreated
+      | FactExists => context.done(),
+        FactTypeMismatch =>
+          context.fail("Type mismatch".to_string()),
+        FactPredUnreg(s) => context.fail(
+          format!("Predicate not registered: {}", s)),
+        FactFail(s) => context.fail(
+          format!("Internal error: {}", s))
+    }
   }
 
   fn derive_fact(&mut self, context : holmes::DeriveFactContext) {
