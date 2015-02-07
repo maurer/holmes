@@ -4,7 +4,7 @@ use std::*;
 
 use std::error::FromError;
 use std::fmt::{Formatter};
-use fact_db::{FactDB, PredResponse, FactResponse};
+use fact_db::*;
 use std::str::FromStr;
 
 use postgres::{Connection, ConnectError, Error, SslMode};
@@ -228,5 +228,10 @@ impl FactDB for PgDB {
       Ok(false)  => FactExists,
       Err(e)     => FactFail(format!("{:?}", e))
     }
+  }
+  
+  fn search_facts(&self, _query : Vec<Clause>) -> SearchResponse {
+    use fact_db::SearchResponse::*;
+    SearchInvalid
   }
 }

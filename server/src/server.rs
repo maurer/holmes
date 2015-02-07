@@ -61,8 +61,29 @@ impl holmes::Server for HolmesImpl {
     }
   }
 
-  fn derive_fact(&mut self, context : holmes::DeriveFactContext) {
-    context.done();
+  fn derive(&mut self, mut context : holmes::DeriveContext) {
+    use fact_db::SearchResponse::*;
+    let (params, result) = context.get();
+    let clauses = convert_clauses(params.get_query());
+    match self.fact_db.search_facts(clauses) {
+      SearchNone => context.done(),
+      SearchInvalid => context.fail(
+        "Search query invalid".to_string()),
+      SearchFail(s) => context.fail(
+        format!("Internal error: {}", s)),
+      SearchAns(answer_set) => {
+        let mut ctxs_data = result.init_ctx(answer_set.len() as u32);
+        for (i, answer) in answer_set.iter().enumerate() {
+          let i = i as u32;
+          let mut ctx_data = ctxs_data.borrow().init(i, answer.len() as u32);
+          for (j, asgn) in answer.iter().enumerate() {
+            let j = j as u32;
+            capnp_val(ctx_data.borrow().get(j), asgn);
+          }
+        }
+        context.done();
+      }
+    }
   }
 
   fn new_rule(&mut self, context : holmes::NewRuleContext) {

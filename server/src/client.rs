@@ -4,6 +4,7 @@ use std::old_io::IoResult;
 use native_types::*;
 use capnp_rpc::capability::{InitRequest, WaitForContent};
 use std::num::{ToPrimitive, FromPrimitive};
+use std::borrow::ToOwned;
 
 pub struct Client {
   holmes : holmes::Client,
@@ -38,7 +39,6 @@ impl Client {
   }
 
   pub fn new_fact(&mut self, fact : &Fact) -> Result<(), String> {
-    use native_types::HValue::*;
     let mut resp = {
       let mut fact_req = self.holmes.new_fact_request();
       let req_data = fact_req.init();
@@ -48,14 +48,34 @@ impl Client {
       let mut arg_data = fact_data.borrow().init_args(arg_len);
       for (i, val) in fact.args.iter().enumerate() {
         let i = i as u32;
-        match val {
-          &HStringV(x) => {arg_data.borrow().get(i).set_string(x)}
-          &BlobV(x)    => {arg_data.borrow().get(i).set_blob(x)}
-          &UInt64V(x)  => {arg_data.borrow().get(i).set_uint64(x)}
-        }
+        capnp_val(arg_data.borrow().get(i), val);
       }
       fact_req.send()
     };
     resp.wait().map(|_|{()})
+  }
+  pub fn derive(&mut self, query : Vec<&Clause>) ->
+    Result<Vec<Vec<OHValue>>, String> {
+    let mut resp = {
+      let mut derive_req = self.holmes.derive_request();
+      let mut query_data = derive_req.init().init_query(query.len() as u32);
+      for (i, clause) in query.iter().enumerate() {
+        let i = i as u32;
+        capnp_clause(query_data.borrow().get(i), clause);
+      }
+      derive_req.send()
+    };
+    let resp_data = try!(resp.wait());
+    let ctxs = resp_data.get_ctx();
+    let mut anss = Vec::new();
+    for i in range(0, ctxs.len() - 1) {
+      let mut ans = Vec::new();
+      let ctx = ctxs.get(i);
+      for j in range(0, ctx.len() - 1) {
+        ans.push(convert_val(ctx.get(j)).to_owned());
+      }
+      anss.push(ans);
+    }
+    Ok(anss)
   }
 }

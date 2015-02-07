@@ -55,7 +55,7 @@ interface Holmes {
   # Ask the server to search or expand the intensional database
   # searching for a set of facts that matches a body clause
   # Returns the list of satisfying assignments to the body clauses.
-  deriveFact @2 (target :List(BodyClause)) -> (ctx :List(List(Val)));
+  derive @2 (query :List(BodyClause)) -> (ctx :List(List(Val)));
 
   # Add a rule to expand the intentional database
   newRule @3 (rule :Rule) -> ();
