@@ -68,10 +68,10 @@ impl Client {
     let resp_data = try!(resp.wait());
     let ctxs = resp_data.get_ctx();
     let mut anss = Vec::new();
-    for i in range(0, ctxs.len() - 1) {
+    for i in range(0, ctxs.len()) {
       let mut ans = Vec::new();
       let ctx = ctxs.get(i);
-      for j in range(0, ctx.len() - 1) {
+      for j in range(0, ctx.len()) {
         ans.push(convert_val(ctx.get(j)).to_owned());
       }
       anss.push(ans);

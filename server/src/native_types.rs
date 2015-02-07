@@ -16,7 +16,7 @@ pub enum HType {
 }
 use native_types::HType::*;
 
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq,Clone,Debug)]
 pub enum HValue<'a> {
   UInt64V(u64),
   HStringV(&'a str),
@@ -24,6 +24,7 @@ pub enum HValue<'a> {
 }
 use native_types::HValue::*;
 
+#[derive(PartialEq,Clone,Debug)]
 pub enum OHValue {
   UInt64OV(u64),
   HStringOV(String),
