@@ -19,7 +19,7 @@ pub enum FactResponse {
 pub enum SearchResponse<'a> {
   SearchNone,
   SearchAns(Vec<Vec<OHValue>>),
-  SearchInvalid,
+  SearchInvalid(String),
   SearchFail(String)
 }
 

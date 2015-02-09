@@ -67,8 +67,8 @@ impl holmes::Server for HolmesImpl {
     let clauses = convert_clauses(params.get_query());
     match self.fact_db.search_facts(clauses) {
       SearchNone => context.done(),
-      SearchInvalid => context.fail(
-        "Search query invalid".to_string()),
+      SearchInvalid(s) => context.fail(
+        format!("Search query invalid: {}", s)),
       SearchFail(s) => context.fail(
         format!("Internal error: {}", s)),
       SearchAns(answer_set) => {

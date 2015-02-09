@@ -231,19 +231,51 @@ impl FactDB for PgDB {
   }
   
   fn search_facts<'a>(&self, query : Vec<Clause>) -> SearchResponse<'a> {
-    //TODO: Validate that clauses have sequentially introduced variables, starting with 0
-    //TODO: Validate there is at least one clause
-    //TODO: Validate that variables which are unified are the same type
-    //TODO: validate that predicates exist
     use fact_db::SearchResponse::*;
     use native_types::OHValue::*;
-
-    let mut tables = Vec::new();
-    let mut restricts = Vec::new();
-    let mut var_names = Vec::new();
-    let mut var_types = Vec::new();
-    let mut where_clause = Vec::new();
-    let mut vals : Vec<&ToSql> = Vec::new();
+    
+    //Check there is at least one clause
+    if query.len() == 0 {
+      return SearchInvalid("Empty search query".to_string());
+    };
+    
+    //Check that clauses:
+    // * Have sequential variables
+    // * Reference predicates in the database
+    // * Only unify variables of equal type
+    {
+      let mut var_type : Vec<HType> = Vec::new(); 
+      for clause in query.iter() {
+        let pred = match self.pred_by_name.get(&clause.pred_name) {
+          Some(pred) => pred,
+          None => return SearchInvalid(format!("{} is not a registered predicate.", clause.pred_name)),
+        };
+        for (idx, slot) in clause.args.iter().enumerate() {
+          match slot {
+              &MatchExpr::Unbound
+            | &MatchExpr::HConst(_) => (),
+              &MatchExpr::Var(v) => {
+                let v = v as usize;
+                if v == var_type.len() {
+                  var_type.push(pred.types[idx])
+                } else if v > var_type.len() {
+                  return SearchInvalid(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v));
+                } else if var_type[v] != pred.types[idx] {
+                  return SearchInvalid(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx]))
+                }
+              }
+          }
+        }
+      }
+    }
+    
+    // Actually build and execute the query
+    let mut tables = Vec::new(); //predicate names involved in the query, in sequence
+    let mut restricts = Vec::new(); //Unification expressions, indexed by which join they belong on.
+    let mut var_names = Vec::new(); //Translation of variable numbers to sql exprs
+    let mut var_types = Vec::new(); //Translation of variable numbers to HTypes
+    let mut where_clause = Vec::new(); //Constant comparisons
+    let mut vals : Vec<&ToSql> = Vec::new(); //Values for passing into the stmt
     for clause in query.iter() {
       let table_name = format!("facts.{}", clause.pred_name);
       let mut clause_elements = Vec::new();

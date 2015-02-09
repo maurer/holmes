@@ -8,7 +8,7 @@ use std::borrow::{ToOwned, BorrowFrom};
 
 pub type PredId = u64;
 
-#[derive(Copy,PartialEq,Clone)]
+#[derive(Copy,PartialEq,Clone,Debug)]
 pub enum HType {
   UInt64,
   HString,
