@@ -230,9 +230,85 @@ impl FactDB for PgDB {
     }
   }
   
-  fn search_facts(&self, _query : Vec<Clause>) -> SearchResponse {
+  fn search_facts<'a>(&self, query : Vec<Clause>) -> SearchResponse<'a> {
+    //TODO: Validate that clauses have sequentially introduced variables, starting with 0
+    //TODO: Validate there is at least one clause
+    //TODO: Validate that variables which are unified are the same type
+    //TODO: validate that predicates exist
     use fact_db::SearchResponse::*;
-    use native_types::HValue::*;
-    SearchAns(vec![vec![UInt64V(7)]])
+    use native_types::OHValue::*;
+
+    let mut tables = Vec::new();
+    let mut restricts = Vec::new();
+    let mut var_names = Vec::new();
+    let mut var_types = Vec::new();
+    let mut where_clause = Vec::new();
+    let mut vals : Vec<&ToSql> = Vec::new();
+    for clause in query.iter() {
+      let table_name = format!("facts.{}", clause.pred_name);
+      let mut clause_elements = Vec::new();
+      for (idx, arg) in clause.args.iter().enumerate() {
+        match arg {
+          &MatchExpr::Unbound => (),
+          &MatchExpr::Var(var) => if var <= var_names.len() as u32 {
+              var_names.push(
+                format!("{}.arg{}", table_name, idx));
+              var_types.push(self.pred_by_name[clause.pred_name].types[idx]);
+            } else {
+              let piece = format!("{}.arg{} = {}", table_name, idx, var_names[var as usize]);
+              if idx == 0 {
+                //For the first element, we have no ON clause, so stick this in WHERE
+                where_clause.push(piece);
+              } else {
+                clause_elements.push(piece);
+              }
+            },
+          &MatchExpr::HConst(ref val) => {
+            vals.push(val);
+            where_clause.push(
+              format!("{}.arg{} = ${}", table_name, idx, vals.len()));
+          }
+        }
+      }
+      restricts.push(clause_elements);
+      tables.push(table_name);
+    }
+    let vars = format!("({})", var_names.connect(", "));
+    let main_table = tables.pop().unwrap();
+    let main_join = restricts.pop();
+    assert_eq!(main_join, Some(vec![]));
+    let join_blocks : Vec<String> = tables.iter().zip(restricts.iter()).map(|(table, join)| {
+        format!("JOIN {} ON {}", table, join.connect(" AND "))
+      }).collect();
+    let join_query = join_blocks.connect(" ");
+    let res_stmt = self.conn.prepare(
+      format!("SELECT {} FROM {} {} WHERE {}",
+              vars, main_table, join_query,
+              where_clause.connect(" AND ")).as_slice());
+    let stmt = match res_stmt {
+      Ok(stmt) => stmt,
+      Err(e) => return SearchFail(
+        format!("Preparing statement failed: {:?}", e))
+    };
+    let res_rows = stmt.query(vals.as_slice());
+    let rows = match res_rows {
+      Ok(rows) => rows,
+      Err(e)   => return SearchFail(
+        format!("Executing query failed: {:?}", e)) 
+    };
+
+    let anss : Vec<Vec<OHValue>> = rows.map(|row| {
+      var_types.iter().enumerate().map(|(idx, h_type)| {
+        match h_type {
+          &HType::UInt64  => { 
+            let v : i64 = row.get(idx);
+            UInt64OV(v as u64)},
+          &HType::HString => HStringOV(row.get(idx)),
+          &HType::Blob    => BlobOV(row.get(idx))
+        }
+      }).collect() 
+    }).collect();
+
+    SearchAns(anss)
   }
 }

@@ -78,7 +78,8 @@ impl holmes::Server for HolmesImpl {
           let mut ctx_data = ctxs_data.borrow().init(i, answer.len() as u32);
           for (j, asgn) in answer.iter().enumerate() {
             let j = j as u32;
-            capnp_val(ctx_data.borrow().get(j), asgn);
+            capnp_val(ctx_data.borrow().get(j),
+                      &disown(asgn));
           }
         }
         context.done();

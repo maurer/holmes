@@ -34,7 +34,15 @@ use native_types::OHValue::*;
 
 impl<'a> BorrowFrom<OHValue> for HValue<'a> {
   fn borrow_from(_oh : &OHValue) -> &HValue<'a> {
-    unimplemented!()
+    unimplemented!();
+  }
+}
+
+pub fn disown<'a> (oh : &'a OHValue) -> HValue<'a> {
+  match oh {
+    &UInt64OV(ref i)  => UInt64V(*i),
+    &HStringOV(ref s) => HStringV(s.as_slice()),
+    &BlobOV(ref b)    => BlobV(b.as_slice())
   }
 }
 
