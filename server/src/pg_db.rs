@@ -79,9 +79,10 @@ impl<'a> ToSql for HValue<'a> {
 }
 
 pub struct PgDB {
-  conn           : Connection,
-  pred_by_name   : HashMap<String, Predicate>,
-  insert_by_name : HashMap<String, String>
+  conn              : Connection,
+  pred_by_name      : HashMap<String, Predicate>,
+  insert_by_name    : HashMap<String, String>,
+//  rule_by_pred_name : HashMap<String, Rc<Rule>>
 }
 
 impl PgDB {
@@ -121,6 +122,21 @@ impl PgDB {
           Occupied(mut entry) => {
             entry.get_mut().types.push(h_type);
           }
+        }
+      }
+    }
+
+    //Reload rule cache
+    {
+      let rule_stmt = try!(conn.prepare("select head_clause, head_pred, body_clause, body_pred from rules"));
+      let mut body_ids_by_head_id : HashMap<ClauseId, Vec<ClauseId>> = HashMap::new();
+      let rows = try!(rule_stmt.query(&[]));
+      for row in rows {
+        let head : ClauseId = (row.get(0), row.get(1));
+        let body : ClauseId = (row.get(2), row.get(3));
+        match body_ids_by_head_id.entry(head) {
+          Vacant(entry) => {entry.insert(vec![body]);}
+          Occupied(mut entry) => entry.get_mut().push(body)
         }
       }
     }
@@ -421,6 +437,7 @@ impl FactDB for PgDB {
       _ => ()
     }
 
+    //Enter rule into rulecache
 
     unimplemented!();
   }
