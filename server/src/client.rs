@@ -55,7 +55,7 @@ impl Client {
     resp.wait().map(|_|{()})
   }
   pub fn derive(&mut self, query : Vec<&Clause>) ->
-    Result<Vec<Vec<OHValue>>, String> {
+    Result<Vec<Vec<HValue>>, String> {
     let mut resp = {
       let mut derive_req = self.holmes.derive_request();
       let mut query_data = derive_req.init().init_query(query.len() as u32);

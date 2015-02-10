@@ -67,13 +67,13 @@ impl ToSql for HType {
   }
 }
 
-impl<'a> ToSql for HValue<'a> {
+impl ToSql for HValue {
   fn to_sql(&self, ty: &::postgres::types::Type) -> Result<Option<Vec<u8>>, Error> {
     use native_types::HValue::*;
     match self {
       &UInt64V(i)  => (i as i64).to_sql(ty),
       &HStringV(ref s) => s.clone().to_sql(ty),
-      &BlobV(b)    => b.to_sql(ty),
+      &BlobV(ref b)    => b.to_sql(ty),
     }
   }
 }
@@ -304,8 +304,8 @@ impl FactDB for PgDB {
   
   fn search_facts<'a>(&self, query : Vec<Clause>) -> SearchResponse<'a> {
     use fact_db::SearchResponse::*;
-    use native_types::OHValue::*;
-    
+    use native_types::HValue::*;
+
     //Check there is at least one clause
     if query.len() == 0 {
       return SearchInvalid("Empty search query".to_string());
@@ -401,14 +401,14 @@ impl FactDB for PgDB {
         format!("Executing query failed: {:?}", e)) 
     };
 
-    let anss : Vec<Vec<OHValue>> = rows.map(|row| {
+    let anss : Vec<Vec<HValue>> = rows.map(|row| {
       var_types.iter().enumerate().map(|(idx, h_type)| {
         match h_type {
           &HType::UInt64  => { 
             let v : i64 = row.get(idx);
-            UInt64OV(v as u64)},
-          &HType::HString => HStringOV(row.get(idx)),
-          &HType::Blob    => BlobOV(row.get(idx))
+            UInt64V(v as u64)},
+          &HType::HString => HStringV(row.get(idx)),
+          &HType::Blob    => BlobV(row.get(idx))
         }
       }).collect() 
     }).collect();

@@ -79,7 +79,7 @@ impl holmes::Server for HolmesImpl {
           for (j, asgn) in answer.iter().enumerate() {
             let j = j as u32;
             capnp_val(ctx_data.borrow().get(j),
-                      &disown(asgn));
+                      asgn);
           }
         }
         context.done();

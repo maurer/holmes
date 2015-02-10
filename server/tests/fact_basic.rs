@@ -5,7 +5,6 @@ use holmes::native_types::*;
 use holmes::native_types::HType::*;
 use holmes::native_types::HValue::*;
 use holmes::native_types::MatchExpr::*;
-use holmes::native_types::OHValue::*;
 
 #[test]
 pub fn new_fact_basic() {
@@ -16,8 +15,8 @@ pub fn new_fact_basic() {
     }));
     &client.new_fact(&Fact {
       pred_name : "test_pred".to_string(),
-      args : vec![HStringV("foo"),
-                  BlobV(&[3;3]),
+      args : vec![HStringV("foo".to_string()),
+                  BlobV(vec![3;3]),
                   UInt64V(7)
                  ]
     }).unwrap();
@@ -34,7 +33,7 @@ pub fn new_fact_type_err() {
     assert_eq!(&client.new_fact(&Fact {
       pred_name : "test_pred".to_string(),
       args : vec![UInt64V(7),
-                  BlobV(&[3;3]),
+                  BlobV(vec![3;3]),
                   UInt64V(7)
                  ]
     }).unwrap_err()[], "Type mismatch");
@@ -51,17 +50,17 @@ pub fn new_fact_echo() {
     }));
     &client.new_fact(&Fact {
       pred_name : test_pred.clone(),
-      args : vec![HStringV("foo"),
-                  BlobV(&[3;3]),
+      args : vec![HStringV("foo".to_string()),
+                  BlobV(vec![3;3]),
                   UInt64V(7)
                  ]
     }).unwrap();
     assert_eq!(&client.derive(vec![&Clause {
       pred_name : test_pred,
-      args : vec![HConst(HStringV("foo")),
+      args : vec![HConst(HStringV("foo".to_string())),
                   Unbound,
                   Var(0)]
-    }]).unwrap(), &vec![vec![UInt64OV(7)]]);
+    }]).unwrap(), &vec![vec![UInt64V(7)]]);
   })
 }
 
