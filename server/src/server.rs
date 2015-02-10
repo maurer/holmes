@@ -87,7 +87,16 @@ impl holmes::Server for HolmesImpl {
     }
   }
 
-  fn new_rule(&mut self, context : holmes::NewRuleContext) {
-    context.done();
+  fn new_rule(&mut self, mut context : holmes::NewRuleContext) {
+    use fact_db::RuleResponse::*;
+    let (params, _) = context.get();
+    let rule = convert_rule(params.get_rule());
+    match self.fact_db.new_rule(rule) {
+      RuleInvalid(s) => context.fail(
+        format!("Rule invalid: {}", s)),
+      RuleFail(s) => context.fail(
+        format!("Internal Error: {}", s)),
+      RuleAdded => context.done()
+    }
   }
 }

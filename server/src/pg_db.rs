@@ -16,6 +16,8 @@ use postgres::ToSql;
 use std::iter::IteratorExt;
 use std::slice::SliceConcatExt;
 
+type ClauseId = (String, i32);
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DBError {
   ConnectError(ConnectError),
@@ -85,8 +87,17 @@ pub struct PgDB {
 impl PgDB {
   pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
     let conn = try!(Connection::connect(conn_str, &SslMode::None));
+    
+    //Create schemas
     try!(conn.execute("create schema if not exists facts", &[]));
+    try!(conn.execute("create schema if not exists clauses", &[]));
+
+    //Create Tables
     try!(conn.execute("create table if not exists predicates (pred_name varchar not null, ordinal int4 not null, type varchar not null)", &[]));
+    try!(conn.execute("create table if not exists gen_clauses (id serial, pred_name varchar not null, tgt serial)", &[]));
+    try!(conn.execute("create table if not exists rules (head_clause serial, head_pred varchar not null, body_clause serial, body_pred varchar not null)", &[]));
+    
+    //Reload predicate cache
     let mut pred_by_name : HashMap<String, Predicate> = HashMap::new();
     {
       let pred_stmt = try!(conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
@@ -113,14 +124,20 @@ impl PgDB {
         }
       }
     }
+
+    //Create temporary pg_db object
     let mut pg_db = PgDB {
       conn : conn,
       pred_by_name : HashMap::new(),
       insert_by_name : HashMap::new()
     };
+
+    //Populate fact insert cache
     for pred in pred_by_name.values() {
       &pg_db.gen_insert_stmt(pred);
     }
+
+    //Finish off pg_db and return
     pg_db.pred_by_name = pred_by_name;
     Ok(pg_db)
   }
@@ -150,7 +167,13 @@ impl PgDB {
     }
     table_str.pop();
     table_str.push(')');
+
+    let clause_str = format!("(id serial primary key, {})", types.iter().enumerate().map(|(idx, h_type)| {
+      format!("var{} int4, val{} {}", idx, idx, h_type_to_sql_type(h_type))
+    }).collect::<Vec<String>>().connect(", "));
+
     try!(self.conn.execute(format!("create table facts.{} {}", name, table_str).as_slice(), &[]));
+    try!(self.conn.execute(format!("create table clauses.{} {}", name, clause_str).as_slice(), &[]));
     return Ok(());
   }
 
@@ -162,6 +185,39 @@ impl PgDB {
     let argrefs : Vec<&ToSql> = fact.args.iter().map(|x|{x as &ToSql}).collect();
     Ok(try!(self.conn.execute(stmt, argrefs.as_slice())) > 0)
   }
+
+  fn insert_clause(&mut self, clause : &Clause) -> Result<ClauseId, DBError> {
+   let table = clause.pred_name.clone();
+   let (columns, traits) : (Vec<String>, Vec<&ToSql>) = 
+     clause.args.iter().enumerate().filter_map(|(idx, arg)| {
+     match arg {
+       &MatchExpr::Unbound       => None,
+       &MatchExpr::Var(ref v)    => Some((format!("var{}", idx), v as &ToSql)),
+       &MatchExpr::HConst(ref c) => Some((format!("val{}", idx), c as &ToSql))
+     }}).unzip();
+   let template = columns.iter().enumerate().map(|(idx, _)| {
+     format!("${}", idx + 1)
+   }).collect::<Vec<String>>().connect(", ");
+   let stmt = try!(self.conn.prepare(
+     format!("insert into clauses.{} ({}) values ({}) returning id",
+             table, columns.connect(", "), template).as_slice()));
+   let mut res = try!(stmt.query(traits.as_slice()));
+   Ok((table, res.next().expect("Clause insert failure").get(0)))
+  }
+
+  fn insert_rule(&mut self, head_id : ClauseId, body_ids : Vec<ClauseId>) -> Result<(), DBError> {
+    //XXX: This should probably be in a txn, an error will create a malformed rule on reboot
+    for body_id in body_ids.iter() {
+      try!(self.conn.execute(
+         format!("insert into rules values ($1, $2, $3, $4)").as_slice(),
+         &[&head_id.0 as &ToSql,
+           &head_id.1 as &ToSql,
+           &body_id.0 as &ToSql,
+           &body_id.1 as &ToSql]));
+    }
+    Ok(())
+  }
+
 }
 
 fn valid_name(name : &String) -> bool {
@@ -342,5 +398,30 @@ impl FactDB for PgDB {
     }).collect();
 
     SearchAns(anss)
+  }
+
+  fn new_rule(&mut self, rule : Rule) -> RuleResponse {
+    use fact_db::RuleResponse::*;
+    let Rule {head, body} = rule;
+    
+    //Persist the rule
+    //Create clauses
+    let head_id : ClauseId = match self.insert_clause(&head) {
+      Ok(v) => v,
+      Err(e) => return RuleFail(format!("Issue creating head clause: {:?}", e))
+    };
+    let body_ids : Vec<ClauseId> =
+      match body.iter().map(|x|{self.insert_clause(x)}).collect::<Result<Vec<ClauseId>, DBError>>() {
+        Ok(v) => v,
+        Err(e) => return RuleFail(format!("Issue creating body clauses: {:?}", e))
+      };
+    //Create rule
+    match self.insert_rule(head_id, body_ids) {
+      Err(e) => return RuleFail(format!("Issue creating rule: {:?}", e)),
+      _ => ()
+    }
+
+
+    unimplemented!();
   }
 }
