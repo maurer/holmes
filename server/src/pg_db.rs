@@ -15,6 +15,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use postgres::ToSql;
 use std::iter::IteratorExt;
 use std::slice::SliceConcatExt;
+use std::sync::Arc;
 
 type ClauseId = (String, i32);
 
@@ -82,7 +83,7 @@ pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,
   insert_by_name    : HashMap<String, String>,
-//  rule_by_pred_name : HashMap<String, Rc<Rule>>
+  rule_by_pred_name : HashMap<String, Arc<Rule>>
 }
 
 impl PgDB {
@@ -97,11 +98,19 @@ impl PgDB {
     try!(conn.execute("create table if not exists predicates (pred_name varchar not null, ordinal int4 not null, type varchar not null)", &[]));
     try!(conn.execute("create table if not exists gen_clauses (id serial, pred_name varchar not null, tgt serial)", &[]));
     try!(conn.execute("create table if not exists rules (head_clause serial, head_pred varchar not null, body_clause serial, body_pred varchar not null)", &[]));
-    
+
+    //Create incremental PgDB object
+    let mut pg_db = PgDB {
+      conn : conn,
+      pred_by_name      : HashMap::new(),
+      insert_by_name    : HashMap::new(),
+      rule_by_pred_name : HashMap::new(),
+    };
+   
     //Reload predicate cache
     let mut pred_by_name : HashMap<String, Predicate> = HashMap::new();
     {
-      let pred_stmt = try!(conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
+      let pred_stmt = try!(pg_db.conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
       let pred_types = try!(pred_stmt.query(&[]));
       for type_entry in pred_types {
         let name : String = type_entry.get(0);
@@ -126,9 +135,18 @@ impl PgDB {
       }
     }
 
+    //Populate fact insert cache
+    for pred in pred_by_name.values() {
+      &pg_db.gen_insert_stmt(pred);
+    }
+
+    //Finish predicate cache
+    pg_db.pred_by_name = pred_by_name;
+ 
     //Reload rule cache
+    let mut rule_by_pred_name : HashMap<String, Arc<Rule>> = HashMap::new();
     {
-      let rule_stmt = try!(conn.prepare("select head_clause, head_pred, body_clause, body_pred from rules"));
+      let rule_stmt = try!(pg_db.conn.prepare("select head_clause, head_pred, body_clause, body_pred from rules"));
       let mut body_ids_by_head_id : HashMap<ClauseId, Vec<ClauseId>> = HashMap::new();
       let rows = try!(rule_stmt.query(&[]));
       for row in rows {
@@ -139,23 +157,51 @@ impl PgDB {
           Occupied(mut entry) => entry.get_mut().push(body)
         }
       }
+      let rules = try!(body_ids_by_head_id.iter().map(|(head_id, body_ids)| {
+        let head_clause = try!(pg_db.get_clause(head_id));
+        let body_clauses = try!(body_ids.iter().map(|body_id| {
+          pg_db.get_clause(body_id)
+        }).collect::<Result<Vec<Clause>,DBError>>());
+        Ok(Rule {
+          head : head_clause,
+          body : body_clauses
+        })
+      }).collect::<Result<Vec<Rule>, DBError>>());
+      //unimplemented!()
     }
 
-    //Create temporary pg_db object
-    let mut pg_db = PgDB {
-      conn : conn,
-      pred_by_name : HashMap::new(),
-      insert_by_name : HashMap::new()
-    };
-
-    //Populate fact insert cache
-    for pred in pred_by_name.values() {
-      &pg_db.gen_insert_stmt(pred);
-    }
-
-    //Finish off pg_db and return
-    pg_db.pred_by_name = pred_by_name;
+    //Transfer rule cache into pg_db
+    pg_db.rule_by_pred_name = rule_by_pred_name;
+    
     Ok(pg_db)
+  }
+
+  fn get_clause(&self, clause_id : &ClauseId)
+     -> Result<Clause, DBError> {
+    use native_types::HValue::*;
+    let stmt = try!(self.conn.prepare(&format!("select * from clauses.{} where id=$1", clause_id.0)));
+    let mut rows = try!(stmt.query(&[&clause_id.1]));
+    let row = rows.next().expect("Should be one row");
+    let args = self.pred_by_name[clause_id.0].types.iter().enumerate().map(|(idx, h_type)| {
+      let var_idx = idx * 2 + 1;
+      let val_idx = var_idx + 1;
+      let var : Option<i32> = row.get(var_idx);
+      let val : Option<HValue> =
+        match h_type {
+          &UInt64  => row.get::<_,Option<i64>>(val_idx).map(|i|{UInt64V(i as u64)}),
+          &HString => row.get::<_,Option<String>>(val_idx).map(HStringV),
+          &Blob    => row.get::<_,Option<Vec<u8>>>(val_idx).map(BlobV)
+        };
+      match (var, val) {
+        (None, None) => MatchExpr::Unbound,
+        (Some(v), _) => MatchExpr::Var(v as u32),
+        (_, Some(v)) => MatchExpr::HConst(v)
+      }
+    }).collect::<Vec<MatchExpr>>();
+    Ok(Clause {
+      pred_name : clause_id.0.clone(),
+      args : args
+    })
   }
 
   fn gen_insert_stmt(&mut self, pred : &Predicate) {

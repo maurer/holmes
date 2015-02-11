@@ -79,7 +79,7 @@ pub struct Clause {
   pub args : Vec<MatchExpr>
 }
 
-pub struct Rule<'a> {
+pub struct Rule {
   pub head : Clause,
   pub body : Vec<Clause>
 }
@@ -155,7 +155,7 @@ pub fn convert_clauses<'a>(clauses_reader : struct_list::Reader<'a,
                        Vec<Clause> {
   clauses_reader.iter().map(convert_clause).collect()
 }
-pub fn convert_rule<'a>(rule_reader : holmes::rule::Reader<'a>) -> Rule<'a> {
+pub fn convert_rule<'a>(rule_reader : holmes::rule::Reader<'a>) -> Rule {
   Rule {
     head : convert_clause(rule_reader.get_head()),
     body : convert_clauses(rule_reader.get_body())
