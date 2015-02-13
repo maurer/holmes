@@ -65,7 +65,7 @@ impl holmes::Server for HolmesImpl {
     use fact_db::SearchResponse::*;
     let (params, result) = context.get();
     let clauses = convert_clauses(params.get_query());
-    match self.fact_db.search_facts(clauses) {
+    match self.fact_db.search_facts(&clauses) {
       SearchNone => context.done(),
       SearchInvalid(s) => context.fail(
         format!("Search query invalid: {}", s)),

@@ -6,7 +6,7 @@ use std::string::{ToString, String};
 
 pub type PredId = u64;
 
-#[derive(Copy,PartialEq,Clone,Debug)]
+#[derive(Copy,PartialEq,Clone,Debug,Hash,Eq)]
 pub enum HType {
   UInt64,
   HString,
@@ -14,7 +14,7 @@ pub enum HType {
 }
 use native_types::HType::*;
 
-#[derive(PartialEq,Clone,Debug)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub enum HValue {
   UInt64V(u64),
   HStringV(String),
@@ -53,13 +53,13 @@ impl ToString for HType {
   }
 }
 
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Predicate {
   pub name  : String,
   pub types : Vec<HType>
 }
 
-#[derive(PartialEq,Clone)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Fact {
   pub pred_name : String,
   pub args : Vec<HValue>
@@ -67,6 +67,7 @@ pub struct Fact {
 
 pub type HVar = u32;
 
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub enum MatchExpr {
   Unbound,
   Var(HVar),
@@ -74,11 +75,13 @@ pub enum MatchExpr {
 }
 use native_types::MatchExpr::*;
 
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Clause {
   pub pred_name : String,
   pub args : Vec<MatchExpr>
 }
 
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Rule {
   pub head : Clause,
   pub body : Vec<Clause>

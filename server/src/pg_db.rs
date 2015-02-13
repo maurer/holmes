@@ -9,6 +9,7 @@ use std::str::FromStr;
 
 use postgres::{Connection, ConnectError, Error, SslMode};
 
+use std::collections::HashSet;
 use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
@@ -79,11 +80,26 @@ impl ToSql for HValue {
   }
 }
 
+fn substitute(clause : &Clause, ans : &Vec<HValue>) -> Fact {
+  use native_types::MatchExpr::*;
+  Fact {
+    pred_name : clause.pred_name.clone(),
+    args : clause.args.iter().map(|slot| {
+      match slot {
+        &Unbound       => panic!("Unbound is not allowed in substituted facts"),
+        &Var(ref n)    => ans[*n as usize].clone(),
+        &HConst(ref v) => v.clone()
+      }
+    }).collect()
+  }
+}
+
 pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,
   insert_by_name    : HashMap<String, String>,
-  rule_by_pred_name : HashMap<String, Arc<Rule>>
+  rule_by_pred_name : HashMap<String, Vec<Arc<Rule>>>,
+  rule_exec_cache   : HashMap<Rule, HashSet<Vec<HValue>>>
 }
 
 impl PgDB {
@@ -105,6 +121,7 @@ impl PgDB {
       pred_by_name      : HashMap::new(),
       insert_by_name    : HashMap::new(),
       rule_by_pred_name : HashMap::new(),
+      rule_exec_cache   : HashMap::new(),
     };
    
     //Reload predicate cache
@@ -144,8 +161,7 @@ impl PgDB {
     pg_db.pred_by_name = pred_by_name;
  
     //Reload rule cache
-    let mut rule_by_pred_name : HashMap<String, Arc<Rule>> = HashMap::new();
-    {
+    let rules = {
       let rule_stmt = try!(pg_db.conn.prepare("select head_clause, head_pred, body_clause, body_pred from rules"));
       let mut body_ids_by_head_id : HashMap<ClauseId, Vec<ClauseId>> = HashMap::new();
       let rows = try!(rule_stmt.query(&[]));
@@ -157,7 +173,7 @@ impl PgDB {
           Occupied(mut entry) => entry.get_mut().push(body)
         }
       }
-      let rules = try!(body_ids_by_head_id.iter().map(|(head_id, body_ids)| {
+      try!(body_ids_by_head_id.iter().map(|(head_id, body_ids)| {
         let head_clause = try!(pg_db.get_clause(head_id));
         let body_clauses = try!(body_ids.iter().map(|body_id| {
           pg_db.get_clause(body_id)
@@ -166,12 +182,12 @@ impl PgDB {
           head : head_clause,
           body : body_clauses
         })
-      }).collect::<Result<Vec<Rule>, DBError>>());
-      //unimplemented!()
+      }).collect::<Result<Vec<Rule>, DBError>>())
+    };
+    for rule in rules {
+      &pg_db.add_rule_cache(&rule);
     }
-
-    //Transfer rule cache into pg_db
-    pg_db.rule_by_pred_name = rule_by_pred_name;
+    //TODO load exec cache
     
     Ok(pg_db)
   }
@@ -239,13 +255,23 @@ impl PgDB {
     return Ok(());
   }
 
-  fn insert_fact(&self, fact : &Fact) -> Result<bool, DBError> {
-    let ref stmt : &String = try!(self.insert_by_name
+  fn insert_fact(&mut self, fact : &Fact) -> Result<bool, DBError> {
+    let stmt : String = try!(self.insert_by_name
       .get(&fact.pred_name)
       .ok_or(InternalError("Insert Statement Missing"
-                           .to_string())));
+                           .to_string()))).clone();
     let argrefs : Vec<&ToSql> = fact.args.iter().map(|x|{x as &ToSql}).collect();
-    Ok(try!(self.conn.execute(stmt, argrefs.as_slice())) > 0)
+    let inserted = try!(self.conn.execute(&stmt, argrefs.as_slice())) > 0;
+    if inserted {
+      let rules = match self.rule_by_pred_name.get(&fact.pred_name) {
+        Some(z) => z.clone(),
+        None => Vec::new()
+      };
+      for rule in rules {
+        self.run_rule(&rule);
+      }
+    }
+    Ok(inserted)
   }
 
   fn insert_clause(&mut self, clause : &Clause) -> Result<ClauseId, DBError> {
@@ -265,6 +291,42 @@ impl PgDB {
              table, columns.connect(", "), template).as_slice()));
    let mut res = try!(stmt.query(traits.as_slice()));
    Ok((table, res.next().expect("Clause insert failure").get(0)))
+  }
+
+  fn run_rule(&mut self, rule : &Rule) {
+    let cache_entry = match self.rule_exec_cache.get(rule) {
+      Some(v) => v.clone(),
+      None => HashSet::new()
+    };
+    match self.search_facts(&rule.body) {
+      SearchResponse::SearchAns(anss) => {
+        let mut anss = anss.clone();
+        anss.dedup();
+        //TODO: make this persist the cache
+        for ans in anss.iter().filter(|ans|{!cache_entry.contains(*ans)}) {
+          match self.rule_exec_cache.entry(rule.clone()) {
+            Vacant(entry) => {
+              let mut cache = HashSet::new();
+              cache.insert(ans.clone());
+              entry.insert(cache);
+            }
+            Occupied(mut entry) => {entry.get_mut().insert(ans.clone());}
+          }
+          self.insert_fact(&substitute(&rule.head, &ans));
+        }
+      }
+      _ => ()
+    }
+  }
+
+  fn add_rule_cache(&mut self, rule : &Rule) {
+    let a_rule : Arc<Rule> = Arc::new(rule.clone());
+    for pred in &rule.body {
+      match self.rule_by_pred_name.entry(pred.pred_name.clone()) {
+        Vacant(entry) => {entry.insert(vec![a_rule.clone()]);}
+        Occupied(mut entry) => entry.get_mut().push(a_rule.clone())
+      }
+    }
   }
 
   fn insert_rule(&mut self, head_id : ClauseId, body_ids : Vec<ClauseId>) -> Result<(), DBError> {
@@ -342,13 +404,22 @@ impl FactDB for PgDB {
     // attempting to insert it in the db should be legal.
 
     match self.insert_fact(&fact) {
-      Ok(true)   => FactCreated,
+      Ok(true)   => {
+        let rules = match self.rule_by_pred_name.get(&fact.pred_name) {
+          Some(z) => z.clone(),
+          None => Vec::new()
+        };
+        for rule in rules {
+          self.run_rule(&rule);
+        }
+        FactCreated
+      }
       Ok(false)  => FactExists,
       Err(e)     => FactFail(format!("{:?}", e))
     }
   }
   
-  fn search_facts<'a>(&self, query : Vec<Clause>) -> SearchResponse<'a> {
+  fn search_facts<'a>(&self, query : &Vec<Clause>) -> SearchResponse<'a> {
     use fact_db::SearchResponse::*;
     use native_types::HValue::*;
 
@@ -464,16 +535,15 @@ impl FactDB for PgDB {
 
   fn new_rule(&mut self, rule : Rule) -> RuleResponse {
     use fact_db::RuleResponse::*;
-    let Rule {head, body} = rule;
     
     //Persist the rule
     //Create clauses
-    let head_id : ClauseId = match self.insert_clause(&head) {
+    let head_id : ClauseId = match self.insert_clause(&rule.head) {
       Ok(v) => v,
       Err(e) => return RuleFail(format!("Issue creating head clause: {:?}", e))
     };
     let body_ids : Vec<ClauseId> =
-      match body.iter().map(|x|{self.insert_clause(x)}).collect::<Result<Vec<ClauseId>, DBError>>() {
+      match rule.body.iter().map(|x|{self.insert_clause(x)}).collect::<Result<Vec<ClauseId>, DBError>>() {
         Ok(v) => v,
         Err(e) => return RuleFail(format!("Issue creating body clauses: {:?}", e))
       };
@@ -484,7 +554,11 @@ impl FactDB for PgDB {
     }
 
     //Enter rule into rulecache
+    self.add_rule_cache(&rule);
 
-    unimplemented!();
+    //Actually run the rule?
+    self.run_rule(&rule);
+
+    RuleAdded
   }
 }

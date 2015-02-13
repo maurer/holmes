@@ -32,6 +32,6 @@ pub enum RuleResponse {
 pub trait FactDB: Send {
   fn new_predicate(&mut self, pred : Predicate) -> PredResponse;
   fn new_fact(&mut self, fact : &Fact) -> FactResponse;
-  fn search_facts(&self, query : Vec<Clause>) -> SearchResponse;
+  fn search_facts(&self, query : &Vec<Clause>) -> SearchResponse;
   fn new_rule(&mut self, rule : Rule) -> RuleResponse;
 }
