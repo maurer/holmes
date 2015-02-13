@@ -301,28 +301,31 @@ impl PgDB {
   }
 
   fn run_rule(&mut self, rule : &Rule) {
-    let cache_entry = match self.rule_exec_cache.get(rule) {
-      Some(v) => v.clone(),
-      None => HashSet::new()
-    };
     match self.search_facts(&rule.body) {
       SearchResponse::SearchAns(anss) => {
-        let mut anss = anss.clone();
-        anss.dedup();
         //TODO: make this persist the cache
-        for ans in anss.iter().filter(|ans|{!cache_entry.contains(*ans)}) {
-          match self.rule_exec_cache.entry(rule.clone()) {
+        for ans in anss {
+          let miss = match self.rule_exec_cache.entry(rule.clone()) {
             Vacant(entry) => {
               let mut cache = HashSet::new();
               cache.insert(ans.clone());
               entry.insert(cache);
+              true
             }
-            Occupied(mut entry) => {entry.get_mut().insert(ans.clone());}
+            Occupied(mut entry) => {
+              let miss = !entry.get().contains(&ans);
+              entry.get_mut().insert(ans.clone());
+              miss
+            }
+          };
+          if miss {
+            self.insert_fact(&substitute(&rule.head, &ans));
           }
-          self.insert_fact(&substitute(&rule.head, &ans));
         }
       }
-      _ => ()
+      SearchResponse::SearchInvalid(s) => panic!("Internal invalid search query {}", s),
+      SearchResponse::SearchFail(s) => panic!("Search procedure failure {}", s),
+      SearchResponse::SearchNone => ()
     }
   }
 
@@ -473,19 +476,20 @@ impl FactDB for PgDB {
     let mut var_types = Vec::new(); //Translation of variable numbers to HTypes
     let mut where_clause = Vec::new(); //Constant comparisons
     let mut vals : Vec<&ToSql> = Vec::new(); //Values for passing into the stmt
-    for clause in query.iter() {
+    for (idxc, clause) in query.iter().enumerate() {
       let table_name = format!("facts.{}", clause.pred_name);
+      let alias_name = format!("t{}", idxc);
       let mut clause_elements = Vec::new();
       for (idx, arg) in clause.args.iter().enumerate() {
         match arg {
           &MatchExpr::Unbound => (),
-          &MatchExpr::Var(var) => if var <= var_names.len() as u32 {
+          &MatchExpr::Var(var) => if var >= var_names.len() as u32 {
               var_names.push(
-                format!("{}.arg{}", table_name, idx));
+                format!("{}.arg{}", alias_name, idx));
               var_types.push(self.pred_by_name[clause.pred_name].types[idx]);
             } else {
-              let piece = format!("{}.arg{} = {}", table_name, idx, var_names[var as usize]);
-              if idx == 0 {
+              let piece = format!("{}.arg{} = {}", alias_name, idx, var_names[var as usize]);
+              if idxc == 0 {
                 //For the first element, we have no ON clause, so stick this in WHERE
                 where_clause.push(piece);
               } else {
@@ -495,29 +499,43 @@ impl FactDB for PgDB {
           &MatchExpr::HConst(ref val) => {
             vals.push(val);
             where_clause.push(
-              format!("{}.arg{} = ${}", table_name, idx, vals.len()));
+              format!("{}.arg{} = ${}", alias_name, idx, vals.len()));
           }
         }
       }
       restricts.push(clause_elements);
-      tables.push(table_name);
+      tables.push(format!("{} as {}", table_name, alias_name));
     }
-    let vars = format!("({})", var_names.connect(", "));
+    let vars = format!("{}", var_names.connect(", "));
+    tables.reverse();
+    restricts.reverse();
     let main_table = tables.pop().unwrap();
     let main_join = restricts.pop();
     assert_eq!(main_join, Some(vec![]));
     let join_blocks : Vec<String> = tables.iter().zip(restricts.iter()).map(|(table, join)| {
-        format!("JOIN {} ON {}", table, join.connect(" AND "))
+        if join.len() == 0 {
+          format!("JOIN {} ", table)
+        } else {
+          format!("JOIN {} ON {}", table, join.connect(" AND "))
+        }
       }).collect();
     let join_query = join_blocks.connect(" ");
-    let res_stmt = self.conn.prepare(
-      format!("SELECT {} FROM {} {} WHERE {}",
+    let where_clause = {
+      if where_clause.len() == 0 {
+        String::new()
+      } else {
+        format!("WHERE {}", where_clause.connect(" AND "))
+      }
+    };
+    let raw_stmt = 
+      format!("SELECT {} FROM {} {} {}",
               vars, main_table, join_query,
-              where_clause.connect(" AND ")).as_slice());
+              where_clause);
+    let res_stmt = self.conn.prepare(&raw_stmt);
     let stmt = match res_stmt {
       Ok(stmt) => stmt,
       Err(e) => return SearchFail(
-        format!("Preparing statement failed: {:?}", e))
+        format!("Preparing statement failed: {}\n{:?}", raw_stmt, e))
     };
     let res_rows = stmt.query(vals.as_slice());
     let rows = match res_rows {
@@ -526,7 +544,7 @@ impl FactDB for PgDB {
         format!("Executing query failed: {:?}", e)) 
     };
 
-    let anss : Vec<Vec<HValue>> = rows.map(|row| {
+    let mut anss : Vec<Vec<HValue>> = rows.map(|row| {
       var_types.iter().enumerate().map(|(idx, h_type)| {
         match h_type {
           &HType::UInt64  => { 
@@ -537,7 +555,7 @@ impl FactDB for PgDB {
         }
       }).collect() 
     }).collect();
-
+    anss.dedup();
     SearchAns(anss)
   }
 

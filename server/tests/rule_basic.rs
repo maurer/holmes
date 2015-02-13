@@ -45,4 +45,54 @@ pub fn one_step() {
   })
 }
 
+#[test]
+pub fn closure() {
+  server_single(&|&: client : &mut Client| {
+    let test_pred = "reaches".to_string();
+    assert!(&client.new_predicate(&Predicate {
+      name  : test_pred.clone(),
+      types : vec![HString, HString]
+    }));
+    &client.new_fact(&Fact {
+      pred_name : test_pred.clone(),
+      args : vec![HStringV("foo".to_string()),
+                  HStringV("bar".to_string())
+                 ]
+    }).unwrap();
+    &client.new_fact(&Fact {
+      pred_name : test_pred.clone(),
+      args : vec![HStringV("bar".to_string()),
+                  HStringV("baz".to_string())
+                 ]
+    }).unwrap();
+    &client.new_fact(&Fact {
+      pred_name : test_pred.clone(),
+      args : vec![HStringV("baz".to_string()),
+                  HStringV("bang".to_string())
+                 ]
+    }).unwrap();
+    let rule = Rule {
+      head : Clause {
+        pred_name : test_pred.clone(),
+        args : vec![Var(0), Var(2)]
+      },
+      body : vec![
+        Clause {
+          pred_name : test_pred.clone(),
+          args : vec![Var(0), Var(1)]
+          },
+        Clause {
+          pred_name : test_pred.clone(),
+          args : vec![Var(1), Var(2)]
+        }]
+      };
+    &client.new_rule(&rule).unwrap();
+    let ans = &client.derive(vec![&Clause {
+      pred_name : test_pred,
+      args : vec![HConst(HStringV("foo".to_string())),
+                  Var(0)]
+    }]).unwrap();
+    assert_eq!(ans, &vec![[HStringV("bar".to_string())], [HStringV("baz".to_string())], [HStringV("bang".to_string())]]);
+  })
+}
 
