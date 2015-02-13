@@ -14,7 +14,6 @@ pub fn one_step() {
       name  : test_pred.clone(),
       types : vec![HString, Blob, UInt64]
     }));
-    println!("Created predicate");
     &client.new_fact(&Fact {
       pred_name : test_pred.clone(),
       args : vec![HStringV("foo".to_string()),
@@ -22,7 +21,6 @@ pub fn one_step() {
                   UInt64V(7)
                  ]
     }).unwrap();
-    println!("Created fact");
     let rule = Rule {
       head : Clause {
         pred_name : test_pred.clone(),
@@ -38,14 +36,12 @@ pub fn one_step() {
         }]
       };
     &client.new_rule(&rule).unwrap();
-    println!("Added rule");
     assert_eq!(&client.derive(vec![&Clause {
       pred_name : test_pred,
       args : vec![HConst(HStringV("bar".to_string())),
                   Unbound,
                   Var(0)]
     }]).unwrap(), &vec![vec![UInt64V(7)]]);
-    println!("Entering cleanup"); 
   })
 }
 
