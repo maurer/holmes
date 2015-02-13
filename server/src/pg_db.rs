@@ -18,6 +18,8 @@ use std::iter::IteratorExt;
 use std::slice::SliceConcatExt;
 use std::sync::Arc;
 
+use std::mem::transmute;
+
 type ClauseId = (String, i32);
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -113,7 +115,7 @@ impl PgDB {
     //Create Tables
     try!(conn.execute("create table if not exists predicates (pred_name varchar not null, ordinal int4 not null, type varchar not null)", &[]));
     try!(conn.execute("create table if not exists gen_clauses (id serial, pred_name varchar not null, tgt serial)", &[]));
-    try!(conn.execute("create table if not exists rules (head_clause serial, head_pred varchar not null, body_clause serial, body_pred varchar not null)", &[]));
+    try!(conn.execute("create table if not exists rules (head_pred varchar not null, head_clause serial, body_pred varchar not null, body_clause serial)", &[]));
 
     //Create incremental PgDB object
     let mut pg_db = PgDB {
@@ -166,8 +168,8 @@ impl PgDB {
       let mut body_ids_by_head_id : HashMap<ClauseId, Vec<ClauseId>> = HashMap::new();
       let rows = try!(rule_stmt.query(&[]));
       for row in rows {
-        let head : ClauseId = (row.get(0), row.get(1));
-        let body : ClauseId = (row.get(2), row.get(3));
+        let head : ClauseId = (row.get(1), row.get(0));
+        let body : ClauseId = (row.get(3), row.get(2));
         match body_ids_by_head_id.entry(head) {
           Vacant(entry) => {entry.insert(vec![body]);}
           Occupied(mut entry) => entry.get_mut().push(body)
@@ -278,10 +280,15 @@ impl PgDB {
    let table = clause.pred_name.clone();
    let (columns, traits) : (Vec<String>, Vec<&ToSql>) = 
      clause.args.iter().enumerate().filter_map(|(idx, arg)| {
-     match arg {
-       &MatchExpr::Unbound       => None,
-       &MatchExpr::Var(ref v)    => Some((format!("var{}", idx), v as &ToSql)),
-       &MatchExpr::HConst(ref c) => Some((format!("val{}", idx), c as &ToSql))
+     match *arg {
+       MatchExpr::Unbound       => None,
+       MatchExpr::Var(ref v)    => {
+         let v : &i32 = unsafe {
+           transmute(v)
+         };
+         Some((format!("var{}", idx), v as &ToSql))
+       }
+       MatchExpr::HConst(ref c) => Some((format!("val{}", idx), c as &ToSql))
      }}).unzip();
    let template = columns.iter().enumerate().map(|(idx, _)| {
      format!("${}", idx + 1)
