@@ -64,4 +64,19 @@ pub fn new_fact_echo() {
   })
 }
 
-
+#[test]
+pub fn two_strings() {
+  server_single(&|&: client : &mut Client| {
+    let test_pred = "test_pred".to_string();
+    assert!(&client.new_predicate(&Predicate {
+      name  : test_pred.clone(),
+      types : vec![HString, HString]
+    }));
+    &client.new_fact(&Fact {
+      pred_name : test_pred.clone(),
+      args : vec![HStringV("foo".to_string()),
+                  HStringV("bar".to_string())
+                 ]
+    }).unwrap();
+  })
+}

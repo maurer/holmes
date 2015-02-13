@@ -27,7 +27,7 @@ impl Client {
     pred_data.set_pred_name(pred.name.as_slice());
     let type_len = pred.types.len().to_u32().unwrap();
     let mut type_data = pred_data.borrow().init_arg_types(type_len);
-    for i in 0..(type_len - 1) {
+    for i in 0..type_len {
       let idex : usize = FromPrimitive::from_u32(i).unwrap();
       match pred.types[idex] {
         HType::HString => {type_data.borrow().get(i).set_string(())}

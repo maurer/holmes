@@ -402,6 +402,7 @@ impl FactDB for PgDB {
     match self.pred_by_name.get(&fact.pred_name) {
       Some(ref pred) => {
         if !fact.args.iter().zip(pred.types.iter()).all(type_check) {
+          //TODO use zip that mandates same length iters?
           return FactTypeMismatch;
         }
       }
