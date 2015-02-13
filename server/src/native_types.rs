@@ -158,6 +158,18 @@ pub fn convert_clauses<'a>(clauses_reader : struct_list::Reader<'a,
                        Vec<Clause> {
   clauses_reader.iter().map(convert_clause).collect()
 }
+
+pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule) {
+  {
+    let head_builder = rule_builder.borrow().init_head();
+    capnp_clause(head_builder, &rule.head);
+  }
+  let mut body_builder = rule_builder.borrow().init_body(rule.body.len() as u32);
+  for (i, clause) in rule.body.iter().enumerate() {
+    capnp_clause(body_builder.borrow().get(i as u32), clause)
+  }
+}
+
 pub fn convert_rule<'a>(rule_reader : holmes::rule::Reader<'a>) -> Rule {
   Rule {
     head : convert_clause(rule_reader.get_head()),
@@ -173,7 +185,7 @@ pub fn capnp_expr<'a>(mut expr_builder : holmes::body_expr::Builder<'a>,
   }
 }
 
-pub fn capnp_clause<'a, 'b>(mut clause_builder : holmes::body_clause::Builder<'a>,
+pub fn capnp_clause<'a>(mut clause_builder : holmes::body_clause::Builder<'a>,
                         clause : &Clause) {
   clause_builder.set_predicate(&clause.pred_name[]);
   let mut clause_args = clause_builder.init_args(clause.args.len() as u32);

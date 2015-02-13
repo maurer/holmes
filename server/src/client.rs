@@ -78,4 +78,15 @@ impl Client {
     }
     Ok(anss)
   }
+  pub fn new_rule(&mut self, rule : &Rule) ->
+    Result<(), String> {
+    let mut resp = {
+      let mut rule_req = self.holmes.new_rule_request();
+      let rule_data = rule_req.init().init_rule();
+      capnp_rule(rule_data, rule);
+      rule_req.send()
+    };
+    try!(resp.wait());
+    Ok(())
+  }
 }
