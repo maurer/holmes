@@ -1,4 +1,4 @@
-use capnp::list::{struct_list};
+use capnp::struct_list;
 use holmes_capnp::holmes;
 
 use std::str::FromStr;
