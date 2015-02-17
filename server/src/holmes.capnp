@@ -45,6 +45,12 @@ interface Holmes {
     body @1 :List(BodyClause);
   }
 
+  interface HFunc {
+    types @0 ()->(inputTypes  : List(HType),
+                  outputTypes : List(HType));
+    run @1 (args :List(Val)) -> (results :List(Val));
+  }
+
   # Register a predicate
   newPredicate @0 (predName :PredName,
                    argTypes :List(HType)) -> (valid :Bool);
@@ -59,4 +65,7 @@ interface Holmes {
 
   # Add a rule to expand the intentional database
   newRule @3 (rule :Rule) -> ();
+
+  # Register a new external function
+  newFunc @4 (name :Text, func :HFunc);
 }

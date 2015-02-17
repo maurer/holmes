@@ -99,4 +99,8 @@ impl holmes::Server for HolmesImpl {
       RuleAdded => context.done()
     }
   }
+
+  fn new_func(&mut self, _context : holmes::NewFuncContext) {
+    unimplemented!()
+  }
 }
