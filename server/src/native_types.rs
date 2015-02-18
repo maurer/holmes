@@ -87,6 +87,12 @@ pub struct Rule {
   pub body : Vec<Clause>
 }
 
+pub struct HFunc {
+  pub input_types  : Vec<HType>,
+  pub output_types : Vec<HType>,
+  pub run : Box<Fn(Vec<HValue>) -> Vec<HValue> + 'static + Send>
+}
+
 pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
    -> Vec<HType> {
   let mut types = Vec::new();
@@ -121,6 +127,15 @@ pub fn capnp_val<'a> (mut val_builder : holmes::val::Builder<'a>,
     &HStringV(ref x) => val_builder.set_string(x),
     &BlobV(ref x)    => val_builder.set_blob(x),
     &UInt64V(x) => val_builder.set_uint64(x)
+  }
+}
+
+pub fn capnp_type<'a> (mut type_builder : holmes::h_type::Builder<'a>,
+                        h_type : &HType) {
+  match *h_type {
+    HString => type_builder.set_string(()),
+    Blob    => type_builder.set_blob(()),
+    UInt64  => type_builder.set_uint64(())
   }
 }
 

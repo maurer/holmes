@@ -1,14 +1,58 @@
 use holmes_capnp::holmes;
 use capnp_rpc::ez_rpc::EzRpcClient;
+use capnp::capability::FromServer;
 use std::old_io::IoResult;
 use native_types::*;
-use capnp_rpc::capability::{InitRequest, WaitForContent};
+use capnp_rpc::capability::{InitRequest, LocalClient, WaitForContent};
 use std::num::{ToPrimitive, FromPrimitive};
 use std::borrow::ToOwned;
 
 pub struct Client {
   holmes : holmes::Client,
   pub rpc_client : EzRpcClient
+}
+
+struct Func {
+  h_func : HFunc
+}
+
+impl Func {
+  pub fn new(func : HFunc) -> Func {
+    Func {h_func : func}
+  }
+}
+
+impl holmes::h_func::Server for Func {
+  fn types(&mut self, mut context : holmes::h_func::TypesContext) {
+    let (_, mut results) = context.get();
+    {
+      let input_len = self.h_func.input_types.len() as u32;
+      let mut inputs = results.borrow().init_input_types(input_len);
+      for i in range(0, input_len) {
+        capnp_type(inputs.borrow().get(i),
+                   &self.h_func.input_types[i as usize])
+      }
+    }
+    {
+      let output_len = self.h_func.output_types.len() as u32;
+      let mut outputs = results.borrow().init_output_types(output_len);
+      for i in range(0, output_len) {
+        capnp_type(outputs.borrow().get(i),
+                   &self.h_func.output_types[i as usize])
+      }
+    }
+    context.done()
+  }
+  fn run(&mut self, mut context : holmes::h_func::RunContext) {
+    let (params, results) = context.get();
+    let ins  = convert_vals(params.get_args());
+    let outs = (self.h_func.run)(ins);
+    let mut res_data = results.init_results(outs.len() as u32);
+    for (i, v) in outs.iter().enumerate() {
+      capnp_val(res_data.borrow().get(i as u32), v)
+    }
+    context.done()
+  }
 }
 
 impl Client {
@@ -85,6 +129,21 @@ impl Client {
       let rule_data = rule_req.init().init_rule();
       capnp_rule(rule_data, rule);
       rule_req.send()
+    };
+    try!(resp.wait());
+    Ok(())
+  }
+  pub fn new_func(&mut self, name : &str, func : HFunc) ->
+    Result<(), String> {
+    let func = Func::new(func);
+    let mut resp = {
+      let mut func_req = self.holmes.new_func_request();
+      let mut func_data = func_req.init();
+      func_data.set_name(name);
+      func_data.set_func(
+        holmes::h_func::ToClient(func).from_server(None::<LocalClient>)); //TODO find out what from_server does
+      //Set stuff here
+      func_req.send()
     };
     try!(resp.wait());
     Ok(())

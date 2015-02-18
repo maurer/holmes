@@ -3,15 +3,17 @@ use capnp::capability::Server;
 use holmes_capnp::holmes;
 
 use fact_db::FactDB;
+use std::collections::hash_map::HashMap;
 use native_types::*;
 
 pub struct HolmesImpl {
-  fact_db : Box<FactDB + Send>
+  fact_db : Box<FactDB + Send>,
+  funcs   : HashMap<String, HFunc>
 }
 
 impl HolmesImpl {
   pub fn new(db : Box<FactDB+Send>) -> HolmesImpl {
-    HolmesImpl {fact_db : db}
+    HolmesImpl {fact_db : db, funcs : HashMap::new()}
   }
 }
 
@@ -100,7 +102,46 @@ impl holmes::Server for HolmesImpl {
     }
   }
 
-  fn new_func(&mut self, _context : holmes::NewFuncContext) {
-    unimplemented!()
+  fn new_func(&mut self, mut context : holmes::NewFuncContext) {
+    use capnp_rpc::capability::WaitForContent;
+    use std::collections::hash_map::Entry::{Occupied, Vacant};
+
+    let (params, _) = context.get();
+    let name = params.get_name();
+    let func = params.get_func();
+    let (input_types, output_types) = {
+      let mut type_resp = func.types_request().send();
+      match type_resp.wait() {
+        Ok(v) => (convert_types(v.get_input_types()),
+                  convert_types(v.get_output_types())),
+        Err(e) => {
+          context.fail(format!("Type request failed: {}", e));
+          return
+        }
+      }
+    };
+    //TODO error relief path
+    let run = move |v : Vec<HValue>| {
+      use capnp_rpc::capability::InitRequest;
+      let mut req = func.run_request();
+      let mut req_data = req.init().init_args(v.len() as u32);
+      for (i, v) in v.iter().enumerate() {
+        capnp_val(req_data.borrow().get(i as u32), v)
+      }
+      convert_vals(req.send().wait().unwrap().get_results())
+    };
+    let h_func = HFunc {
+      input_types : input_types,
+      output_types : output_types,
+      run : Box::new(run)
+    };
+    match self.funcs.entry(name.to_string()) {
+      Vacant(entry) => {entry.insert(h_func);}
+      Occupied(_) => {
+        context.fail("Function already registered".to_string());
+        return;
+      }
+    }
+    context.done();
   }
 }
