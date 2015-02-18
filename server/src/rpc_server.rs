@@ -11,6 +11,7 @@ use std;
 use std::sync::Arc;
 use std::thread::{Thread, JoinGuard};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::borrow::ToOwned;
 
 enum ExportEvent {
     Restore(String, std::sync::mpsc::Sender<Option<Box<ClientHook+Send>>>),
@@ -58,7 +59,7 @@ impl Restorer {
 impl SturdyRefRestorer for Restorer {
     fn restore(&self, obj_id : any_pointer::Reader) -> Option<Box<ClientHook+Send>> {
         let (tx, rx) = std::sync::mpsc::channel();
-        self.sender.send(ExportEvent::Restore(obj_id.get_as::<::capnp::text::Reader>().to_string(), tx)).unwrap();
+        self.sender.send(ExportEvent::Restore(obj_id.get_as::<::capnp::text::Reader>().to_owned(), tx)).unwrap();
         return rx.recv().unwrap();
     }
 }
@@ -80,7 +81,7 @@ impl RpcServer {
     Ok(RpcServer { sender : sender, tcp_acceptor : tcp_acceptor, shutdown : Arc::new(AtomicBool::new(false))})
   }
   pub fn export_cap(&self, name : &str, server : Box<::capnp::capability::Server+Send>) {
-    self.sender.send(ExportEvent::Register(name.to_string(), server)).unwrap()
+    self.sender.send(ExportEvent::Register(name.to_owned(), server)).unwrap()
   }
   pub fn serve<'a>(self) -> JoinGuard<'a, ()> {
     std::thread::Thread::scoped(move || {

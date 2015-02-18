@@ -3,6 +3,7 @@ use holmes_capnp::holmes;
 
 use std::str::FromStr;
 use std::string::{ToString, String};
+use std::borrow::ToOwned;
 
 pub type PredId = u64;
 
@@ -38,7 +39,7 @@ impl FromStr for HType {
       "uint64" => Ok(UInt64),
       "string" => Ok(HString),
       "blob"   => Ok(Blob),
-      _ => Err(s.to_string())
+      _ => Err(s.to_owned())
     }
   }
 }
@@ -111,7 +112,7 @@ pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
   -> HValue {
   match val_reader.which() {
     Some(holmes::val::Uint64(v)) => UInt64V(v),
-    Some(holmes::val::String(s)) => HStringV(s.to_string()),
+    Some(holmes::val::String(s)) => HStringV(s.to_owned()),
     Some(holmes::val::Blob(b)) => {
       let mut bv = Vec::new();
       bv.push_all(b);
@@ -164,7 +165,7 @@ pub fn convert_clause<'a>(clause_reader : holmes::body_clause::Reader<'a>)
     args.push(match_expr);
   }
   Clause {
-    pred_name : pred.to_string(),
+    pred_name : pred.to_owned(),
     args : args
   }
 }

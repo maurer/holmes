@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::old_io::TcpStream;
 use std::error::FromError;
+use std::borrow::ToOwned;
 
 pub fn unwrap<T, E : Display>(r : &Result<T,E>) -> &T {
   match r {
@@ -82,7 +83,7 @@ impl<'a> DB {
       &DB::Postgres(ref str) => { 
         let mut params = try!(str.into_connect_params());
         let old_db = try!(params.database.ok_or(NoDB));
-        params.database = Some("postgres".to_string());
+        params.database = Some("postgres".to_owned());
         let conn = try!(Connection::connect(params, &SslMode::None));
         let drop_query = format!("DROP DATABASE {}", &old_db);
         try!(conn.execute(drop_query.as_slice(), &[]));
@@ -95,7 +96,7 @@ impl<'a> DB {
       &DB::Postgres(ref str) => {
         let mut params = try!(str.into_connect_params());
         let old_db = try!(params.database.ok_or(NoDB));
-        params.database = Some("postgres".to_string());
+        params.database = Some("postgres".to_owned());
         let conn = try!(Connection::connect(params, &SslMode::None));
         let create_query = format!("CREATE DATABASE {}", &old_db);
         let _ = conn.execute(create_query.as_slice(), &[]);
