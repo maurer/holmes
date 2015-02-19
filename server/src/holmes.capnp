@@ -40,9 +40,28 @@ interface Holmes {
     args      @1 :List(BodyExpr);
   }
 
+  struct FExpr {
+    func @0 :Text;
+    args @1 :List(Expr);
+  }
+
+  struct Expr {
+    union {
+      var @0 :Var;
+      const @1 :Val;
+      app @2 : FExpr;
+    }
+  }
+
+  struct WhereClause {
+    lhs @0 :List(BodyExpr);
+    rhs @1 :Expr;
+  }
+
   struct Rule {
     head @0 :BodyClause;
     body @1 :List(BodyClause);
+    where @2 :List(WhereClause);
   }
 
   interface HFunc {
