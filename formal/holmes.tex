@@ -54,8 +54,7 @@ To address these problems, I intend to create a logic language, modeled after da
 
 <prog> ::= (<decl> | <rule>)*
 
-<decl> ::= <pred> `(' <argsig>+ `)'
-\alt <pred> `(' <var>* `)' `where' `(' <arg>* `)' `=' <expr>
+<decl> ::= <pred> `(' <argsig>+ `)' [`where' (`(' <arg>* `)' `=' <expr>)+]
 
 <argsig>
 ::=  <type>(= : <func>)
