@@ -182,7 +182,8 @@ impl PgDB {
         }).collect::<Result<Vec<Clause>,DBError>>());
         Ok(Rule {
           head : head_clause,
-          body : body_clauses
+          body : body_clauses,
+          wheres : vec![] //TODO fill in properly
         })
       }).collect::<Result<Vec<Rule>, DBError>>())
     };

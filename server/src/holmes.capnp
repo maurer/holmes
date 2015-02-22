@@ -48,7 +48,7 @@ interface Holmes {
   struct Expr {
     union {
       var @0 :Var;
-      const @1 :Val;
+      val @1 :Val;
       app @2 : FExpr;
     }
   }

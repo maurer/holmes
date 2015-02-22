@@ -33,7 +33,8 @@ pub fn one_step() {
         args : vec![HConst(HStringV("foo".to_string())),
                     Unbound,
                     Var(0)]
-        }]
+        }],
+      wheres: vec![]
       };
     &client.new_rule(&rule).unwrap();
     assert_eq!(&client.derive(vec![&Clause {
@@ -84,7 +85,8 @@ pub fn closure() {
         Clause {
           pred_name : test_pred.clone(),
           args : vec![Var(1), Var(2)]
-        }]
+        }],
+      wheres : vec![]
       };
     &client.new_rule(&rule).unwrap();
     let ans = &client.derive(vec![&Clause {

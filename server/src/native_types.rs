@@ -5,6 +5,8 @@ use std::str::FromStr;
 use std::string::{ToString, String};
 use std::borrow::ToOwned;
 
+use capnp::traits::FromStructReader;
+
 pub type PredId = u64;
 
 #[derive(Copy,PartialEq,Clone,Debug,Hash,Eq)]
@@ -83,9 +85,24 @@ pub struct Clause {
 }
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq)]
+pub enum Expr {
+  EVar(HVar),
+  EVal(HValue),
+  EApp(String, Vec<Expr>)
+}
+use native_types::Expr::*;
+
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Rule {
-  pub head : Clause,
-  pub body : Vec<Clause>
+  pub head  : Clause,
+  pub body  : Vec<Clause>,
+  pub wheres : Vec<WhereClause>
+}
+
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+pub struct WhereClause {
+  pub asgns : Vec<MatchExpr>,
+  pub rhs : Expr
 }
 
 pub struct HFunc {
@@ -102,7 +119,7 @@ pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type:
       Some(holmes::h_type::Uint64(())) => {types.push(UInt64);}
       Some(holmes::h_type::String(())) => {types.push(HString);}
       Some(holmes::h_type::Blob(())) => {types.push(Blob);}
-      None => { } //TODO: What should we do if there's an unknown type?
+      None => {panic!("Unknown HType")}
     }
   }
   types
@@ -149,30 +166,57 @@ pub fn convert_vals<'a> (args_reader : struct_list::Reader<'a, holmes::val::Read
   args
 }
 
+pub fn convert_expr<'a>(expr_reader : holmes::expr::Reader<'a>) -> Expr {
+  match expr_reader.which() {
+    Some(holmes::expr::Var(v)) => EVar(v),
+    Some(holmes::expr::Val(val)) => EVal(convert_val(val)),
+    Some(holmes::expr::App(f_expr)) =>
+      EApp(f_expr.get_func().to_owned(),
+           convert_many(f_expr.get_args(),
+                        convert_expr)),
+    None => panic!("Unidentified expr branch")
+  }
+}
+
+pub fn convert_where<'a>(where_reader : holmes::where_clause::Reader<'a>) -> WhereClause {
+  WhereClause {
+    asgns : convert_many(where_reader.get_lhs(),
+                         convert_body_expr),
+    rhs : unimplemented!()
+  }
+}
+
+pub fn convert_body_expr<'a>(body_expr_reader : holmes::body_expr::Reader<'a>) -> MatchExpr {
+  match body_expr_reader.which() {
+    Some(holmes::body_expr::Unbound(())) => Unbound,
+    Some(holmes::body_expr::Var(v)) => Var(v),
+    Some(holmes::body_expr::Const(val)) =>
+      HConst(convert_val(val)),
+    None => panic!("Unknown expr type")
+  }
+}
+
 pub fn convert_clause<'a>(clause_reader : holmes::body_clause::Reader<'a>)
                          -> Clause {
   let pred = clause_reader.get_predicate();
-  let exprs_reader = clause_reader.get_args();
-  let mut args = Vec::new();
-  for expr_reader in exprs_reader.iter() {
-    let match_expr = match expr_reader.which() {
-      Some(holmes::body_expr::Unbound(())) => Unbound,
-      Some(holmes::body_expr::Var(v)) => Var(v),
-      Some(holmes::body_expr::Const(val)) =>
-        HConst(convert_val(val)),
-      None => panic!("Unknown expr type")
-    };
-    args.push(match_expr);
-  }
   Clause {
     pred_name : pred.to_owned(),
-    args : args
+    args : convert_many(clause_reader.get_args(),
+                        convert_body_expr)
   }
 }
+
+pub fn convert_many<'a, T : FromStructReader<'a>, U,
+                     F : Fn(T) -> U>(
+    reader   : struct_list::Reader<'a, T>,
+    conv_one : F) -> Vec<U> {
+  reader.iter().map(conv_one).collect()
+}
+
 pub fn convert_clauses<'a>(clauses_reader : struct_list::Reader<'a,
                        holmes::body_clause::Reader<'a>>) ->
                        Vec<Clause> {
-  clauses_reader.iter().map(convert_clause).collect()
+  convert_many(clauses_reader, convert_clause)
 }
 
 pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule) {
@@ -189,10 +233,12 @@ pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule
 pub fn convert_rule<'a>(rule_reader : holmes::rule::Reader<'a>) -> Rule {
   Rule {
     head : convert_clause(rule_reader.get_head()),
-    body : convert_clauses(rule_reader.get_body())
+    body : convert_many(rule_reader.get_body(), convert_clause),
+    wheres : convert_many(rule_reader.get_where(),
+                          convert_where)
   }
 }
-pub fn capnp_expr<'a>(mut expr_builder : holmes::body_expr::Builder<'a>,
+pub fn capnp_body_expr<'a>(mut expr_builder : holmes::body_expr::Builder<'a>,
                   expr : &MatchExpr) {
   match expr {
     &Unbound => expr_builder.set_unbound(()),
@@ -207,6 +253,6 @@ pub fn capnp_clause<'a>(mut clause_builder : holmes::body_clause::Builder<'a>,
   let mut clause_args = clause_builder.init_args(clause.args.len() as u32);
   for (i, arg) in clause.args.iter().enumerate() {
     let i = i as u32;
-    capnp_expr(clause_args.borrow().get(i), arg);
+    capnp_body_expr(clause_args.borrow().get(i), arg);
   }
 }
