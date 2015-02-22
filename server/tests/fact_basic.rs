@@ -36,7 +36,7 @@ pub fn new_fact_type_err() {
                   BlobV(vec![3;3]),
                   UInt64V(7)
                  ]
-    }).unwrap_err()[], "Type mismatch");
+    }).unwrap_err()[..], "Type mismatch");
   })
 }
 

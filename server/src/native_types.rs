@@ -203,7 +203,7 @@ pub fn capnp_expr<'a>(mut expr_builder : holmes::body_expr::Builder<'a>,
 
 pub fn capnp_clause<'a>(mut clause_builder : holmes::body_clause::Builder<'a>,
                         clause : &Clause) {
-  clause_builder.set_predicate(&clause.pred_name[]);
+  clause_builder.set_predicate(&clause.pred_name[..]);
   let mut clause_args = clause_builder.init_args(clause.args.len() as u32);
   for (i, arg) in clause.args.iter().enumerate() {
     let i = i as u32;

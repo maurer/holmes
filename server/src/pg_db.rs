@@ -319,7 +319,7 @@ impl PgDB {
             }
           };
           if miss {
-            self.insert_fact(&substitute(&rule.head, &ans));
+            assert!(self.insert_fact(&substitute(&rule.head, &ans)).is_ok());
           }
         }
       }
@@ -430,7 +430,7 @@ impl FactDB for PgDB {
     }
   }
   
-  fn search_facts<'a>(&self, query : &Vec<Clause>) -> SearchResponse<'a> {
+  fn search_facts(&self, query : &Vec<Clause>) -> SearchResponse {
     use fact_db::SearchResponse::*;
     use native_types::HValue::*;
 

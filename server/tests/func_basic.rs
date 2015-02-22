@@ -4,7 +4,6 @@ use holmes::client::*;
 use holmes::native_types::*;
 use holmes::native_types::HType::*;
 use holmes::native_types::HValue::*;
-use holmes::native_types::MatchExpr::*;
 
 #[test]
 pub fn reg_func() {

@@ -9,7 +9,7 @@ use capnp_rpc::rpc::{RpcConnectionState, SturdyRefRestorer};
 use capnp_rpc::capability::{LocalClient};
 use std;
 use std::sync::Arc;
-use std::thread::{Thread, JoinGuard};
+use std::thread::{JoinGuard, spawn, scoped};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::borrow::ToOwned;
 
@@ -26,7 +26,7 @@ impl ExportedCaps {
     pub fn new() -> std::sync::mpsc::Sender<ExportEvent> {
         let (chan, port) = std::sync::mpsc::channel::<ExportEvent>();
 
-        std::thread::Thread::spawn(move || {
+        spawn(move || {
                 let mut vat = ExportedCaps { objects : HashMap::new() };
 
                 loop {
@@ -84,7 +84,7 @@ impl RpcServer {
     self.sender.send(ExportEvent::Register(name.to_owned(), server)).unwrap()
   }
   pub fn serve<'a>(self) -> JoinGuard<'a, ()> {
-    std::thread::Thread::scoped(move || {
+    scoped(move || {
       use std::old_io::Acceptor;
       let mut server = self;
       let shutdown = server.shutdown.clone();
@@ -110,7 +110,7 @@ impl std::old_io::Acceptor<()> for RpcServer {
     let reader_options : ReaderOptions =
       *ReaderOptions::new()
       .fail_fast(false);
-    Thread::spawn(move || {
+    spawn(move || {
       let connection_state = RpcConnectionState::new();
       let _rpc_chan = connection_state.run(tcp.clone(), tcp, Restorer::new(sender2), reader_options);
     });

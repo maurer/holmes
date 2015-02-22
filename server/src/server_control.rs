@@ -136,7 +136,7 @@ impl<'a> Server<'a> {
     self.thread = Some(rpc_server.serve());
     Ok(())
   }
-  pub fn join(&mut self) -> ::std::thread::Result<()> {
+  pub fn join(&mut self) -> () {
     let thread = self.thread.take();
     thread.expect("Tried to join non-running server").join()
   }
@@ -144,7 +144,7 @@ impl<'a> Server<'a> {
     let shutdown = self.shutdown.take();
     shutdown.expect("Tried to shut down non-running server").store(true,Ordering::Release);
     try!(TcpStream::connect(self.addr).map_err(ControlIO));
-    self.join().map_err(AnyErr)
+    Ok(self.join())
   }
   pub fn destroy(&mut self) -> Result<(), ControlError> {
     try!(self.shutdown());
