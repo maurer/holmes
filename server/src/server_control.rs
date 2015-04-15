@@ -7,9 +7,8 @@ use postgres::{SslMode, Connection, IntoConnectParams};
 use std::fmt::{Formatter, Display};
 use std::thread::JoinGuard;
 use rpc_server::*;
-use std::sync::Arc;
 use std::fmt::Debug;
-use std::old_io::TcpStream;
+use std::net::TcpStream;
 use std::convert::From;
 use std::borrow::ToOwned;
 use std::sync::mpsc::{Sender,Receiver};
@@ -21,7 +20,6 @@ pub enum DB {
 pub enum ControlError {
   NoDB,
   AnyErr(Box<Error>),
-  ControlIO(::std::old_io::IoError),
   PgConnect(::postgres::ConnectError),
   PgErr(::postgres::Error),
   PgDbErr(pg_db::DBError)
@@ -34,7 +32,6 @@ impl Display for ControlError {
     match *self {
       NoDB             => fmt.write_str("No database specified"),
       AnyErr(ref e)    => fmt.write_fmt(format_args!("{}", e)),
-      ControlIO(ref e) => fmt.write_fmt(format_args!("{}", e)),
       PgConnect(ref e) => fmt.write_fmt(format_args!("{}", e)),
       PgErr(ref e)     => fmt.write_fmt(format_args!("{}", e)),
       PgDbErr(ref e)   => fmt.write_fmt(format_args!("{}", e)),
@@ -47,7 +44,6 @@ impl Debug for ControlError  {
     match *self {
       NoDB             => fmt.write_str("NoDB"),
       AnyErr(ref e)    => fmt.write_fmt(format_args!("AnyErr({:?})", e)),
-      ControlIO(ref e) => fmt.write_fmt(format_args!("ControlIO({:?})", e)),
       PgConnect(ref e) => fmt.write_fmt(format_args!("PgConnect({:?})", e)),
       PgErr(ref e)     => fmt.write_fmt(format_args!("PgErr({:?})", e)),
       PgDbErr(ref e)   => fmt.write_fmt(format_args!("PgDbErr({:?})", e))
@@ -60,7 +56,6 @@ impl Error for ControlError {
     match self {
       &NoDB              => "No database specified",
       &AnyErr(_)         => "Error from thread",
-      &ControlIO(ref io) => io.description(),
       &PgConnect(ref e)  => e.description(),
       &PgErr(ref e)      => e.description(),
       &PgDbErr(ref e)    => e.description()
@@ -76,10 +71,6 @@ impl From<::postgres::Error> for ControlError {
   fn from(e : ::postgres::Error) -> ControlError {PgErr(e)}
 }
 
-impl From<::std::old_io::IoError> for ControlError {
-  fn from(e : ::std::old_io::IoError) -> ControlError {ControlIO(e)}
-}
-
 impl From<pg_db::DBError> for ControlError {
   fn from(e : pg_db::DBError) -> ControlError {PgDbErr(e)}
 }
@@ -93,9 +84,9 @@ impl<'a> DB {
         params.database = Some("postgres".to_owned());
         let conn = try!(Connection::connect(params, &SslMode::None));
         let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '{}' AND pid <> pg_backend_pid()", &old_db);
-        try!(conn.execute(disco_query.as_slice(), &[]));
+        try!(conn.execute(&disco_query, &[]));
         let drop_query = format!("DROP DATABASE {}", &old_db);
-        try!(conn.execute(drop_query.as_slice(), &[]));
+        try!(conn.execute(&drop_query, &[]));
       }
     }
     Ok(())
@@ -108,7 +99,7 @@ impl<'a> DB {
         params.database = Some("postgres".to_owned());
         let conn = try!(Connection::connect(params, &SslMode::None));
         let create_query = format!("CREATE DATABASE {}", &old_db);
-        let _ = conn.execute(create_query.as_slice(), &[]);
+        let _ = conn.execute(&create_query, &[]);
       }
     }
     Ok(())
@@ -137,7 +128,7 @@ impl<'a> Server<'a> {
     try!(self.db.create());
     let (rpc_server, control, status) = try!(RpcServer::new(self.addr));
     let db = match self.db {
-      DB::Postgres(ref s) => {try!(PgDB::new(s.as_slice()))}
+      DB::Postgres(ref s) => {try!(PgDB::new(&s))}
     };
     let holmes = Box::new(holmes::ServerDispatch {
       server : Box::new(HolmesImpl::new(Box::new(db)))
@@ -156,7 +147,7 @@ impl<'a> Server<'a> {
              .take()
              .expect("No control channel held.")
              .send(Command::Shutdown));
-    try!(TcpStream::connect(self.addr).map_err(ControlIO));
+    try!(TcpStream::connect(self.addr));
     let s = try!(self.status
                      .take()
                      .expect("No status channel held.")

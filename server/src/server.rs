@@ -23,7 +23,7 @@ impl holmes::Server for HolmesImpl {
     let (params, mut results) = context.get();
     let types = convert_types(params.get_arg_types().unwrap());
     let predicate = Predicate {
-      name  : String::from_str(params.get_pred_name().unwrap()).clone(),
+      name  : params.get_pred_name().unwrap().to_string().clone(),
       types : types
     };
     match self.fact_db.new_predicate(predicate) {

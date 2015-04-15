@@ -12,10 +12,10 @@ pub fn server_wrap(test : Vec<&Fn(&mut Client) -> ()>) {
   let db = DB::Postgres(db_addr);
   {
     let mut server = 
-        Server::new(addr.as_slice(), db);
+        Server::new(&addr, db);
     &server.boot().unwrap();
     for action in test.iter() {
-      let mut client = Client::new(addr.as_slice()).unwrap();
+      let mut client = Client::new(&addr).unwrap();
       action(&mut client);
       &server.reboot().unwrap();
     }

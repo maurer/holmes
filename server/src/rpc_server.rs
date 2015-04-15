@@ -1,22 +1,10 @@
 //Derived heavily from ez_rpc.rs in capnp-rpc-rust
-use capnp_rpc::rpc_capnp::{message, return_};
-
-use capnp::{MessageBuilder, MallocMessageBuilder, ReaderOptions};
+use capnp::{ReaderOptions};
 use capnp::private::capability::{ClientHook};
-use capnp::capability::{FromClientHook, Server};
-use capnp_rpc::rpc::{RpcConnectionState, RpcEvent};
+use capnp::capability::{Server};
+use capnp_rpc::rpc::{RpcConnectionState};
 use capnp_rpc::capability::{LocalClient};
 use std::sync::mpsc::{channel, Receiver, Sender};
-
-struct EmptyCap;
-
-impl Server for EmptyCap {
-    fn dispatch_call(&mut self, _interface_id : u64, _method_id : u16,
-                     context : ::capnp::capability::CallContext<::capnp::any_pointer::Reader,
-                                                                ::capnp::any_pointer::Builder>) {
-        context.fail("Attempted to call a method on an empty capability.".to_string());
-    }
-}
 
 #[derive(PartialEq, Clone, Eq, Debug)]
 pub enum Command {
@@ -51,7 +39,7 @@ impl RpcServer {
                 let tcp = stream_result.unwrap();
                 match server.control.try_recv() {
                   Ok(Command::Shutdown) => {
-                    server.status.send(Status::Offline);
+                    server.status.send(Status::Offline).unwrap();
                     break
                   }
                   _ => ()

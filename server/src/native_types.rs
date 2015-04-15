@@ -48,11 +48,11 @@ impl FromStr for HType {
 
 impl ToString for HType {
   fn to_string(&self) -> String {
-    String::from_str(match self {
+    (match self {
       &UInt64  => {"uint64"}
       &HString => {"string"}
       &Blob    => {"blob"}
-    })
+    }).to_string()
   }
 }
 
@@ -131,8 +131,7 @@ pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
     Ok(holmes::val::Uint64(v)) => UInt64V(v),
     Ok(holmes::val::String(s)) => HStringV(s.unwrap().to_owned()),
     Ok(holmes::val::Blob(b)) => {
-      let mut bv = Vec::new();
-      bv.push_all(b.unwrap());
+      let bv = b.unwrap().to_owned();
       BlobV(bv)
     }
     Err(_) => panic!("Invalid value on wire")

@@ -3,7 +3,6 @@ use capnp_rpc::ez_rpc::EzRpcClient;
 use capnp::capability::FromServer;
 use native_types::*;
 use capnp_rpc::capability::{InitRequest, LocalClient, WaitForContent};
-use std::num::{ToPrimitive, FromPrimitive};
 use std::borrow::ToOwned;
 
 pub struct Client {
@@ -67,11 +66,11 @@ impl Client {
   pub fn new_predicate(&mut self, pred : &Predicate) -> bool {
     let mut pred_req = self.holmes.new_predicate_request();
     let mut pred_data = pred_req.init();
-    pred_data.set_pred_name(pred.name.as_slice());
-    let type_len = pred.types.len().to_u32().unwrap();
+    pred_data.set_pred_name(&pred.name);
+    let type_len = pred.types.len() as u32;
     let mut type_data = pred_data.borrow().init_arg_types(type_len);
     for i in 0..type_len {
-      let idex : usize = FromPrimitive::from_u32(i).unwrap();
+      let idex : usize = i as usize;
       match pred.types[idex] {
         HType::HString => {type_data.borrow().get(i).set_string(())}
         HType::Blob    => {type_data.borrow().get(i).set_blob(())}
@@ -86,8 +85,8 @@ impl Client {
       let mut fact_req = self.holmes.new_fact_request();
       let req_data = fact_req.init();
       let mut fact_data = req_data.init_fact();
-      fact_data.set_predicate(fact.pred_name.as_slice());
-      let arg_len = fact.args.len().to_u32().unwrap();
+      fact_data.set_predicate(&fact.pred_name);
+      let arg_len = fact.args.len() as u32;
       let mut arg_data = fact_data.borrow().init_args(arg_len);
       for (i, val) in fact.args.iter().enumerate() {
         let i = i as u32;

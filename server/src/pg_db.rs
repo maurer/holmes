@@ -15,7 +15,6 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use postgres::ToSql;
 use postgres::types::IsNull;
-use std::slice::SliceConcatExt;
 use std::sync::Arc;
 
 use std::io::Write;
@@ -161,7 +160,7 @@ impl PgDB {
       for type_entry in pred_types {
         let name : String = type_entry.get(0);
         let h_type_str : String = type_entry.get(1);
-        let h_type : HType = match FromStr::from_str(h_type_str.as_slice()) {
+        let h_type : HType = match FromStr::from_str(&h_type_str) {
             Ok(ty) => ty,
             Err(e) => return Err(TypeParseError(e))
           };
@@ -226,7 +225,7 @@ impl PgDB {
      -> Result<Clause, DBError> {
     use native_types::HValue::*;
     let stmt = try!(self.conn.prepare(&format!("select * from clauses.{} where id=$1", clause_id.0)));
-    let mut rows = try!(stmt.query(&[&clause_id.1]));
+    let rows = try!(stmt.query(&[&clause_id.1]));
     let row = rows.iter().next().expect("Should be one row");
     let args = self.pred_by_name[&clause_id.0].types.iter().enumerate().map(|(idx, h_type)| {
       let var_idx = idx * 2 + 1;
@@ -271,7 +270,7 @@ impl PgDB {
                                h_type,
                                &(ordinal as i32)]));
 
-      table_str.push_str(format!("arg{} {},", ordinal, h_type_to_sql_type(h_type)).as_slice());
+      table_str.push_str(&format!("arg{} {},", ordinal, h_type_to_sql_type(h_type)));
     }
     table_str.pop();
     table_str.push(')');
@@ -321,7 +320,7 @@ impl PgDB {
    let stmt = try!(self.conn.prepare(
      &format!("insert into clauses.{} ({}) values ({}) returning id",
               table, columns.connect(", "), template)));
-   let mut res = try!(stmt.query(&traits));
+   let res = try!(stmt.query(&traits));
    Ok((table, res.iter().next().expect("Clause insert failure").get(0)))
   }
 
