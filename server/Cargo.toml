@@ -13,12 +13,12 @@ repository = "https://github.com/maurer/holmes"
 name = "holmes"
 
 [build-dependencies]
-capnpc = "0.1.8"
+capnpc = "*"
 
 [dependencies]
-capnp = "0.1.8"
-capnp-rpc = "0.1.8"
-postgres = "0.6.2"
+capnp = "*"
+capnp-rpc = "*"
+postgres = "*"
 
 [[test]]
 name = "lib"

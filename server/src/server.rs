@@ -21,9 +21,9 @@ impl holmes::Server for HolmesImpl {
   fn new_predicate(&mut self, mut context : holmes::NewPredicateContext) {
     use fact_db::PredResponse::*;
     let (params, mut results) = context.get();
-    let types = convert_types(params.get_arg_types());
+    let types = convert_types(params.get_arg_types().unwrap());
     let predicate = Predicate {
-      name  : String::from_str(params.get_pred_name()).clone(),
+      name  : String::from_str(params.get_pred_name().unwrap()).clone(),
       types : types
     };
     match self.fact_db.new_predicate(predicate) {
@@ -46,10 +46,10 @@ impl holmes::Server for HolmesImpl {
   fn new_fact(&mut self, mut context : holmes::NewFactContext) {
     use fact_db::FactResponse::*;
     let (params, _) = context.get();
-    let fact_data = params.get_fact();
+    let fact_data = params.get_fact().unwrap();
     let fact = Fact {
-      pred_name : fact_data.get_predicate().to_string(),
-      args : convert_vals(fact_data.get_args())
+      pred_name : fact_data.get_predicate().unwrap().to_string(),
+      args : convert_vals(fact_data.get_args().unwrap())
     };
     match self.fact_db.new_fact(&fact) {
         FactCreated
@@ -66,7 +66,7 @@ impl holmes::Server for HolmesImpl {
   fn derive(&mut self, mut context : holmes::DeriveContext) {
     use fact_db::SearchResponse::*;
     let (params, result) = context.get();
-    let clauses = convert_clauses(params.get_query());
+    let clauses = convert_clauses(params.get_query().unwrap());
     match self.fact_db.search_facts(&clauses) {
       SearchNone => context.done(),
       SearchInvalid(s) => context.fail(
@@ -92,7 +92,7 @@ impl holmes::Server for HolmesImpl {
   fn new_rule(&mut self, mut context : holmes::NewRuleContext) {
     use fact_db::RuleResponse::*;
     let (params, _) = context.get();
-    let rule = convert_rule(params.get_rule());
+    let rule = convert_rule(params.get_rule().unwrap());
     match self.fact_db.new_rule(rule) {
       RuleInvalid(s) => context.fail(
         format!("Rule invalid: {}", s)),
@@ -107,13 +107,13 @@ impl holmes::Server for HolmesImpl {
     use std::collections::hash_map::Entry::{Occupied, Vacant};
 
     let (params, _) = context.get();
-    let name = params.get_name();
-    let func = params.get_func();
+    let name = params.get_name().unwrap();
+    let func = params.get_func().unwrap();
     let (input_types, output_types) = {
       let mut type_resp = func.types_request().send();
       match type_resp.wait() {
-        Ok(v) => (convert_types(v.get_input_types()),
-                  convert_types(v.get_output_types())),
+        Ok(v) => (convert_types(v.get_input_types().unwrap()),
+                  convert_types(v.get_output_types().unwrap())),
         Err(e) => {
           context.fail(format!("Type request failed: {}", e));
           return
@@ -128,7 +128,7 @@ impl holmes::Server for HolmesImpl {
       for (i, v) in v.iter().enumerate() {
         capnp_val(req_data.borrow().get(i as u32), v)
       }
-      convert_vals(req.send().wait().unwrap().get_results())
+      convert_vals(req.send().wait().unwrap().get_results().unwrap())
     };
     let h_func = HFunc {
       input_types : input_types,

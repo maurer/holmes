@@ -1,7 +1,6 @@
 use holmes_capnp::holmes;
 use capnp_rpc::ez_rpc::EzRpcClient;
 use capnp::capability::FromServer;
-use std::old_io::IoResult;
 use native_types::*;
 use capnp_rpc::capability::{InitRequest, LocalClient, WaitForContent};
 use std::num::{ToPrimitive, FromPrimitive};
@@ -28,7 +27,7 @@ impl holmes::h_func::Server for Func {
     {
       let input_len = self.h_func.input_types.len() as u32;
       let mut inputs = results.borrow().init_input_types(input_len);
-      for i in range(0, input_len) {
+      for i in (0..input_len) {
         capnp_type(inputs.borrow().get(i),
                    &self.h_func.input_types[i as usize])
       }
@@ -36,7 +35,7 @@ impl holmes::h_func::Server for Func {
     {
       let output_len = self.h_func.output_types.len() as u32;
       let mut outputs = results.borrow().init_output_types(output_len);
-      for i in range(0, output_len) {
+      for i in (0..output_len) {
         capnp_type(outputs.borrow().get(i),
                    &self.h_func.output_types[i as usize])
       }
@@ -45,7 +44,7 @@ impl holmes::h_func::Server for Func {
   }
   fn run(&mut self, mut context : holmes::h_func::RunContext) {
     let (params, results) = context.get();
-    let ins  = convert_vals(params.get_args());
+    let ins  = convert_vals(params.get_args().unwrap());
     let outs = (self.h_func.run)(ins);
     let mut res_data = results.init_results(outs.len() as u32);
     for (i, v) in outs.iter().enumerate() {
@@ -56,9 +55,9 @@ impl holmes::h_func::Server for Func {
 }
 
 impl Client {
-  pub fn new(addr : &str) -> IoResult<Client> {
+  pub fn new(addr : &str) -> Result<Client,::std::io::Error> {
     let mut rpc_client = try!(EzRpcClient::new(addr));
-    let holmes : holmes::Client = rpc_client.import_cap("holmes");
+    let holmes : holmes::Client = rpc_client.get_main();
     Ok(Client {
       holmes     : holmes,
       rpc_client : rpc_client
@@ -99,7 +98,7 @@ impl Client {
     resp.wait().map(|_|{()})
   }
   pub fn derive(&mut self, query : Vec<&Clause>) ->
-    Result<Vec<Vec<HValue>>, String> {
+    Result<Vec<Vec<HValue>>, ::capnp::Error> {
     let mut resp = {
       let mut derive_req = self.holmes.derive_request();
       let mut query_data = derive_req.init().init_query(query.len() as u32);
@@ -109,13 +108,13 @@ impl Client {
       }
       derive_req.send()
     };
-    let resp_data = try!(resp.wait());
-    let ctxs = resp_data.get_ctx();
+    let resp_data = resp.wait().unwrap();
+    let ctxs = try!(resp_data.get_ctx());
     let mut anss = Vec::new();
-    for i in range(0, ctxs.len()) {
+    for i in (0..ctxs.len()) {
       let mut ans = Vec::new();
-      let ctx = ctxs.get(i);
-      for j in range(0, ctx.len()) {
+      let ctx = try!(ctxs.get(i));
+      for j in (0..ctx.len()) {
         ans.push(convert_val(ctx.get(j)).to_owned());
       }
       anss.push(ans);
@@ -130,7 +129,7 @@ impl Client {
       capnp_rule(rule_data, rule);
       rule_req.send()
     };
-    try!(resp.wait());
+    resp.wait().unwrap();
     Ok(())
   }
   pub fn new_func(&mut self, name : &str, func : HFunc) ->
@@ -145,7 +144,7 @@ impl Client {
       //Set stuff here
       func_req.send()
     };
-    try!(resp.wait());
+    resp.wait().unwrap();
     Ok(())
   }
 }

@@ -1,6 +1,6 @@
 #![feature(core,collections,std_misc,old_io)]
 extern crate capnp;
-extern crate "capnp-rpc" as capnp_rpc;
+extern crate capnp_rpc;
 extern crate postgres;
 
 pub mod server;

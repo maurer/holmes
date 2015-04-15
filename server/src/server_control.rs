@@ -8,17 +8,11 @@ use std::fmt::{Formatter, Display};
 use std::thread::JoinGuard;
 use rpc_server::*;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::fmt::Debug;
 use std::old_io::TcpStream;
-use std::error::FromError;
+use std::convert::From;
 use std::borrow::ToOwned;
-
-pub fn unwrap<T, E : Display>(r : &Result<T,E>) -> &T {
-  match r {
-    &Ok(ref v) => {v}
-    &Err(ref e) => {panic!(format!("unwrap failed: {}", e))}
-  }
-}
+use std::sync::mpsc::{Sender,Receiver};
 
 pub enum DB {
   Postgres(String)
@@ -26,7 +20,7 @@ pub enum DB {
 
 pub enum ControlError {
   NoDB,
-  AnyErr(Box<::std::any::Any + Send>),
+  AnyErr(Box<Error>),
   ControlIO(::std::old_io::IoError),
   PgConnect(::postgres::ConnectError),
   PgErr(::postgres::Error),
@@ -37,13 +31,26 @@ use server_control::ControlError::*;
 
 impl Display for ControlError {
   fn fmt(&self, fmt : &mut Formatter) -> Result<(),::std::fmt::Error> {
-    match self {
-      &NoDB              => fmt.write_str("No database specified"),
-      &AnyErr(_)         => fmt.write_str("Error from thread"),
-      &ControlIO(ref io) => io.fmt(fmt),
-      &PgConnect(ref e)  => e.fmt(fmt),
-      &PgErr(ref e)      => e.fmt(fmt),
-      &PgDbErr(ref e)    => e.fmt(fmt),
+    match *self {
+      NoDB             => fmt.write_str("No database specified"),
+      AnyErr(ref e)    => fmt.write_fmt(format_args!("{}", e)),
+      ControlIO(ref e) => fmt.write_fmt(format_args!("{}", e)),
+      PgConnect(ref e) => fmt.write_fmt(format_args!("{}", e)),
+      PgErr(ref e)     => fmt.write_fmt(format_args!("{}", e)),
+      PgDbErr(ref e)   => fmt.write_fmt(format_args!("{}", e)),
+    }
+  }
+}
+
+impl Debug for ControlError  {
+  fn fmt(&self, fmt : &mut Formatter) -> Result<(),::std::fmt::Error> {
+    match *self {
+      NoDB             => fmt.write_str("NoDB"),
+      AnyErr(ref e)    => fmt.write_fmt(format_args!("AnyErr({:?})", e)),
+      ControlIO(ref e) => fmt.write_fmt(format_args!("ControlIO({:?})", e)),
+      PgConnect(ref e) => fmt.write_fmt(format_args!("PgConnect({:?})", e)),
+      PgErr(ref e)     => fmt.write_fmt(format_args!("PgErr({:?})", e)),
+      PgDbErr(ref e)   => fmt.write_fmt(format_args!("PgDbErr({:?})", e))
     }
   }
 }
@@ -61,37 +68,39 @@ impl Error for ControlError {
   }
 } 
 
-impl FromError<::postgres::ConnectError> for ControlError {
-  fn from_error(ce : ::postgres::ConnectError) -> ControlError {PgConnect(ce)}
+impl From<::postgres::ConnectError> for ControlError {
+  fn from(ce : ::postgres::ConnectError) -> ControlError {PgConnect(ce)}
 }
 
-impl FromError<::postgres::Error> for ControlError {
-  fn from_error(e : ::postgres::Error) -> ControlError {PgErr(e)}
+impl From<::postgres::Error> for ControlError {
+  fn from(e : ::postgres::Error) -> ControlError {PgErr(e)}
 }
 
-impl FromError<::std::old_io::IoError> for ControlError {
-  fn from_error(e : ::std::old_io::IoError) -> ControlError {ControlIO(e)}
+impl From<::std::old_io::IoError> for ControlError {
+  fn from(e : ::std::old_io::IoError) -> ControlError {ControlIO(e)}
 }
 
-impl FromError<pg_db::DBError> for ControlError {
-  fn from_error(e : pg_db::DBError) -> ControlError {PgDbErr(e)}
+impl From<pg_db::DBError> for ControlError {
+  fn from(e : pg_db::DBError) -> ControlError {PgDbErr(e)}
 }
 
 impl<'a> DB {
-  fn destroy(&self) -> Result<(), ControlError> {
+  fn destroy(&self) -> Result<(), Box<Error>> {
     match self {
       &DB::Postgres(ref str) => { 
         let mut params = try!(str.into_connect_params());
         let old_db = try!(params.database.ok_or(NoDB));
         params.database = Some("postgres".to_owned());
         let conn = try!(Connection::connect(params, &SslMode::None));
+        let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '{}' AND pid <> pg_backend_pid()", &old_db);
+        try!(conn.execute(disco_query.as_slice(), &[]));
         let drop_query = format!("DROP DATABASE {}", &old_db);
         try!(conn.execute(drop_query.as_slice(), &[]));
       }
     }
     Ok(())
   }
-  fn create(&self) -> Result<(), ControlError> {
+  fn create(&self) -> Result<(), Box<Error>> {
     match self {
       &DB::Postgres(ref str) => {
         let mut params = try!(str.into_connect_params());
@@ -109,48 +118,58 @@ impl<'a> DB {
 pub struct Server<'a> {
   addr : &'a str,
   db : DB,
-  thread : Option<JoinGuard<'a, ()>>,
-  shutdown : Option<Arc<AtomicBool>>
+  thread  : Option<JoinGuard<'a, ()>>,
+  control : Option<Sender<Command>>,
+  status  : Option<Receiver<Status>>
 }
 
 impl<'a> Server<'a> {
   pub fn new(addr : &str, db : DB) -> Server {
     Server {
-      addr     : addr,
-      db       : db,
-      thread   : None,
-      shutdown : None
+      addr    : addr,
+      db      : db,
+      thread  : None,
+      control : None,
+      status  : None
     }
   }
-  pub fn boot(&mut self) -> Result<(), ControlError> {
+  pub fn boot(&mut self) -> Result<(), Box<Error>> {
     try!(self.db.create());
-    let rpc_server = try!(RpcServer::new(self.addr));
+    let (rpc_server, control, status) = try!(RpcServer::new(self.addr));
     let db = match self.db {
       DB::Postgres(ref s) => {try!(PgDB::new(s.as_slice()))}
     };
     let holmes = Box::new(holmes::ServerDispatch {
       server : Box::new(HolmesImpl::new(Box::new(db)))
       });
-    rpc_server.export_cap("holmes", holmes);
-    self.shutdown.clone_from(&Some(rpc_server.shutdown.clone()));
-    self.thread = Some(rpc_server.serve());
+    self.control = Some(control);
+    self.status  = Some(status);
+    self.thread = Some(rpc_server.serve(holmes));
     Ok(())
   }
   pub fn join(&mut self) -> () {
     let thread = self.thread.take();
     thread.expect("Tried to join non-running server").join()
   }
-  pub fn shutdown(&mut self) -> Result<(), ControlError> {
-    let shutdown = self.shutdown.take();
-    shutdown.expect("Tried to shut down non-running server").store(true,Ordering::Release);
+  pub fn shutdown(&mut self) -> Result<(), Box<Error>> {
+    try!(self.control
+             .take()
+             .expect("No control channel held.")
+             .send(Command::Shutdown));
     try!(TcpStream::connect(self.addr).map_err(ControlIO));
-    Ok(self.join())
+    let s = try!(self.status
+                     .take()
+                     .expect("No status channel held.")
+                     .recv());
+    assert_eq!(s, Status::Offline);
+    self.join();
+    Ok(())
   }
-  pub fn destroy(&mut self) -> Result<(), ControlError> {
+  pub fn destroy(&mut self) -> Result<(), Box<Error>> {
     try!(self.shutdown());
     self.db.destroy()
   }
-  pub fn reboot(&mut self) -> Result<(), ControlError> {
+  pub fn reboot(&mut self) -> Result<(), Box<Error>> {
     try!(self.shutdown());
     try!(self.boot());
     Ok(())

@@ -2,7 +2,7 @@ use native_types::*;
 use native_types::HType::*;
 use std::*;
 
-use std::error::FromError;
+use std::convert::From;
 use std::fmt::{Formatter};
 use fact_db::*;
 use std::str::FromStr;
@@ -14,15 +14,15 @@ use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use postgres::ToSql;
-use std::iter::IteratorExt;
+use postgres::types::IsNull;
 use std::slice::SliceConcatExt;
 use std::sync::Arc;
 
-use std::mem::transmute;
+use std::io::Write;
 
 type ClauseId = (String, i32);
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub enum DBError {
   ConnectError(ConnectError),
   Error(Error),
@@ -32,11 +32,17 @@ pub enum DBError {
 use pg_db::DBError::TypeParseError;
 use pg_db::DBError::InternalError;
 
-impl FromError<Error> for DBError {
-  fn from_error(x : Error) -> DBError {DBError::Error(x)}
+fn i32_cast(v : &u32) -> &i32 {
+  unsafe {
+    ::std::mem::transmute(v)
+  }
 }
-impl FromError<ConnectError> for DBError {
-  fn from_error(x : ConnectError) -> DBError {DBError::ConnectError(x)}
+
+impl From<Error> for DBError {
+  fn from(x : Error) -> DBError {DBError::Error(x)}
+}
+impl From<ConnectError> for DBError {
+  fn from(x : ConnectError) -> DBError {DBError::ConnectError(x)}
 }
 
 impl ::std::fmt::Display for DBError {
@@ -45,11 +51,11 @@ impl ::std::fmt::Display for DBError {
       DBError::ConnectError(ref x) => x.fmt(fmt),
       DBError::Error(ref x) => x.fmt(fmt),
       DBError::TypeParseError(ref s) =>
-        fmt.write_str(format!("Could not parse db type: {}",
-                              s.clone()).as_slice()),
+        fmt.write_str(&format!("Could not parse db type: {}",
+                               s.clone())),
       DBError::InternalError(ref s) =>
-        fmt.write_str(format!("PgDB Internal Error: {}",
-                              s.clone()).as_slice())
+        fmt.write_str(&format!("PgDB Internal Error: {}",
+                               s.clone()))
     }
   }
 }
@@ -66,18 +72,39 @@ impl ::std::error::Error for DBError {
 }
 
 impl ToSql for HType {
-  fn to_sql(&self, ty: &::postgres::types::Type) -> Result<Option<Vec<u8>>, Error> {
-    self.to_string().to_sql(ty)
+  fn to_sql<W: ?Sized>(&self, ty: &::postgres::types::Type, out : &mut W) -> Result<IsNull, Error> 
+    where Self: Sized, W: Write
+  {
+    self.to_string().to_sql(ty, out)
+  }
+  fn accepts(ty: &::postgres::types::Type) -> bool {
+    String::accepts(ty)
+  }
+  fn to_sql_checked(&self, ty: &::postgres::types::Type, out: &mut Write) -> Result<IsNull, Error> {
+    self.to_string().to_sql_checked(ty, out)
   }
 }
 
 impl ToSql for HValue {
-  fn to_sql(&self, ty: &::postgres::types::Type) -> Result<Option<Vec<u8>>, Error> {
+  fn to_sql<W: ?Sized>(&self, ty: &::postgres::types::Type, out : &mut W) -> Result<IsNull, Error> 
+    where Self: Sized, W: Write
+  {
     use native_types::HValue::*;
-    match self {
-      &UInt64V(i)  => (i as i64).to_sql(ty),
-      &HStringV(ref s) => s.clone().to_sql(ty),
-      &BlobV(ref b)    => b.to_sql(ty),
+    match *self {
+      UInt64V(i)  => (i as i64).to_sql(ty, out),
+      HStringV(ref s) => s.clone().to_sql(ty, out),
+      BlobV(ref b)    => b.to_sql(ty, out),
+    }
+  }
+  fn accepts(_ty: &::postgres::types::Type) -> bool {
+     true // It varies wildly based on the type, so we approximate as yes
+  }
+  fn to_sql_checked(&self, ty: &::postgres::types::Type, out: &mut Write) -> Result<IsNull, Error> {
+    use native_types::HValue::*;
+    match *self {
+      UInt64V(i)  => (i as i64).to_sql_checked(ty, out),
+      HStringV(ref s) => s.clone().to_sql_checked(ty, out),
+      BlobV(ref b)    => b.to_sql_checked(ty, out),
     }
   }
 }
@@ -200,16 +227,16 @@ impl PgDB {
     use native_types::HValue::*;
     let stmt = try!(self.conn.prepare(&format!("select * from clauses.{} where id=$1", clause_id.0)));
     let mut rows = try!(stmt.query(&[&clause_id.1]));
-    let row = rows.next().expect("Should be one row");
-    let args = self.pred_by_name[clause_id.0].types.iter().enumerate().map(|(idx, h_type)| {
+    let row = rows.iter().next().expect("Should be one row");
+    let args = self.pred_by_name[&clause_id.0].types.iter().enumerate().map(|(idx, h_type)| {
       let var_idx = idx * 2 + 1;
       let val_idx = var_idx + 1;
       let var : Option<i32> = row.get(var_idx);
       let val : Option<HValue> =
-        match h_type {
-          &UInt64  => row.get::<_,Option<i64>>(val_idx).map(|i|{UInt64V(i as u64)}),
-          &HString => row.get::<_,Option<String>>(val_idx).map(HStringV),
-          &Blob    => row.get::<_,Option<Vec<u8>>>(val_idx).map(BlobV)
+        match *h_type {
+          UInt64  => row.get::<_,Option<i64>>(val_idx).map(|i|{UInt64V(i as u64)}),
+          HString => row.get::<_,Option<String>>(val_idx).map(HStringV),
+          Blob    => row.get::<_,Option<Vec<u8>>>(val_idx).map(BlobV)
         };
       match (var, val) {
         (None, None) => MatchExpr::Unbound,
@@ -253,8 +280,8 @@ impl PgDB {
       format!("var{} int4, val{} {}", idx, idx, h_type_to_sql_type(h_type))
     }).collect::<Vec<String>>().connect(", "));
 
-    try!(self.conn.execute(format!("create table facts.{} {}", name, table_str).as_slice(), &[]));
-    try!(self.conn.execute(format!("create table clauses.{} {}", name, clause_str).as_slice(), &[]));
+    try!(self.conn.execute(&format!("create table facts.{} {}", name, table_str), &[]));
+    try!(self.conn.execute(&format!("create table clauses.{} {}", name, clause_str), &[]));
     return Ok(());
   }
 
@@ -264,7 +291,7 @@ impl PgDB {
       .ok_or(InternalError("Insert Statement Missing"
                            .to_string()))).clone();
     let argrefs : Vec<&ToSql> = fact.args.iter().map(|x|{x as &ToSql}).collect();
-    let inserted = try!(self.conn.execute(&stmt, argrefs.as_slice())) > 0;
+    let inserted = try!(self.conn.execute(&stmt, &argrefs)) > 0;
     if inserted {
       let rules = match self.rule_by_pred_name.get(&fact.pred_name) {
         Some(z) => z.clone(),
@@ -284,10 +311,7 @@ impl PgDB {
      match *arg {
        MatchExpr::Unbound       => None,
        MatchExpr::Var(ref v)    => {
-         let v : &i32 = unsafe {
-           transmute(v)
-         };
-         Some((format!("var{}", idx), v as &ToSql))
+         Some((format!("var{}", idx), i32_cast(v) as &ToSql))
        }
        MatchExpr::HConst(ref c) => Some((format!("val{}", idx), c as &ToSql))
      }}).unzip();
@@ -295,10 +319,10 @@ impl PgDB {
      format!("${}", idx + 1)
    }).collect::<Vec<String>>().connect(", ");
    let stmt = try!(self.conn.prepare(
-     format!("insert into clauses.{} ({}) values ({}) returning id",
-             table, columns.connect(", "), template).as_slice()));
-   let mut res = try!(stmt.query(traits.as_slice()));
-   Ok((table, res.next().expect("Clause insert failure").get(0)))
+     &format!("insert into clauses.{} ({}) values ({}) returning id",
+              table, columns.connect(", "), template)));
+   let mut res = try!(stmt.query(&traits));
+   Ok((table, res.iter().next().expect("Clause insert failure").get(0)))
   }
 
   fn run_rule(&mut self, rule : &Rule) {
@@ -344,7 +368,7 @@ impl PgDB {
     //XXX: This should probably be in a txn, an error will create a malformed rule on reboot
     for body_id in body_ids.iter() {
       try!(self.conn.execute(
-         format!("insert into rules values ($1, $2, $3, $4)").as_slice(),
+         &format!("insert into rules values ($1, $2, $3, $4)"),
          &[&head_id.0 as &ToSql,
            &head_id.1 as &ToSql,
            &body_id.0 as &ToSql,
@@ -487,7 +511,7 @@ impl FactDB for PgDB {
           &MatchExpr::Var(var) => if var >= var_names.len() as u32 {
               var_names.push(
                 format!("{}.arg{}", alias_name, idx));
-              var_types.push(self.pred_by_name[clause.pred_name].types[idx]);
+              var_types.push(self.pred_by_name[&clause.pred_name].types[idx]);
             } else {
               let piece = format!("{}.arg{} = {}", alias_name, idx, var_names[var as usize]);
               if idxc == 0 {
@@ -538,14 +562,14 @@ impl FactDB for PgDB {
       Err(e) => return SearchFail(
         format!("Preparing statement failed: {}\n{:?}", raw_stmt, e))
     };
-    let res_rows = stmt.query(vals.as_slice());
+    let res_rows = stmt.query(&vals);
     let rows = match res_rows {
       Ok(rows) => rows,
       Err(e)   => return SearchFail(
         format!("Executing query failed: {:?}", e)) 
     };
 
-    let mut anss : Vec<Vec<HValue>> = rows.map(|row| {
+    let mut anss : Vec<Vec<HValue>> = rows.iter().map(|row| {
       var_types.iter().enumerate().map(|(idx, h_type)| {
         match h_type {
           &HType::UInt64  => { 

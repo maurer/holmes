@@ -1,123 +1,71 @@
-// This code heavily derived from capnp-rpc-rust's EzRpcServer
-use std::old_io::Acceptor;
-use std::collections::hash_map::HashMap;
-use capnp::any_pointer;
-use capnp::message::ReaderOptions;
-use capnp::private::capability::ClientHook;
-use capnp::capability::Server;
-use capnp_rpc::rpc::{RpcConnectionState, SturdyRefRestorer};
+//Derived heavily from ez_rpc.rs in capnp-rpc-rust
+use capnp_rpc::rpc_capnp::{message, return_};
+
+use capnp::{MessageBuilder, MallocMessageBuilder, ReaderOptions};
+use capnp::private::capability::{ClientHook};
+use capnp::capability::{FromClientHook, Server};
+use capnp_rpc::rpc::{RpcConnectionState, RpcEvent};
 use capnp_rpc::capability::{LocalClient};
-use std;
-use std::sync::Arc;
-use std::thread::{JoinGuard, spawn, scoped};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::borrow::ToOwned;
+use std::sync::mpsc::{channel, Receiver, Sender};
 
-enum ExportEvent {
-    Restore(String, std::sync::mpsc::Sender<Option<Box<ClientHook+Send>>>),
-    Register(String, Box<Server+Send>),
-}
+struct EmptyCap;
 
-struct ExportedCaps {
-    objects : HashMap<String, Box<ClientHook+Send>>,
-}
-
-impl ExportedCaps {
-    pub fn new() -> std::sync::mpsc::Sender<ExportEvent> {
-        let (chan, port) = std::sync::mpsc::channel::<ExportEvent>();
-
-        spawn(move || {
-                let mut vat = ExportedCaps { objects : HashMap::new() };
-
-                loop {
-                    match port.recv() {
-                        Ok(ExportEvent::Register(name, server)) => {
-                            vat.objects.insert(name, Box::new(LocalClient::new(server)) as Box<ClientHook+Send>);
-                        }
-                        Ok(ExportEvent::Restore(name, return_chan)) => {
-                            return_chan.send(Some(vat.objects[name].copy())).unwrap();
-                        }
-                        Err(_) => break,
-                    }
-                }
-            });
-
-        chan
+impl Server for EmptyCap {
+    fn dispatch_call(&mut self, _interface_id : u64, _method_id : u16,
+                     context : ::capnp::capability::CallContext<::capnp::any_pointer::Reader,
+                                                                ::capnp::any_pointer::Builder>) {
+        context.fail("Attempted to call a method on an empty capability.".to_string());
     }
 }
 
-pub struct Restorer {
-    sender : std::sync::mpsc::Sender<ExportEvent>,
+#[derive(PartialEq, Clone, Eq, Debug)]
+pub enum Command {
+     Shutdown
 }
 
-impl Restorer {
-    fn new(sender : std::sync::mpsc::Sender<ExportEvent>) -> Restorer {
-        Restorer { sender : sender }
-    }
-}
-
-impl SturdyRefRestorer for Restorer {
-    fn restore(&self, obj_id : any_pointer::Reader) -> Option<Box<ClientHook+Send>> {
-        let (tx, rx) = std::sync::mpsc::channel();
-        self.sender.send(ExportEvent::Restore(obj_id.get_as::<::capnp::text::Reader>().to_owned(), tx)).unwrap();
-        return rx.recv().unwrap();
-    }
+#[derive(PartialEq, Clone, Eq, Debug)]
+pub enum Status {
+     Offline
 }
 
 pub struct RpcServer {
-  sender : std::sync::mpsc::Sender<ExportEvent>,
-  tcp_acceptor : std::old_io::net::tcp::TcpAcceptor,
-  pub shutdown : Arc<AtomicBool>
+     tcp_listener : ::std::net::TcpListener,
+     control      : Receiver<Command>,
+     status       : Sender<Status>
 }
 
 impl RpcServer {
-  pub fn new(bind_address : &str) -> std::old_io::IoResult<RpcServer> {
-    use std::old_io::net::{ip, tcp};
-    use std::old_io::Listener;
-    let addr : ip::SocketAddr = std::str::FromStr::from_str(bind_address).ok().expect("bad bind address");
-    let tcp_listener = try!(tcp::TcpListener::bind(addr));
-    let tcp_acceptor = try!(tcp_listener.listen());
-    let sender = ExportedCaps::new();
-    Ok(RpcServer { sender : sender, tcp_acceptor : tcp_acceptor, shutdown : Arc::new(AtomicBool::new(false))})
-  }
-  pub fn export_cap(&self, name : &str, server : Box<::capnp::capability::Server+Send>) {
-    self.sender.send(ExportEvent::Register(name.to_owned(), server)).unwrap()
-  }
-  pub fn serve<'a>(self) -> JoinGuard<'a, ()> {
-    scoped(move || {
-      use std::old_io::Acceptor;
-      let mut server = self;
-      let shutdown = server.shutdown.clone();
-      for res in server.incoming() {
-        if shutdown.load(Ordering::Acquire) {
-          break;
-        }
-        match res {
-          Ok(()) => {}
-          Err(e) => {
-            println!("error: {}", e)
-          }
-        }
-      }
-    })
-  }
+    pub fn new<A: ::std::net::ToSocketAddrs>(bind_address : A) -> ::std::io::Result<(RpcServer, Sender<Command>, Receiver<Status>)> {
+        let tcp_listener = try!(::std::net::TcpListener::bind(bind_address));
+        let (tx, rx) = channel();
+        let (status_tx, status_rx) = channel();
+        Ok((RpcServer { tcp_listener : tcp_listener, control : rx , status : status_tx}, tx, status_rx))
+    }
+
+    pub fn serve<'a>(self, bootstrap_interface : Box<Server + Send>) -> ::std::thread::JoinGuard<'a, ()> {
+        ::std::thread::scoped(move || {
+            let server = self;
+            let bootstrap_interface = Box::new(LocalClient::new(bootstrap_interface));
+            for stream_result in server.tcp_listener.incoming() {
+                let bootstrap_interface = bootstrap_interface.copy();
+                let tcp = stream_result.unwrap();
+                match server.control.try_recv() {
+                  Ok(Command::Shutdown) => {
+                    server.status.send(Status::Offline);
+                    break
+                  }
+                  _ => ()
+                }
+                ::std::thread::spawn(move || {
+                    let connection_state = RpcConnectionState::new();
+                    let _rpc_chan = connection_state.run(
+                        tcp.try_clone().unwrap(),
+                        tcp,
+                        bootstrap_interface,
+                        ReaderOptions::new());
+                });
+            }
+        })
+    }
 }
-
-impl std::old_io::Acceptor<()> for RpcServer {
-  fn accept(&mut self) -> std::old_io::IoResult<()> {
-    let sender2 = self.sender.clone();
-    let tcp = try!(self.tcp_acceptor.accept());
-    let reader_options : ReaderOptions =
-      *ReaderOptions::new()
-      .fail_fast(false);
-    spawn(move || {
-      let connection_state = RpcConnectionState::new();
-      let _rpc_chan = connection_state.run(tcp.clone(), tcp, Restorer::new(sender2), reader_options);
-    });
-    Ok(())
-  }
-}
-
-// End derived code
-
 

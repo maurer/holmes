@@ -8,7 +8,7 @@ use holmes::native_types::MatchExpr::*;
 
 #[test]
 pub fn new_fact_basic() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     assert!(&client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
@@ -25,7 +25,7 @@ pub fn new_fact_basic() {
 
 #[test]
 pub fn new_fact_type_err() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     assert!(&client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
@@ -42,7 +42,7 @@ pub fn new_fact_type_err() {
 
 #[test]
 pub fn new_fact_echo() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
     assert!(&client.new_predicate(&Predicate {
       name  : test_pred.clone(),
@@ -66,7 +66,7 @@ pub fn new_fact_echo() {
 
 #[test]
 pub fn two_strings() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
     assert!(&client.new_predicate(&Predicate {
       name  : test_pred.clone(),

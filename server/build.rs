@@ -1,6 +1,5 @@
-#![feature(old_path)]
-
 extern crate capnpc;
+use std::path::Path;
 
 fn main() {
   ::capnpc::compile(Path::new("src"),

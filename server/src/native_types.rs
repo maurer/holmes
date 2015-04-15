@@ -116,10 +116,10 @@ pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type:
   let mut types = Vec::new();
   for type_reader in types_reader.iter() {
     match type_reader.which() {
-      Some(holmes::h_type::Uint64(())) => {types.push(UInt64);}
-      Some(holmes::h_type::String(())) => {types.push(HString);}
-      Some(holmes::h_type::Blob(())) => {types.push(Blob);}
-      None => {panic!("Unknown HType")}
+      Ok(holmes::h_type::Uint64(())) => {types.push(UInt64);}
+      Ok(holmes::h_type::String(())) => {types.push(HString);}
+      Ok(holmes::h_type::Blob(())) => {types.push(Blob);}
+      Err(_) => {panic!("Unknown HType")}
     }
   }
   types
@@ -128,14 +128,14 @@ pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type:
 pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
   -> HValue {
   match val_reader.which() {
-    Some(holmes::val::Uint64(v)) => UInt64V(v),
-    Some(holmes::val::String(s)) => HStringV(s.to_owned()),
-    Some(holmes::val::Blob(b)) => {
+    Ok(holmes::val::Uint64(v)) => UInt64V(v),
+    Ok(holmes::val::String(s)) => HStringV(s.unwrap().to_owned()),
+    Ok(holmes::val::Blob(b)) => {
       let mut bv = Vec::new();
-      bv.push_all(b);
+      bv.push_all(b.unwrap());
       BlobV(bv)
     }
-    None => panic!("Invalid value on wire")
+    Err(_) => panic!("Invalid value on wire")
   }
 }
 
@@ -168,19 +168,21 @@ pub fn convert_vals<'a> (args_reader : struct_list::Reader<'a, holmes::val::Read
 
 pub fn convert_expr<'a>(expr_reader : holmes::expr::Reader<'a>) -> Expr {
   match expr_reader.which() {
-    Some(holmes::expr::Var(v)) => EVar(v),
-    Some(holmes::expr::Val(val)) => EVal(convert_val(val)),
-    Some(holmes::expr::App(f_expr)) =>
-      EApp(f_expr.get_func().to_owned(),
-           convert_many(f_expr.get_args(),
-                        convert_expr)),
-    None => panic!("Unidentified expr branch")
+    Ok(holmes::expr::Var(v)) => EVar(v),
+    Ok(holmes::expr::Val(val)) => EVal(convert_val(val.unwrap())),
+    Ok(holmes::expr::App(f_expr)) => {
+      let f_expr = f_expr.unwrap();
+      EApp(f_expr.get_func().unwrap().to_owned(),
+           convert_many(f_expr.get_args().unwrap(),
+                        convert_expr))
+    }
+    Err(_) => panic!("Unidentified expr branch")
   }
 }
 
 pub fn convert_where<'a>(where_reader : holmes::where_clause::Reader<'a>) -> WhereClause {
   WhereClause {
-    asgns : convert_many(where_reader.get_lhs(),
+    asgns : convert_many(where_reader.get_lhs().unwrap(),
                          convert_body_expr),
     rhs : unimplemented!()
   }
@@ -188,20 +190,20 @@ pub fn convert_where<'a>(where_reader : holmes::where_clause::Reader<'a>) -> Whe
 
 pub fn convert_body_expr<'a>(body_expr_reader : holmes::body_expr::Reader<'a>) -> MatchExpr {
   match body_expr_reader.which() {
-    Some(holmes::body_expr::Unbound(())) => Unbound,
-    Some(holmes::body_expr::Var(v)) => Var(v),
-    Some(holmes::body_expr::Const(val)) =>
-      HConst(convert_val(val)),
-    None => panic!("Unknown expr type")
+    Ok(holmes::body_expr::Unbound(())) => Unbound,
+    Ok(holmes::body_expr::Var(v)) => Var(v),
+    Ok(holmes::body_expr::Const(val)) =>
+      HConst(convert_val(val.unwrap())),
+    Err(_) => panic!("Unknown expr type")
   }
 }
 
 pub fn convert_clause<'a>(clause_reader : holmes::body_clause::Reader<'a>)
                          -> Clause {
-  let pred = clause_reader.get_predicate();
+  let pred = clause_reader.get_predicate().unwrap();
   Clause {
     pred_name : pred.to_owned(),
-    args : convert_many(clause_reader.get_args(),
+    args : convert_many(clause_reader.get_args().unwrap(),
                         convert_body_expr)
   }
 }
@@ -232,9 +234,9 @@ pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule
 
 pub fn convert_rule<'a>(rule_reader : holmes::rule::Reader<'a>) -> Rule {
   Rule {
-    head : convert_clause(rule_reader.get_head()),
-    body : convert_many(rule_reader.get_body(), convert_clause),
-    wheres : convert_many(rule_reader.get_where(),
+    head : convert_clause(rule_reader.get_head().unwrap()),
+    body : convert_many(rule_reader.get_body().unwrap(), convert_clause),
+    wheres : convert_many(rule_reader.get_where().unwrap(),
                           convert_where)
   }
 }

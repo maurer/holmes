@@ -8,7 +8,7 @@ use holmes::native_types::MatchExpr::*;
 
 #[test]
 pub fn one_step() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
     assert!(&client.new_predicate(&Predicate {
       name  : test_pred.clone(),
@@ -48,7 +48,7 @@ pub fn one_step() {
 
 #[test]
 pub fn closure() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let test_pred = "reaches".to_string();
     assert!(&client.new_predicate(&Predicate {
       name  : test_pred.clone(),

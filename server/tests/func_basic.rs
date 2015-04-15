@@ -7,7 +7,7 @@ use holmes::native_types::HValue::*;
 
 #[test]
 pub fn reg_func() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     &client.new_func("test_func", HFunc {
       input_types : vec![UInt64],
       output_types : vec![UInt64],

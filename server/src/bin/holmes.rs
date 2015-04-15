@@ -6,6 +6,6 @@ pub fn main () {
   let mut server =
     Server::new("127.0.0.1:8080",
                 DB::Postgres("postgresql://localhost/holmes".to_string()));
-  {unwrap(&server.boot());}
+  {&server.boot().unwrap();}
   &server.join();
 }

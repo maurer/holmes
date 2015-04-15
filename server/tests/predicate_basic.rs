@@ -6,7 +6,7 @@ use holmes::native_types::HType::*;
 
 #[test]
 pub fn new_predicate_basic() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client: &mut Client| {
     assert!(&client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
@@ -16,7 +16,7 @@ pub fn new_predicate_basic() {
 
 #[test]
 pub fn double_register() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let pred1 = &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]      
@@ -32,7 +32,7 @@ pub fn double_register() {
 
 #[test]
 pub fn double_register_incompat() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let pred1 = &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]            
@@ -48,12 +48,12 @@ pub fn double_register_incompat() {
 
 #[test]
 pub fn pred_persist() {
-  server_wrap(vec![&|&: client : &mut Client| {
+  server_wrap(vec![&|client : &mut Client| {
     assert!(&client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
     }));
-  }, &|&: client : &mut Client| {
+  }, &|client : &mut Client| {
     assert!(!&client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, HString, UInt64]

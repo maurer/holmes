@@ -9,7 +9,7 @@ use holmes::native_types::Expr::*;
 
 #[test]
 pub fn register_where_rule() {
-  server_single(&|&: client : &mut Client| {
+  server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
     assert!(&client.new_predicate(&Predicate {
       name  : test_pred.clone(),
