@@ -1,6 +1,7 @@
 extern crate capnp;
 extern crate capnp_rpc;
 extern crate postgres;
+extern crate rustc_serialize;
 
 pub mod server;
 pub mod fact_db;

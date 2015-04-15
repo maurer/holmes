@@ -19,7 +19,10 @@ use std::sync::Arc;
 
 use std::io::Write;
 
+use rustc_serialize::json;
+
 type ClauseId = (String, i32);
+type WhereId = i32;
 
 #[derive(Debug)]
 pub enum DBError {
@@ -30,12 +33,6 @@ pub enum DBError {
 }
 use pg_db::DBError::TypeParseError;
 use pg_db::DBError::InternalError;
-
-fn i32_cast(v : &u32) -> &i32 {
-  unsafe {
-    ::std::mem::transmute(v)
-  }
-}
 
 impl From<Error> for DBError {
   fn from(x : Error) -> DBError {DBError::Error(x)}
@@ -140,8 +137,7 @@ impl PgDB {
 
     //Create Tables
     try!(conn.execute("create table if not exists predicates (pred_name varchar not null, ordinal int4 not null, type varchar not null)", &[]));
-    try!(conn.execute("create table if not exists gen_clauses (id serial, pred_name varchar not null, tgt serial)", &[]));
-    try!(conn.execute("create table if not exists rules (head_pred varchar not null, head_clause serial, body_pred varchar not null, body_clause serial)", &[]));
+    try!(conn.execute("create table if not exists rules (id serial, rule varchar not null)", &[]));
 
     //Create incremental PgDB object
     let mut pg_db = PgDB {
@@ -189,64 +185,21 @@ impl PgDB {
     pg_db.pred_by_name = pred_by_name;
  
     //Reload rule cache
-    let rules = {
-      let rule_stmt = try!(pg_db.conn.prepare("select head_clause, head_pred, body_clause, body_pred from rules"));
-      let mut body_ids_by_head_id : HashMap<ClauseId, Vec<ClauseId>> = HashMap::new();
+    let rules : Vec<Rule> = {
+      let rule_stmt = try!(pg_db.conn.prepare("select rule from rules"));
       let rows = try!(rule_stmt.query(&[]));
-      for row in rows {
-        let head : ClauseId = (row.get(1), row.get(0));
-        let body : ClauseId = (row.get(3), row.get(2));
-        match body_ids_by_head_id.entry(head) {
-          Vacant(entry) => {entry.insert(vec![body]);}
-          Occupied(mut entry) => entry.get_mut().push(body)
-        }
-      }
-      try!(body_ids_by_head_id.iter().map(|(head_id, body_ids)| {
-        let head_clause = try!(pg_db.get_clause(head_id));
-        let body_clauses = try!(body_ids.iter().map(|body_id| {
-          pg_db.get_clause(body_id)
-        }).collect::<Result<Vec<Clause>,DBError>>());
-        Ok(Rule {
-          head : head_clause,
-          body : body_clauses,
-          wheres : vec![] //TODO fill in properly
-        })
-      }).collect::<Result<Vec<Rule>, DBError>>())
+      rows.iter().map(|encoded_rule_row| {
+        let encoded_rule : String = encoded_rule_row.get(0);
+        json::decode(&encoded_rule).unwrap()
+      }).collect()
     };
+
     for rule in rules {
       &pg_db.add_rule_cache(&rule);
     }
     //TODO load exec cache
     
     Ok(pg_db)
-  }
-
-  fn get_clause(&self, clause_id : &ClauseId)
-     -> Result<Clause, DBError> {
-    use native_types::HValue::*;
-    let stmt = try!(self.conn.prepare(&format!("select * from clauses.{} where id=$1", clause_id.0)));
-    let rows = try!(stmt.query(&[&clause_id.1]));
-    let row = rows.iter().next().expect("Should be one row");
-    let args = self.pred_by_name[&clause_id.0].types.iter().enumerate().map(|(idx, h_type)| {
-      let var_idx = idx * 2 + 1;
-      let val_idx = var_idx + 1;
-      let var : Option<i32> = row.get(var_idx);
-      let val : Option<HValue> =
-        match *h_type {
-          UInt64  => row.get::<_,Option<i64>>(val_idx).map(|i|{UInt64V(i as u64)}),
-          HString => row.get::<_,Option<String>>(val_idx).map(HStringV),
-          Blob    => row.get::<_,Option<Vec<u8>>>(val_idx).map(BlobV)
-        };
-      match (var, val) {
-        (None, None) => MatchExpr::Unbound,
-        (Some(v), _) => MatchExpr::Var(v as u32),
-        (_, Some(v)) => MatchExpr::HConst(v)
-      }
-    }).collect::<Vec<MatchExpr>>();
-    Ok(Clause {
-      pred_name : clause_id.0.clone(),
-      args : args
-    })
   }
 
   fn gen_insert_stmt(&mut self, pred : &Predicate) {
@@ -303,27 +256,6 @@ impl PgDB {
     Ok(inserted)
   }
 
-  fn insert_clause(&mut self, clause : &Clause) -> Result<ClauseId, DBError> {
-   let table = clause.pred_name.clone();
-   let (columns, traits) : (Vec<String>, Vec<&ToSql>) = 
-     clause.args.iter().enumerate().filter_map(|(idx, arg)| {
-     match *arg {
-       MatchExpr::Unbound       => None,
-       MatchExpr::Var(ref v)    => {
-         Some((format!("var{}", idx), i32_cast(v) as &ToSql))
-       }
-       MatchExpr::HConst(ref c) => Some((format!("val{}", idx), c as &ToSql))
-     }}).unzip();
-   let template = columns.iter().enumerate().map(|(idx, _)| {
-     format!("${}", idx + 1)
-   }).collect::<Vec<String>>().connect(", ");
-   let stmt = try!(self.conn.prepare(
-     &format!("insert into clauses.{} ({}) values ({}) returning id",
-              table, columns.connect(", "), template)));
-   let res = try!(stmt.query(&traits));
-   Ok((table, res.iter().next().expect("Clause insert failure").get(0)))
-  }
-
   fn run_rule(&mut self, rule : &Rule) {
     match self.search_facts(&rule.body) {
       SearchResponse::SearchAns(anss) => {
@@ -363,17 +295,11 @@ impl PgDB {
     }
   }
 
-  fn insert_rule(&mut self, head_id : ClauseId, body_ids : Vec<ClauseId>) -> Result<(), DBError> {
-    //XXX: This should probably be in a txn, an error will create a malformed rule on reboot
-    for body_id in body_ids.iter() {
-      try!(self.conn.execute(
-         &format!("insert into rules values ($1, $2, $3, $4)"),
-         &[&head_id.0 as &ToSql,
-           &head_id.1 as &ToSql,
-           &body_id.0 as &ToSql,
-           &body_id.1 as &ToSql]));
-    }
-    Ok(())
+  fn insert_rule(&mut self, rule : &Rule) -> Result<i32, DBError> {
+    let stmt = try!(self.conn.prepare("insert into rules (rule) values ($1) returning id"));
+    let rows = try!(stmt.query(&[&json::encode(&rule).unwrap()]));
+    let row = rows.iter().next().expect("Should be one row");
+    Ok(row.get(0))
   }
 
 }
@@ -587,18 +513,7 @@ impl FactDB for PgDB {
     use fact_db::RuleResponse::*;
     
     //Persist the rule
-    //Create clauses
-    let head_id : ClauseId = match self.insert_clause(&rule.head) {
-      Ok(v) => v,
-      Err(e) => return RuleFail(format!("Issue creating head clause: {:?}", e))
-    };
-    let body_ids : Vec<ClauseId> =
-      match rule.body.iter().map(|x|{self.insert_clause(x)}).collect::<Result<Vec<ClauseId>, DBError>>() {
-        Ok(v) => v,
-        Err(e) => return RuleFail(format!("Issue creating body clauses: {:?}", e))
-      };
-    //Create rule
-    match self.insert_rule(head_id, body_ids) {
+    match self.insert_rule(&rule) {
       Err(e) => return RuleFail(format!("Issue creating rule: {:?}", e)),
       _ => ()
     }

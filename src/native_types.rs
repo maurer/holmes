@@ -17,7 +17,7 @@ pub enum HType {
 }
 use native_types::HType::*;
 
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub enum HValue {
   UInt64V(u64),
   HStringV(String),
@@ -70,7 +70,7 @@ pub struct Fact {
 
 pub type HVar = u32;
 
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub enum MatchExpr {
   Unbound,
   Var(HVar),
@@ -78,13 +78,13 @@ pub enum MatchExpr {
 }
 use native_types::MatchExpr::*;
 
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct Clause {
   pub pred_name : String,
   pub args : Vec<MatchExpr>
 }
 
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub enum Expr {
   EVar(HVar),
   EVal(HValue),
@@ -92,14 +92,14 @@ pub enum Expr {
 }
 use native_types::Expr::*;
 
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct Rule {
   pub head  : Clause,
   pub body  : Vec<Clause>,
   pub wheres : Vec<WhereClause>
 }
 
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct WhereClause {
   pub asgns : Vec<MatchExpr>,
   pub rhs : Expr

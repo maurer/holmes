@@ -19,6 +19,7 @@ capnpc = "*"
 capnp = "*"
 capnp-rpc = "*"
 postgres = "*"
+rustc-serialize = "*"
 
 [[test]]
 name = "lib"
