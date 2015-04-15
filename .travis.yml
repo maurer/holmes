@@ -16,11 +16,6 @@ install:
   - autoreconf -i
   - ./configure && make -j5 && sudo make install && cd ../..
 
-script:
-  - cd server
-  - cargo build --verbose
-  - cargo test --verbose
-
 after_success:
   - sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev
   - wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz

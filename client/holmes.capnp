@@ -1,1 +1,0 @@
-../server/holmes.capnp
