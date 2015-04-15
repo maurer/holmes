@@ -1,6 +1,8 @@
 # Holmes
 
-![Holmes Build Badge](https://travis-ci.org/maurer/holmes.svg?branch=rust)
+[![Build Status](https://travis-ci.org/BinaryAnalysisPlatform/holmes.svg?branch=master)](https://travis-ci.org/BinaryAnalysisPlatform/holmes)
+[![Coverage Status](https://coveralls.io/repos/BinaryAnalysisPlatform/holmes/badge.svg)](https://coveralls.io/r/BinaryAnalysisPlatform/holmes)
+
 
 A system for integrating multiple analyses using a logic language.
 
