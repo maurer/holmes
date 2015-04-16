@@ -179,11 +179,40 @@ pub fn convert_expr<'a>(expr_reader : holmes::expr::Reader<'a>) -> Expr {
   }
 }
 
+pub fn capnp_expr<'a>(mut expr_builder : holmes::expr::Builder<'a>, expr : &Expr) {
+  match *expr {
+    EVar(ref var) => expr_builder.set_var(*var),
+    EVal(ref val) => capnp_val(expr_builder.init_val(), val),
+    EApp(ref name, ref args) => {
+      let mut builder = expr_builder.init_app();
+      builder.set_func(name);
+      let mut arg_builder = builder.init_args(args.len() as u32);
+      for (i, arg) in args.iter().enumerate() {
+        capnp_expr(arg_builder.borrow().get(i as u32), arg)
+      }
+    }
+  }
+}
+
 pub fn convert_where<'a>(where_reader : holmes::where_clause::Reader<'a>) -> WhereClause {
   WhereClause {
     asgns : convert_many(where_reader.get_lhs().unwrap(),
                          convert_body_expr),
-    rhs : unimplemented!()
+    rhs : convert_expr(where_reader.get_rhs().unwrap())
+  }
+}
+
+pub fn capnp_where<'a>(mut where_builder : holmes::where_clause::Builder<'a>,
+                       where_clause  : &WhereClause) {
+  {
+    let mut lhs_builder = where_builder.borrow().init_lhs(where_clause.asgns.len() as u32);
+    for (i, lhs) in where_clause.asgns.iter().enumerate() {
+      capnp_body_expr(lhs_builder.borrow().get(i as u32), lhs)
+    }
+  }
+  {
+    let rhs_builder = where_builder.borrow().init_rhs();
+    capnp_expr(rhs_builder, &where_clause.rhs)
   }
 }
 
@@ -225,9 +254,17 @@ pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule
     let head_builder = rule_builder.borrow().init_head();
     capnp_clause(head_builder, &rule.head);
   }
-  let mut body_builder = rule_builder.borrow().init_body(rule.body.len() as u32);
-  for (i, clause) in rule.body.iter().enumerate() {
-    capnp_clause(body_builder.borrow().get(i as u32), clause)
+  {
+    let mut body_builder = rule_builder.borrow().init_body(rule.body.len() as u32);
+    for (i, clause) in rule.body.iter().enumerate() {
+      capnp_clause(body_builder.borrow().get(i as u32), clause)
+    }
+  }
+  {
+    let mut where_builder = rule_builder.borrow().init_where(rule.wheres.len() as u32);
+    for (i, w_clause) in rule.wheres.iter().enumerate() {
+      capnp_where(where_builder.borrow().get(i as u32), w_clause)
+    }
   }
 }
 

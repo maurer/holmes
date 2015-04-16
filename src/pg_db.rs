@@ -119,6 +119,15 @@ fn substitute(clause : &Clause, ans : &Vec<HValue>) -> Fact {
   }
 }
 
+fn eval(expr : &Expr, subs : &Vec<HValue>) -> Vec<HValue> {
+  use native_types::Expr::*;
+  match *expr {
+    EVar(var) => vec![subs[var as usize].clone()],
+    EVal(ref val) => vec![val.clone()],
+    EApp(ref _fun_name, ref _args) => panic!("Function application unimplemented")
+  }
+}
+
 pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,
@@ -260,7 +269,7 @@ impl PgDB {
     match self.search_facts(&rule.body) {
       SearchResponse::SearchAns(anss) => {
         //TODO: make this persist the cache
-        for ans in anss {
+        'ans: for ans in anss {
           let miss = match self.rule_exec_cache.entry(rule.clone()) {
             Vacant(entry) => {
               let mut cache = HashSet::new();
@@ -275,6 +284,26 @@ impl PgDB {
             }
           };
           if miss {
+            let mut ans = ans.clone();
+            for where_clause in rule.wheres.iter() {
+              let resp = eval(&where_clause.rhs, &ans);
+              for (lhs, rhs) in where_clause.asgns.iter().zip(resp.iter()) {
+                use native_types::MatchExpr::*;
+                match *lhs {
+                  Unbound   => (),
+                  HConst(ref v) => {
+                    if *v != *rhs {
+                      continue 'ans
+                    }
+                  }
+                  Var(n) => {
+                    //Definition should be next to be defined.
+                    assert!(n as usize == ans.len());
+                    ans.push(rhs.clone());
+                  }
+                }
+              }
+            }
             assert!(self.insert_fact(&substitute(&rule.head, &ans)).is_ok());
           }
         }
@@ -456,6 +485,8 @@ impl FactDB for PgDB {
       restricts.push(clause_elements);
       tables.push(format!("{} as {}", table_name, alias_name));
     }
+    //Make sure we're never empty on bound variables
+    var_names.push("0".to_string());
     let vars = format!("{}", var_names.connect(", "));
     tables.reverse();
     restricts.reverse();
