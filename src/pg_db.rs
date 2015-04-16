@@ -119,25 +119,32 @@ fn substitute(clause : &Clause, ans : &Vec<HValue>) -> Fact {
   }
 }
 
-fn eval(expr : &Expr, subs : &Vec<HValue>) -> Vec<HValue> {
-  use native_types::Expr::*;
-  match *expr {
-    EVar(var) => vec![subs[var as usize].clone()],
-    EVal(ref val) => vec![val.clone()],
-    EApp(ref _fun_name, ref _args) => panic!("Function application unimplemented")
-  }
-}
-
 pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,
   insert_by_name    : HashMap<String, String>,
   rule_by_pred_name : HashMap<String, Vec<Arc<Rule>>>,
-  rule_exec_cache   : HashMap<Rule, HashSet<Vec<HValue>>>
+  rule_exec_cache   : HashMap<Rule, HashSet<Vec<HValue>>>,
+  func_cache : HashMap<String, HFunc>
 }
 
 impl PgDB {
-  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
+  fn eval(&self, expr : &Expr, subs : &Vec<HValue>) -> Vec<HValue> {
+    use native_types::Expr::*;
+    match *expr {
+      EVar(var) => vec![subs[var as usize].clone()],
+      EVal(ref val) => vec![val.clone()],
+      EApp(ref fun_name, ref args) => {
+        let arg_vals = args.iter().map(|arg_expr|{
+          let v = self.eval(arg_expr, subs);
+          v[0].clone()
+        }).collect();
+        (self.func_cache[fun_name].run)(arg_vals)
+      }
+    }
+  }
+
+ pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
     let conn = try!(Connection::connect(conn_str, &SslMode::None));
     
     //Create schemas
@@ -155,6 +162,7 @@ impl PgDB {
       insert_by_name    : HashMap::new(),
       rule_by_pred_name : HashMap::new(),
       rule_exec_cache   : HashMap::new(),
+      func_cache        : HashMap::new()
     };
    
     //Reload predicate cache
@@ -286,7 +294,7 @@ impl PgDB {
           if miss {
             let mut ans = ans.clone();
             for where_clause in rule.wheres.iter() {
-              let resp = eval(&where_clause.rhs, &ans);
+              let resp = self.eval(&where_clause.rhs, &ans);
               for (lhs, rhs) in where_clause.asgns.iter().zip(resp.iter()) {
                 use native_types::MatchExpr::*;
                 match *lhs {
@@ -346,6 +354,9 @@ fn h_type_to_sql_type(h_type : &HType) -> String {
 }
 
 impl FactDB for PgDB {
+  fn reg_func(&mut self, name : String, func : HFunc) {
+    self.func_cache.insert(name, func);
+  }
   fn new_predicate(&mut self, pred : Predicate) -> PredResponse {
     use fact_db::PredResponse::*;
     if !valid_name(&pred.name) {

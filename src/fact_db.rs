@@ -34,4 +34,5 @@ pub trait FactDB: Send {
   fn new_fact(&mut self, fact : &Fact) -> FactResponse;
   fn search_facts(&self, query : &Vec<Clause>) -> SearchResponse;
   fn new_rule(&mut self, rule : Rule) -> RuleResponse;
+  fn reg_func(&mut self, name : String, func : HFunc);
 }
