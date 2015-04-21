@@ -105,45 +105,15 @@ impl ToSql for HValue {
   }
 }
 
-fn substitute(clause : &Clause, ans : &Vec<HValue>) -> Fact {
-  use native_types::MatchExpr::*;
-  Fact {
-    pred_name : clause.pred_name.clone(),
-    args : clause.args.iter().map(|slot| {
-      match slot {
-        &Unbound       => panic!("Unbound is not allowed in substituted facts"),
-        &Var(ref n)    => ans[*n as usize].clone(),
-        &HConst(ref v) => v.clone()
-      }
-    }).collect()
-  }
-}
-
 pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,
   insert_by_name    : HashMap<String, String>,
   rule_by_pred_name : HashMap<String, Vec<Arc<Rule>>>,
   rule_exec_cache   : HashMap<Rule, HashSet<Vec<HValue>>>,
-  func_cache : HashMap<String, HFunc>
 }
 
 impl PgDB {
-  fn eval(&self, expr : &Expr, subs : &Vec<HValue>) -> Vec<HValue> {
-    use native_types::Expr::*;
-    match *expr {
-      EVar(var) => vec![subs[var as usize].clone()],
-      EVal(ref val) => vec![val.clone()],
-      EApp(ref fun_name, ref args) => {
-        let arg_vals = args.iter().map(|arg_expr|{
-          let v = self.eval(arg_expr, subs);
-          v[0].clone()
-        }).collect();
-        (self.func_cache[fun_name].run)(arg_vals)
-      }
-    }
-  }
-
  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
     let conn = try!(Connection::connect(conn_str, &SslMode::None));
     
@@ -162,7 +132,6 @@ impl PgDB {
       insert_by_name    : HashMap::new(),
       rule_by_pred_name : HashMap::new(),
       rule_exec_cache   : HashMap::new(),
-      func_cache        : HashMap::new()
     };
    
     //Reload predicate cache
@@ -261,67 +230,10 @@ impl PgDB {
                            .to_string()))).clone();
     let argrefs : Vec<&ToSql> = fact.args.iter().map(|x|{x as &ToSql}).collect();
     let inserted = try!(self.conn.execute(&stmt, &argrefs)) > 0;
-    if inserted {
-      let rules = match self.rule_by_pred_name.get(&fact.pred_name) {
-        Some(z) => z.clone(),
-        None => Vec::new()
-      };
-      for rule in rules {
-        self.run_rule(&rule);
-      }
-    }
     Ok(inserted)
   }
 
-  fn run_rule(&mut self, rule : &Rule) {
-    match self.search_facts(&rule.body) {
-      SearchResponse::SearchAns(anss) => {
-        //TODO: make this persist the cache
-        'ans: for ans in anss {
-          let miss = match self.rule_exec_cache.entry(rule.clone()) {
-            Vacant(entry) => {
-              let mut cache = HashSet::new();
-              cache.insert(ans.clone());
-              entry.insert(cache);
-              true
-            }
-            Occupied(mut entry) => {
-              let miss = !entry.get().contains(&ans);
-              entry.get_mut().insert(ans.clone());
-              miss
-            }
-          };
-          if miss {
-            let mut ans = ans.clone();
-            for where_clause in rule.wheres.iter() {
-              let resp = self.eval(&where_clause.rhs, &ans);
-              for (lhs, rhs) in where_clause.asgns.iter().zip(resp.iter()) {
-                use native_types::MatchExpr::*;
-                match *lhs {
-                  Unbound   => (),
-                  HConst(ref v) => {
-                    if *v != *rhs {
-                      continue 'ans
-                    }
-                  }
-                  Var(n) => {
-                    //Definition should be next to be defined.
-                    assert!(n as usize == ans.len());
-                    ans.push(rhs.clone());
-                  }
-                }
-              }
-            }
-            assert!(self.insert_fact(&substitute(&rule.head, &ans)).is_ok());
-          }
-        }
-      }
-      SearchResponse::SearchInvalid(s) => panic!("Internal invalid search query {}", s),
-      SearchResponse::SearchFail(s) => panic!("Search procedure failure {}", s),
-      SearchResponse::SearchNone => ()
-    }
-  }
-
+ 
   fn add_rule_cache(&mut self, rule : &Rule) {
     let a_rule : Arc<Rule> = Arc::new(rule.clone());
     for pred in &rule.body {
@@ -354,18 +266,27 @@ fn h_type_to_sql_type(h_type : &HType) -> String {
 }
 
 impl FactDB for PgDB {
-  fn reg_func(&mut self, name : String, func : HFunc) {
-    self.func_cache.insert(name, func);
+  fn get_rules(&self, by : RuleBy) -> Vec<Rule> {
+    match by {
+      RuleBy::Pred(name) => {
+        match self.rule_by_pred_name.get(&name) {
+          Some(rules) => rules.iter().map(|ref x|{(***x).clone()}).collect(),
+          None => Vec::new()
+        }
+      }
+    }
   }
+
+  fn get_predicate(&self, name : &str) -> Option<&Predicate> {
+    self.pred_by_name.get(name)
+  }
+
   fn new_predicate(&mut self, pred : Predicate) -> PredResponse {
     use fact_db::PredResponse::*;
     if !valid_name(&pred.name) {
       return PredicateInvalid("Invalid name: Use lowercase and underscores only".to_string());
     }
     
-    if pred.types.len() == 0 {
-      return PredicateInvalid("Predicates must have at least one argument.".to_string());
-    }
     //Check if we already have a predicate by this name
     match self.pred_by_name.get(&pred.name) {
       Some(p) => {
@@ -392,29 +313,8 @@ impl FactDB for PgDB {
 
   fn new_fact(&mut self, fact : &Fact) -> FactResponse {
     use fact_db::FactResponse::*;
-    match self.pred_by_name.get(&fact.pred_name) {
-      Some(ref pred) => {
-        if !fact.args.iter().zip(pred.types.iter()).all(type_check) {
-          //TODO use zip that mandates same length iters?
-          return FactTypeMismatch;
-        }
-      }
-      None => return FactPredUnreg(fact.pred_name.to_string())
-    }
-    // We know about the predicate, and the types match, so
-    // attempting to insert it in the db should be legal.
-
     match self.insert_fact(&fact) {
-      Ok(true)   => {
-        let rules = match self.rule_by_pred_name.get(&fact.pred_name) {
-          Some(z) => z.clone(),
-          None => Vec::new()
-        };
-        for rule in rules {
-          self.run_rule(&rule);
-        }
-        FactCreated
-      }
+      Ok(true)   => FactCreated,
       Ok(false)  => FactExists,
       Err(e)     => FactFail(format!("{:?}", e))
     }
@@ -551,7 +451,7 @@ impl FactDB for PgDB {
     SearchAns(anss)
   }
 
-  fn new_rule(&mut self, rule : Rule) -> RuleResponse {
+  fn new_rule(&mut self, rule : &Rule) -> RuleResponse {
     use fact_db::RuleResponse::*;
     
     //Persist the rule
@@ -563,9 +463,24 @@ impl FactDB for PgDB {
     //Enter rule into rulecache
     self.add_rule_cache(&rule);
 
-    //Actually run the rule?
-    self.run_rule(&rule);
-
     RuleAdded
   }
+
+  fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<HValue>) -> bool {
+    //TODO: persist the cache
+    match self.rule_exec_cache.entry(rule.clone()) {
+      Vacant(entry) => {
+        let mut cache = HashSet::new();
+        cache.insert(args.clone());
+        entry.insert(cache);
+        true
+      }
+      Occupied(mut entry) => {
+        let miss = !entry.get().contains(args);
+        entry.get_mut().insert(args.clone());
+        miss
+      }
+    }
+  }
+ 
 }

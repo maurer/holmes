@@ -72,7 +72,7 @@ interface Holmes {
 
   # Register a predicate
   newPredicate @0 (predName :PredName,
-                   argTypes :List(HType)) -> (valid :Bool);
+                   argTypes :List(HType));
 
   # Add a fact to the extensional database
   newFact @1 (fact :Fact);

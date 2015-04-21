@@ -9,10 +9,10 @@ use holmes::native_types::MatchExpr::*;
 #[test]
 pub fn new_fact_basic() {
   server_single(&|client : &mut Client| {
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
-    }));
+    });
     &client.new_fact(&Fact {
       pred_name : "test_pred".to_string(),
       args : vec![HStringV("foo".to_string()),
@@ -26,17 +26,17 @@ pub fn new_fact_basic() {
 #[test]
 pub fn new_fact_type_err() {
   server_single(&|client : &mut Client| {
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
-    }));
-    assert_eq!(&client.new_fact(&Fact {
+    }).unwrap();
+    &client.new_fact(&Fact {
       pred_name : "test_pred".to_string(),
       args : vec![UInt64V(7),
                   BlobV(vec![3;3]),
                   UInt64V(7)
                  ]
-    }).unwrap_err()[..], "Type mismatch");
+    }).unwrap_err();
   })
 }
 
@@ -44,10 +44,10 @@ pub fn new_fact_type_err() {
 pub fn new_fact_echo() {
   server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
     &client.new_fact(&Fact {
       pred_name : test_pred.clone(),
       args : vec![HStringV("foo".to_string()),
@@ -68,10 +68,10 @@ pub fn new_fact_echo() {
 pub fn two_strings() {
   server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, HString]
-    }));
+    }).unwrap();
     &client.new_fact(&Fact {
       pred_name : test_pred.clone(),
       args : vec![HStringV("foo".to_string()),

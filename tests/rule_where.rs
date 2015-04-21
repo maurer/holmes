@@ -11,10 +11,10 @@ use holmes::native_types::Expr::*;
 pub fn register_where_rule() {
   server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
     let rule = Rule {
       head : Clause {
         pred_name : test_pred.clone(),
@@ -41,10 +41,10 @@ pub fn register_where_rule() {
 pub fn where_const() {
   server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
     let rule = Rule {
       head : Clause {
         pred_name : test_pred.clone(),
@@ -86,10 +86,10 @@ pub fn where_const() {
 pub fn where_plus_two() {
   server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
     &client.new_func("test_func", HFunc {
       input_types : vec![UInt64],
       output_types : vec![UInt64],

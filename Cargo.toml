@@ -13,11 +13,11 @@ repository = "https://github.com/maurer/holmes"
 name = "holmes"
 
 [build-dependencies]
-capnpc = "*"
+capnpc = "=0.2.0"
 
 [dependencies]
-capnp = "*"
-capnp-rpc = "*"
+capnp = "=0.2.0"
+capnp-rpc = "=0.2.1"
 postgres = "*"
 rustc-serialize = "*"
 

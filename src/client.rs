@@ -63,7 +63,7 @@ impl Client {
     })
   }
   //TODO: figure out how to represent the output type for a pipelinable promise
-  pub fn new_predicate(&mut self, pred : &Predicate) -> bool {
+  pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), String> {
     let mut pred_req = self.holmes.new_predicate_request();
     let mut pred_data = pred_req.init();
     pred_data.set_pred_name(&pred.name);
@@ -77,7 +77,7 @@ impl Client {
         HType::UInt64  => {type_data.borrow().get(i).set_uint64(())}
       }
     }
-    pred_req.send().wait().unwrap().get_valid()
+    pred_req.send().wait().map(|_|{()})
   }
 
   pub fn new_fact(&mut self, fact : &Fact) -> Result<(), String> {

@@ -10,10 +10,10 @@ use holmes::native_types::MatchExpr::*;
 pub fn one_step() {
   server_single(&|client : &mut Client| {
     let test_pred = "test_pred".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
     &client.new_fact(&Fact {
       pred_name : test_pred.clone(),
       args : vec![HStringV("foo".to_string()),
@@ -50,10 +50,10 @@ pub fn one_step() {
 pub fn closure() {
   server_single(&|client : &mut Client| {
     let test_pred = "reaches".to_string();
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : test_pred.clone(),
       types : vec![HString, HString]
-    }));
+    }).unwrap();
     &client.new_fact(&Fact {
       pred_name : test_pred.clone(),
       args : vec![HStringV("foo".to_string()),

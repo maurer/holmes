@@ -7,56 +7,52 @@ use holmes::native_types::HType::*;
 #[test]
 pub fn new_predicate_basic() {
   server_single(&|client: &mut Client| {
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
   })
 }
 
 #[test]
 pub fn double_register() {
   server_single(&|client : &mut Client| {
-    let pred1 = &client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]      
-    });
-    let pred2 = &client.new_predicate(&Predicate {
+    }).unwrap();
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]            
-    });
-    assert_eq!(pred1, &true);
-    assert_eq!(pred2, &true);
+    }).unwrap();
   })
 }
 
 #[test]
 pub fn double_register_incompat() {
   server_single(&|client : &mut Client| {
-    let pred1 = &client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]            
-    });
-    let pred2 = &client.new_predicate(&Predicate {
+    }).unwrap();
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, HString, UInt64]
-    });
-    assert_eq!(pred1, &true);
-    assert_eq!(pred2, &false);
+    }).unwrap_err();
   })
 }
 
 #[test]
 pub fn pred_persist() {
   server_wrap(vec![&|client : &mut Client| {
-    assert!(&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, Blob, UInt64]
-    }));
+    }).unwrap();
   }, &|client : &mut Client| {
-    assert!(!&client.new_predicate(&Predicate {
+    &client.new_predicate(&Predicate {
       name  : "test_pred".to_string(),
       types : vec![HString, HString, UInt64]
-    }));
+    }).unwrap_err();
   }]);
 }
