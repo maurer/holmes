@@ -30,8 +30,8 @@ impl RpcServer {
         Ok((RpcServer { tcp_listener : tcp_listener, control : rx , status : status_tx}, tx, status_rx))
     }
 
-    pub fn serve<'a>(self, bootstrap_interface : Box<Server + Send>) -> ::std::thread::JoinGuard<'a, ()> {
-        ::std::thread::scoped(move || {
+    pub fn serve(self, bootstrap_interface : Box<Server + Send>) -> ::std::thread::JoinHandle<()> {
+        ::std::thread::spawn(move || {
             let server = self;
             let bootstrap_interface = Box::new(LocalClient::new(bootstrap_interface));
             for stream_result in server.tcp_listener.incoming() {

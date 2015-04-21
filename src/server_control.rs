@@ -5,7 +5,7 @@ use server::HolmesImpl;
 use std::error::Error;
 use postgres::{SslMode, Connection, IntoConnectParams};
 use std::fmt::{Formatter, Display};
-use std::thread::JoinGuard;
+use std::thread::JoinHandle;
 use rpc_server::*;
 use std::fmt::Debug;
 use std::net::TcpStream;
@@ -109,7 +109,7 @@ impl<'a> DB {
 pub struct Server<'a> {
   addr : &'a str,
   db : DB,
-  thread  : Option<JoinGuard<'a, ()>>,
+  thread  : Option<JoinHandle<()>>,
   control : Option<Sender<Command>>,
   status  : Option<Receiver<Status>>
 }
@@ -138,9 +138,9 @@ impl<'a> Server<'a> {
     self.thread = Some(rpc_server.serve(holmes));
     Ok(())
   }
-  pub fn join(&mut self) -> () {
+  pub fn join(&mut self) {
     let thread = self.thread.take();
-    thread.expect("Tried to join non-running server").join()
+    thread.expect("Tried to join non-running server").join().unwrap()
   }
   pub fn shutdown(&mut self) -> Result<(), Box<Error>> {
     try!(self.control
