@@ -220,3 +220,28 @@ macro_rules! derive {
     }),*])
   }}
 }
+
+#[macro_export]
+macro_rules! rule {
+  ($client:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*) => {{
+    use std::collections::HashMap;
+    let mut vars : HashMap<String, u32> = HashMap::new();
+    let mut n : u32 = 0xffffffff;
+    $client.new_rule(&Rule {
+      body : vec![$(Clause {
+        pred_name : stringify!($body_name).to_string(),
+        args : vec![$(clause_match!(vars, n, $mb)),*]
+      }),*],
+      head : Clause {
+        pred_name : stringify!($head_name).to_string(),
+        args : vec![$(clause_match!(vars, n, $m)),*]
+      },
+      wheres : vec! []
+    })
+  }};
+  ($head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*) => {
+    |client : &mut Client| {
+      rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*)
+    }
+  }
+}
