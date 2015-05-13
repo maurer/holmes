@@ -1,4 +1,4 @@
-extern crate holmes;
+#[macro_use] extern crate holmes;
 
 mod common;
 mod predicate_basic;

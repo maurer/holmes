@@ -147,3 +147,28 @@ impl Client {
     Ok(())
   }
 }
+
+#[macro_export]
+macro_rules! htype {
+  (string) => { HString };
+  (blob  ) => { Blob };
+  (uint64) => { UInt64 };
+}
+
+#[macro_export]
+macro_rules! client_exec {
+  ($client:expr, { $( $action:expr );* }) => {
+      { $( $action($client).unwrap() );* }
+  };
+}
+
+#[macro_export]
+macro_rules! predicate {
+  ($client:ident, $pred_name:ident( $( $t:ident ),* ) ) => {
+    $client.new_predicate(&Predicate {
+      name  : stringify!($pred_name).to_string(),
+      types : vec![$(htype!($t),)*]
+    })
+  };
+  ( $pred_name:ident( $( $t:ident ),* ) ) => { |client : &mut Client| { let res : Result<(), String> = predicate!(client, $pred_name( $( $t ),* )); res } };
+}

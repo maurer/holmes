@@ -26,3 +26,13 @@ pub fn server_wrap(test : Vec<&Fn(&mut Client) -> ()>) {
 pub fn server_single(test : &Fn(&mut Client) -> ()) {
   server_wrap(vec![test])
 }
+
+pub fn should_fail<A, B, F>(f : F) -> Box<Fn(&mut Client) -> Result<(), ()>>
+  where F : 'static + Fn(&mut Client) -> Result<A, B> {
+  Box::new(move|client : &mut Client| {
+    match f(client) {
+      Ok(_) => Err(()),
+      Err(_) => Ok(())
+    }
+  })
+}
