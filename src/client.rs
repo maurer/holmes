@@ -150,9 +150,9 @@ impl Client {
 
 #[macro_export]
 macro_rules! htype {
-  (string) => { HString };
-  (blob  ) => { Blob };
-  (uint64) => { UInt64 };
+  (string) => { ::holmes::native_types::HType::HString};
+  (blob  ) => { ::holmes::native_types::HType::Blob};
+  (uint64) => { ::holmes::native_types::HType::UInt64};
 }
 
 #[macro_export]
@@ -188,4 +188,35 @@ macro_rules! fact {
     let res : Result<(), String> = fact!(client, $pred_name($($a),*));
     res
   }};
+}
+
+#[macro_export]
+macro_rules! clause_match {
+  ($vars:ident, $n:ident, [_]) => { ::holmes::native_types::MatchExpr::Unbound };
+  ($vars:ident, $n:ident, ($v:expr)) => { ::holmes::native_types::MatchExpr::HConst($v.to_hvalue()) };
+  ($vars:ident, $n:ident, $m:ident) => {{
+    use std::collections::hash_map::Entry::*;
+    use ::holmes::native_types::MatchExpr::*;
+    match $vars.entry(stringify!($m).to_string()) {
+      Occupied(entry) => Var(*entry.get()),
+      Vacant(entry) => {
+        $n = $n.wrapping_add(1);
+        entry.insert($n);
+        Var($n)
+      }
+    }
+  }};
+}
+
+#[macro_export]
+macro_rules! derive {
+  ($client:ident, $($pred_name:ident($($m:tt),*))&*) => {{
+    use std::collections::HashMap;
+    let mut vars : HashMap<String, u32> = HashMap::new();
+    let mut n : u32 = 0xffffffff;
+    $client.derive(vec![$(&Clause {
+      pred_name : stringify!($pred_name).to_string(),
+      args : vec![$(clause_match!(vars, n, $m)),*]
+    }),*])
+  }}
 }

@@ -2,7 +2,6 @@ use common::*;
 
 use holmes::client::*;
 use holmes::native_types::*;
-use holmes::native_types::HType::*;
 
 #[test]
 pub fn new_predicate_basic() {

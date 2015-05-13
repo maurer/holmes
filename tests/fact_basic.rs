@@ -2,9 +2,6 @@ use common::*;
 
 use holmes::client::*;
 use holmes::native_types::*;
-use holmes::native_types::HType::*;
-use holmes::native_types::HValue::*;
-use holmes::native_types::MatchExpr::*;
 
 #[test]
 pub fn new_fact_basic() {
@@ -25,24 +22,13 @@ pub fn new_fact_type_err() {
 #[test]
 pub fn new_fact_echo() {
   server_single(&|client : &mut Client| {
-    let test_pred = "test_pred".to_string();
-    &client.new_predicate(&Predicate {
-      name  : test_pred.clone(),
-      types : vec![HString, Blob, UInt64]
-    }).unwrap();
-    &client.new_fact(&Fact {
-      pred_name : test_pred.clone(),
-      args : vec![HStringV("foo".to_string()),
-                  BlobV(vec![3;3]),
-                  UInt64V(7)
-                 ]
-    }).unwrap();
-    assert_eq!(&client.derive(vec![&Clause {
-      pred_name : test_pred,
-      args : vec![HConst(HStringV("foo".to_string())),
-                  Unbound,
-                  Var(0)]
-    }]).unwrap(), &vec![vec![UInt64V(7)]]);
+    client_exec!(client, {
+      predicate!(test_pred(string, blob, uint64));
+      fact!(test_pred("foo", vec![3;3], 7))
+    });
+    assert_eq!(derive!(client,
+                       test_pred(("foo"), [_], x)).unwrap(),
+               vec![vec![7.to_hvalue()]]);
   })
 }
 
