@@ -25,6 +25,34 @@ pub enum HValue {
 }
 use native_types::HValue::*;
 
+pub trait ToHValue {
+  fn to_hvalue(self) -> HValue;
+}
+
+impl ToHValue for String {
+  fn to_hvalue(self) -> HValue {
+    HStringV(self)
+  }
+}
+
+impl<'a> ToHValue for &'a str {
+  fn to_hvalue(self) -> HValue {
+    HStringV(self.to_string())
+  }
+}
+
+impl ToHValue for u64 {
+  fn to_hvalue(self) -> HValue {
+    UInt64V(self)
+  }
+}
+
+impl ToHValue for Vec<u8> {
+  fn to_hvalue(self) -> HValue {
+    BlobV(self)
+  }
+}
+
 pub fn type_check(vty : (&HValue, &HType)) -> bool {
   match vty {
       (&UInt64V(_),  &UInt64)

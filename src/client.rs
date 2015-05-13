@@ -164,11 +164,28 @@ macro_rules! client_exec {
 
 #[macro_export]
 macro_rules! predicate {
-  ($client:ident, $pred_name:ident( $( $t:ident ),* ) ) => {
+  ($client:ident, $pred_name:ident($($t:ident),*)) => {
     $client.new_predicate(&Predicate {
       name  : stringify!($pred_name).to_string(),
       types : vec![$(htype!($t),)*]
     })
   };
-  ( $pred_name:ident( $( $t:ident ),* ) ) => { |client : &mut Client| { let res : Result<(), String> = predicate!(client, $pred_name( $( $t ),* )); res } };
+  ($pred_name:ident($($t:ident),*)) => { |client : &mut Client| {
+    let res : Result<(), String> = predicate!(client, $pred_name($($t),*));
+    res
+  }};
+}
+
+#[macro_export]
+macro_rules! fact {
+  ($client:ident, $pred_name:ident($($a:expr),*)) => {
+    $client.new_fact(&Fact {
+      pred_name : stringify!($pred_name).to_string(),
+      args : vec![$($a.to_hvalue()),*]
+    })
+  };
+  ($pred_name:ident($($a:expr),*)) => { |client : &mut Client| {
+    let res : Result<(), String> = fact!(client, $pred_name($($a),*));
+    res
+  }};
 }

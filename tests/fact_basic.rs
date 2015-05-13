@@ -8,36 +8,18 @@ use holmes::native_types::MatchExpr::*;
 
 #[test]
 pub fn new_fact_basic() {
-  server_single(&|client : &mut Client| {
-    &client.new_predicate(&Predicate {
-      name  : "test_pred".to_string(),
-      types : vec![HString, Blob, UInt64]
-    });
-    &client.new_fact(&Fact {
-      pred_name : "test_pred".to_string(),
-      args : vec![HStringV("foo".to_string()),
-                  BlobV(vec![3;3]),
-                  UInt64V(7)
-                 ]
-    }).unwrap();
-  })
+  server_single(&|client : &mut Client| { client_exec!(client, {
+    predicate!(test_pred(string, blob, uint64));
+    fact!(test_pred("foo", vec![3,4,5], 7))
+  })})
 }
 
 #[test]
 pub fn new_fact_type_err() {
-  server_single(&|client : &mut Client| {
-    &client.new_predicate(&Predicate {
-      name  : "test_pred".to_string(),
-      types : vec![HString, Blob, UInt64]
-    }).unwrap();
-    &client.new_fact(&Fact {
-      pred_name : "test_pred".to_string(),
-      args : vec![UInt64V(7),
-                  BlobV(vec![3;3]),
-                  UInt64V(7)
-                 ]
-    }).unwrap_err();
-  })
+  server_single(&|client : &mut Client| { client_exec!(client, {
+    predicate!(test_pred(string, blob, uint64));
+    should_fail(fact!(test_pred(7, vec![3,4,5], 7)))
+  })})
 }
 
 #[test]
@@ -66,17 +48,8 @@ pub fn new_fact_echo() {
 
 #[test]
 pub fn two_strings() {
-  server_single(&|client : &mut Client| {
-    let test_pred = "test_pred".to_string();
-    &client.new_predicate(&Predicate {
-      name  : test_pred.clone(),
-      types : vec![HString, HString]
-    }).unwrap();
-    &client.new_fact(&Fact {
-      pred_name : test_pred.clone(),
-      args : vec![HStringV("foo".to_string()),
-                  HStringV("bar".to_string())
-                 ]
-    }).unwrap();
-  })
+  server_single(&|client : &mut Client| { client_exec!(client, {
+    predicate!(test_pred(string, string));
+    fact!(test_pred("foo", "bar"))
+  })})
 }
