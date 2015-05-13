@@ -157,7 +157,7 @@ macro_rules! htype {
 
 #[macro_export]
 macro_rules! client_exec {
-  ($client:expr, { $( $action:expr );* }) => {
+  ($client:ident, { $( $action:expr );* }) => {
       { $( $action($client).unwrap() );* }
   };
 }
@@ -244,4 +244,20 @@ macro_rules! rule {
       rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*)
     }
   }
+}
+
+#[macro_export]
+macro_rules! func {
+  ($client:ident, let $name:ident : [$($src:ident),*] -> [$($dst:ident),*] = $body:expr) => {
+    $client.new_func(stringify!($name), HFunc {
+      input_types  : vec![$(htype!($src)),*],
+      output_types : vec![$(htype!($dst)),*],
+      run : Box::new($body)
+    })
+  };
+  (let $name:ident : [$($src:ident),*] -> [$($dst:ident),*] = $body:expr) => {
+    |client : &mut Client| {
+      func!(client, let $name : [$($src),*] -> [$($dst),*] = $body)
+    }
+  };
 }
