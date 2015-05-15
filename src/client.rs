@@ -221,9 +221,30 @@ macro_rules! derive {
   }}
 }
 
+pub fn var_to_evar(var : MatchExpr) -> Expr {
+  match var {
+    MatchExpr::Var(var_no) => Expr::EVar(var_no),
+    x => panic!("var_to_evar was passed nonvar: {:?}", x)
+  }
+}
+
+#[macro_export]
+macro_rules! hexpr {
+  ($vars:ident, $n:ident, [$hexpr_name:ident]) => {
+    var_to_evar(clause_match!($vars, $n, $hexpr_name))
+  };
+  ($vars:ident, $n:ident, ($hexpr:expr)) => {
+    Expr::EVal($hexpr.to_hvalue())
+  };
+  ($vars:ident, $n:ident, {$hexpr_func:ident($($hexpr_arg:tt),*)}) => {
+    Expr::EApp(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
+  };
+}
+
 #[macro_export]
 macro_rules! rule {
-  ($client:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*) => {{
+  ($client:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
+   {$(let $($bind:tt),* = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
     let mut vars : HashMap<String, u32> = HashMap::new();
     let mut n : u32 = 0xffffffff;
@@ -236,14 +257,23 @@ macro_rules! rule {
         pred_name : stringify!($head_name).to_string(),
         args : vec![$(clause_match!(vars, n, $m)),*]
       },
-      wheres : vec! []
+      wheres : vec! [$(WhereClause {
+        asgns : vec![$(clause_match!(vars, n, $bind)),*],
+        rhs   : hexpr!(vars, n, $hexpr)
+      }),*]
     })
   }};
   ($head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*) => {
     |client : &mut Client| {
-      rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*)
+      rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*, {})
     }
-  }
+  };
+  ($head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
+    |client : &mut Client| {
+      rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
+    }
+  };
+
 }
 
 #[macro_export]
