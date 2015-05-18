@@ -19,6 +19,7 @@ capnpc = "*"
 capnp = "*"
 capnp-rpc = "*"
 postgres = "*"
+postgres_array = "*"
 rustc-serialize = "*"
 getopts = "*"
 

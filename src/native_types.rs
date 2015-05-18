@@ -9,11 +9,12 @@ use capnp::traits::FromStructReader;
 
 pub type PredId = u64;
 
-#[derive(Copy,PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub enum HType {
   UInt64,
   HString,
-  Blob
+  Blob,
+  List(Box<HType>)
 }
 use native_types::HType::*;
 
@@ -21,7 +22,8 @@ use native_types::HType::*;
 pub enum HValue {
   UInt64V(u64),
   HStringV(String),
-  BlobV(Vec<u8>)
+  BlobV(Vec<u8>),
+  ListV(Vec<HValue>)
 }
 use native_types::HValue::*;
 
@@ -76,11 +78,12 @@ impl FromStr for HType {
 
 impl ToString for HType {
   fn to_string(&self) -> String {
-    (match self {
-      &UInt64  => {"uint64"}
-      &HString => {"string"}
-      &Blob    => {"blob"}
-    }).to_string()
+    match *self {
+      UInt64       => "uint64".to_string(),
+      HString      => "string".to_string(),
+      Blob         => "blob".to_string(),
+      List(ref ty) => format!("[{}]", ty.to_string())
+    }
   }
 }
 
@@ -146,19 +149,21 @@ pub struct HFunc {
   pub run : Box<Fn(Vec<HValue>) -> Vec<HValue> + 'static + Send>
 }
 
-pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
-   -> Vec<HType> {
-  let mut types = Vec::new();
-  for type_reader in types_reader.iter() {
-    match type_reader.which() {
-      Ok(holmes::h_type::Uint64(())) => {types.push(UInt64);}
-      Ok(holmes::h_type::String(())) => {types.push(HString);}
-      Ok(holmes::h_type::Blob(())) => {types.push(Blob);}
-      Ok(holmes::h_type::List(_)) => unimplemented!(),
-      Err(_) => {panic!("Unknown HType")}
-    }
+pub fn convert_type<'a> (type_reader : holmes::h_type::Reader<'a>)
+   -> HType {
+  match type_reader.which() {
+    Ok(holmes::h_type::Uint64(())) => UInt64,
+    Ok(holmes::h_type::String(())) => HString,
+    Ok(holmes::h_type::Blob(())) => Blob,
+    Ok(holmes::h_type::List(ty)) =>
+      List(Box::new(convert_type(ty.unwrap()))),
+    Err(_) => {panic!("Unknown HType")}
   }
-  types
+}
+
+pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
+  -> Vec<HType> {
+  convert_many(types_reader, convert_type)
 }
 
 pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
@@ -170,17 +175,23 @@ pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
       let bv = b.unwrap().to_owned();
       BlobV(bv)
     }
-    Ok(holmes::val::List(_)) => unimplemented!(),
+    Ok(holmes::val::List(l)) => ListV(convert_many(l.unwrap(), convert_val)),
     Err(_) => panic!("Invalid value on wire")
   }
 }
 
 pub fn capnp_val<'a> (mut val_builder : holmes::val::Builder<'a>,
                       h_val : &HValue) {
-  match h_val {
-    &HStringV(ref x) => val_builder.set_string(x),
-    &BlobV(ref x)    => val_builder.set_blob(x),
-    &UInt64V(x) => val_builder.set_uint64(x)
+  match *h_val {
+    HStringV(ref x) => val_builder.set_string(x),
+    BlobV(ref x)    => val_builder.set_blob(x),
+    UInt64V(x) => val_builder.set_uint64(x),
+    ListV(ref vals) => {
+       let mut list_builder = val_builder.init_list(vals.len() as u32);
+       for (i, val) in vals.iter().enumerate() {
+         capnp_val(list_builder.borrow().get(i as u32), val)
+       }
+    }
   }
 }
 
@@ -189,7 +200,8 @@ pub fn capnp_type<'a> (mut type_builder : holmes::h_type::Builder<'a>,
   match *h_type {
     HString => type_builder.set_string(()),
     Blob    => type_builder.set_blob(()),
-    UInt64  => type_builder.set_uint64(())
+    UInt64  => type_builder.set_uint64(()),
+    List(ref inner) => capnp_type(type_builder.init_list(), &*inner)
   }
 }
 

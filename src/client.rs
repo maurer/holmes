@@ -71,11 +71,7 @@ impl Client {
     let mut type_data = pred_data.borrow().init_arg_types(type_len);
     for i in 0..type_len {
       let idex : usize = i as usize;
-      match pred.types[idex] {
-        HType::HString => {type_data.borrow().get(i).set_string(())}
-        HType::Blob    => {type_data.borrow().get(i).set_blob(())}
-        HType::UInt64  => {type_data.borrow().get(i).set_uint64(())}
-      }
+      capnp_type(type_data.borrow().get(i), &pred.types[idex])
     }
     pred_req.send().wait().map(|_|{()})
   }

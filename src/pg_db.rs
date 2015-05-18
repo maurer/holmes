@@ -15,6 +15,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use postgres::ToSql;
 use postgres::types::IsNull;
+use postgres_array::ArrayBase;
 use std::sync::Arc;
 
 use std::io::Write;
@@ -90,6 +91,7 @@ impl ToSql for HValue {
       UInt64V(i)  => (i as i64).to_sql(ty, out),
       HStringV(ref s) => s.clone().to_sql(ty, out),
       BlobV(ref b)    => b.to_sql(ty, out),
+      ListV(ref l)    => ArrayBase::from_vec(l.iter().map(|x|{Some(x.clone())}).collect(), 0).to_sql(ty, out)
     }
   }
   fn accepts(_ty: &::postgres::types::Type) -> bool {
@@ -101,6 +103,7 @@ impl ToSql for HValue {
       UInt64V(i)  => (i as i64).to_sql_checked(ty, out),
       HStringV(ref s) => s.clone().to_sql_checked(ty, out),
       BlobV(ref b)    => b.to_sql_checked(ty, out),
+      ListV(ref l)    => ArrayBase::from_vec(l.iter().map(|x|{Some(x.clone())}).collect(), 0).to_sql_checked(ty, out)
     }
   }
 }
@@ -258,10 +261,15 @@ fn valid_name(name : &String) -> bool {
 }
 
 fn h_type_to_sql_type(h_type : &HType) -> String {
-  match h_type {
-    &HString => "varchar".to_string(),
-    &Blob    => "bytea".to_string(),
-    &UInt64  => "int8".to_string(),
+  match *h_type {
+    HString     => "varchar".to_string(),
+    Blob        => "bytea".to_string(),
+    UInt64      => "int8".to_string(),
+    List(ref inner) => {
+      let mut type_str = h_type_to_sql_type(&*inner);
+      type_str.push_str("[]");
+      type_str
+    }
   }
 }
 
@@ -341,13 +349,13 @@ impl FactDB for PgDB {
           None => return SearchInvalid(format!("{} is not a registered predicate.", clause.pred_name)),
         };
         for (idx, slot) in clause.args.iter().enumerate() {
-          match slot {
-              &MatchExpr::Unbound
-            | &MatchExpr::HConst(_) => (),
-              &MatchExpr::Var(v) => {
+          match *slot {
+              MatchExpr::Unbound
+            | MatchExpr::HConst(_) => (),
+              MatchExpr::Var(v) => {
                 let v = v as usize;
                 if v == var_type.len() {
-                  var_type.push(pred.types[idx])
+                  var_type.push(pred.types[idx].clone())
                 } else if v > var_type.len() {
                   return SearchInvalid(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v));
                 } else if var_type[v] != pred.types[idx] {
@@ -376,7 +384,7 @@ impl FactDB for PgDB {
           &MatchExpr::Var(var) => if var >= var_names.len() as u32 {
               var_names.push(
                 format!("{}.arg{}", alias_name, idx));
-              var_types.push(self.pred_by_name[&clause.pred_name].types[idx]);
+              var_types.push(self.pred_by_name[&clause.pred_name].types[idx].clone());
             } else {
               let piece = format!("{}.arg{} = {}", alias_name, idx, var_names[var as usize]);
               if idxc == 0 {
@@ -438,12 +446,20 @@ impl FactDB for PgDB {
 
     let mut anss : Vec<Vec<HValue>> = rows.iter().map(|row| {
       var_types.iter().enumerate().map(|(idx, h_type)| {
-        match h_type {
-          &HType::UInt64  => { 
-            let v : i64 = row.get(idx);
-            UInt64V(v as u64)},
-          &HType::HString => HStringV(row.get(idx)),
-          &HType::Blob    => BlobV(row.get(idx))
+        match *h_type {
+          HType::UInt64      => {
+           let v : i64 = row.get(idx);
+           UInt64V(v as u64)},
+          HType::HString     => HStringV(row.get(idx)),
+          HType::Blob        => BlobV(row.get(idx)),
+          HType::List(ref inner) => {
+            match **inner {
+              HType::UInt64  => ListV(row.get::<usize, ArrayBase<Option<i64>>>(idx).values().map(|x|{(x.clone().expect("Unexpected null array entry") as u64).to_hvalue()}).collect()),
+              HType::HString => ListV(row.get::<usize, ArrayBase<Option<String>>>(idx).values().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
+              HType::Blob    => ListV(row.get::<usize, ArrayBase<Option<Vec<u8>>>>(idx).values().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
+              HType::List(_) => panic!("Nested lists not implemented in Postgres backend")
+            }
+          }
         }
       }).collect() 
     }).collect();
