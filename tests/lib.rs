@@ -6,3 +6,4 @@ mod fact_basic;
 mod rule_basic;
 mod func_basic;
 mod rule_where;
+mod multihead;

@@ -243,7 +243,7 @@ macro_rules! hexpr {
 
 #[macro_export]
 macro_rules! rule {
-  ($client:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
+  ($client:ident, $($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*,
    {$(let $($bind:tt),* = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
     let mut vars : HashMap<String, u32> = HashMap::new();
@@ -253,24 +253,24 @@ macro_rules! rule {
         pred_name : stringify!($body_name).to_string(),
         args : vec![$(clause_match!(vars, n, $mb)),*]
       }),*],
-      head : vec![Clause {
+      head : vec![$(Clause {
         pred_name : stringify!($head_name).to_string(),
         args : vec![$(clause_match!(vars, n, $m)),*]
-      }],
+      }),*],
       wheres : vec! [$(WhereClause {
         asgns : vec![$(::holmes::native_types::BindExpr::Normal(clause_match!(vars, n, $bind))),*],
         rhs   : hexpr!(vars, n, $hexpr)
       }),*]
     })
   }};
-  ($head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*) => {
+  ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*) => {
     |client : &mut Client| {
-      rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*, {})
+      rule!(client, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {})
     }
   };
-  ($head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
+  ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
     |client : &mut Client| {
-      rule!(client, $head_name($($m),*) <= $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
+      rule!(client, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
     }
   };
 
