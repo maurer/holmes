@@ -6,6 +6,7 @@ interface Holmes {
       uint64 @0 :UInt64;
       string @1 :Text;
       blob   @2 :Data;
+      list   @3 :List(Val);
     }
   }
 
@@ -14,6 +15,7 @@ interface Holmes {
       uint64 @0 :Void;
       string @1 :Void;
       blob   @2 :Void;
+      list   @3 :HType;
     }
   }
 
@@ -53,13 +55,20 @@ interface Holmes {
     }
   }
 
+  struct BindExpr {
+    union {
+      normal  @0 :BodyExpr;
+      iterate @1 :BodyExpr;
+    }
+  }
+
   struct WhereClause {
-    lhs @0 :List(BodyExpr);
+    lhs @0 :List(BindExpr);
     rhs @1 :Expr;
   }
 
   struct Rule {
-    head @0 :BodyClause;
+    head @0 :List(BodyClause);
     body @1 :List(BodyClause);
     where @2 :List(WhereClause);
   }

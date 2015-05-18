@@ -253,12 +253,12 @@ macro_rules! rule {
         pred_name : stringify!($body_name).to_string(),
         args : vec![$(clause_match!(vars, n, $mb)),*]
       }),*],
-      head : Clause {
+      head : vec![Clause {
         pred_name : stringify!($head_name).to_string(),
         args : vec![$(clause_match!(vars, n, $m)),*]
-      },
+      }],
       wheres : vec! [$(WhereClause {
-        asgns : vec![$(clause_match!(vars, n, $bind)),*],
+        asgns : vec![$(::holmes::native_types::BindExpr::Normal(clause_match!(vars, n, $bind))),*],
         rhs   : hexpr!(vars, n, $hexpr)
       }),*]
     })

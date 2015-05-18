@@ -107,6 +107,13 @@ pub enum MatchExpr {
 use native_types::MatchExpr::*;
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
+pub enum BindExpr {
+  Normal(MatchExpr),
+  Iterate(MatchExpr)
+}
+use native_types::BindExpr::*;
+
+#[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct Clause {
   pub pred_name : String,
   pub args : Vec<MatchExpr>
@@ -122,14 +129,14 @@ use native_types::Expr::*;
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct Rule {
-  pub head  : Clause,
+  pub head  : Vec<Clause>,
   pub body  : Vec<Clause>,
   pub wheres : Vec<WhereClause>
 }
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct WhereClause {
-  pub asgns : Vec<MatchExpr>,
+  pub asgns : Vec<BindExpr>,
   pub rhs : Expr
 }
 
@@ -147,6 +154,7 @@ pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type:
       Ok(holmes::h_type::Uint64(())) => {types.push(UInt64);}
       Ok(holmes::h_type::String(())) => {types.push(HString);}
       Ok(holmes::h_type::Blob(())) => {types.push(Blob);}
+      Ok(holmes::h_type::List(_)) => unimplemented!(),
       Err(_) => {panic!("Unknown HType")}
     }
   }
@@ -162,6 +170,7 @@ pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
       let bv = b.unwrap().to_owned();
       BlobV(bv)
     }
+    Ok(holmes::val::List(_)) => unimplemented!(),
     Err(_) => panic!("Invalid value on wire")
   }
 }
@@ -225,7 +234,7 @@ pub fn capnp_expr<'a>(mut expr_builder : holmes::expr::Builder<'a>, expr : &Expr
 pub fn convert_where<'a>(where_reader : holmes::where_clause::Reader<'a>) -> WhereClause {
   WhereClause {
     asgns : convert_many(where_reader.get_lhs().unwrap(),
-                         convert_body_expr),
+                         convert_bind_expr),
     rhs : convert_expr(where_reader.get_rhs().unwrap())
   }
 }
@@ -235,7 +244,7 @@ pub fn capnp_where<'a>(mut where_builder : holmes::where_clause::Builder<'a>,
   {
     let mut lhs_builder = where_builder.borrow().init_lhs(where_clause.asgns.len() as u32);
     for (i, lhs) in where_clause.asgns.iter().enumerate() {
-      capnp_body_expr(lhs_builder.borrow().get(i as u32), lhs)
+      capnp_bind_expr(lhs_builder.borrow().get(i as u32), lhs)
     }
   }
   {
@@ -251,6 +260,14 @@ pub fn convert_body_expr<'a>(body_expr_reader : holmes::body_expr::Reader<'a>) -
     Ok(holmes::body_expr::Const(val)) =>
       HConst(convert_val(val.unwrap())),
     Err(_) => panic!("Unknown expr type")
+  }
+}
+
+pub fn convert_bind_expr<'a>(bind_expr_reader : holmes::bind_expr::Reader<'a>) -> BindExpr {
+  match bind_expr_reader.which() {
+    Ok(holmes::bind_expr::Normal(body_expr_reader)) => Normal(convert_body_expr(body_expr_reader.unwrap())),
+    Ok(holmes::bind_expr::Iterate(body_expr_reader)) => Iterate(convert_body_expr(body_expr_reader.unwrap())),
+    Err(_) => panic!("Unknown bind expr type")
   }
 }
 
@@ -279,8 +296,10 @@ pub fn convert_clauses<'a>(clauses_reader : struct_list::Reader<'a,
 
 pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule) {
   {
-    let head_builder = rule_builder.borrow().init_head();
-    capnp_clause(head_builder, &rule.head);
+    let mut head_builder = rule_builder.borrow().init_head(rule.head.len() as u32);
+    for (i, clause) in rule.head.iter().enumerate() {
+      capnp_clause(head_builder.borrow().get(i as u32), clause)
+    }
   }
   {
     let mut body_builder = rule_builder.borrow().init_body(rule.body.len() as u32);
@@ -298,18 +317,27 @@ pub fn capnp_rule<'a>(mut rule_builder : holmes::rule::Builder<'a>, rule : &Rule
 
 pub fn convert_rule<'a>(rule_reader : holmes::rule::Reader<'a>) -> Rule {
   Rule {
-    head : convert_clause(rule_reader.get_head().unwrap()),
+    head : convert_many(rule_reader.get_head().unwrap(), convert_clause),
     body : convert_many(rule_reader.get_body().unwrap(), convert_clause),
     wheres : convert_many(rule_reader.get_where().unwrap(),
                           convert_where)
   }
 }
+
 pub fn capnp_body_expr<'a>(mut expr_builder : holmes::body_expr::Builder<'a>,
                   expr : &MatchExpr) {
   match expr {
     &Unbound => expr_builder.set_unbound(()),
     &Var(v) => expr_builder.set_var(v),
     &HConst(ref val) => capnp_val(expr_builder.init_const(), val)
+  }
+}
+
+pub fn capnp_bind_expr<'a>(bind_builder : holmes::bind_expr::Builder<'a>,
+                           bind_expr : &BindExpr) {
+  match *bind_expr {
+    Normal(ref match_expr) => capnp_body_expr(bind_builder.init_normal(), match_expr),
+    Iterate(ref match_expr) => capnp_body_expr(bind_builder.init_iterate(), match_expr)
   }
 }
 

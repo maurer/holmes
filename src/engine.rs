@@ -124,22 +124,26 @@ impl Engine {
               let resp = self.eval(&where_clause.rhs, &ans);
               for (lhs, rhs) in where_clause.asgns.iter().zip(resp.iter()) {
                 use native_types::MatchExpr::*;
+                use native_types::BindExpr::*;
                 match *lhs {
-                  Unbound   => (),
-                  HConst(ref v) => {
+                  Normal(Unbound)   => (),
+                  Normal(HConst(ref v)) => {
                     if *v != *rhs {
                       continue 'ans
                     }
                   }
-                  Var(n) => {
+                  Normal(Var(n)) => {
                     //Definition should be next to be defined.
                     assert!(n as usize == ans.len());
                     ans.push(rhs.clone());
                   }
+                  Iterate(_) => unimplemented!()
                 }
               }
             }
-            assert!(self.new_fact(&substitute(&rule.head, &ans)).is_ok());
+            for head_clause in rule.head.iter() {
+              assert!(self.new_fact(&substitute(&head_clause, &ans)).is_ok());
+            }
           }
         }
       }
