@@ -7,15 +7,16 @@ use std::fmt::{Formatter};
 use fact_db::*;
 use std::str::FromStr;
 
-use postgres::{Connection, ConnectError, Error, SslMode};
+use postgres::{Connection, SslMode};
+use postgres::error::{Error, ConnectError};
 
 use std::collections::HashSet;
 use std::collections::hash_map::{HashMap};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-use postgres::ToSql;
+use postgres::types::ToSql;
 use postgres::types::IsNull;
-use postgres_array::ArrayBase;
+use postgres_array::Array;
 use std::sync::Arc;
 
 use std::io::Write;
@@ -69,41 +70,41 @@ impl ::std::error::Error for DBError {
 }
 
 impl ToSql for HType {
-  fn to_sql<W: ?Sized>(&self, ty: &::postgres::types::Type, out : &mut W) -> Result<IsNull, Error> 
+  fn to_sql<W: ?Sized>(&self, ty: &::postgres::types::Type, out : &mut W, ctx : &::postgres::types::SessionInfo) -> Result<IsNull, Error> 
     where Self: Sized, W: Write
   {
-    self.to_string().to_sql(ty, out)
+    self.to_string().to_sql(ty, out, ctx)
   }
   fn accepts(ty: &::postgres::types::Type) -> bool {
     String::accepts(ty)
   }
-  fn to_sql_checked(&self, ty: &::postgres::types::Type, out: &mut Write) -> Result<IsNull, Error> {
-    self.to_string().to_sql_checked(ty, out)
+  fn to_sql_checked(&self, ty: &::postgres::types::Type, out: &mut Write, ctx : &::postgres::types::SessionInfo) -> Result<IsNull, Error> {
+    self.to_string().to_sql_checked(ty, out, ctx)
   }
 }
 
 impl ToSql for HValue {
-  fn to_sql<W: ?Sized>(&self, ty: &::postgres::types::Type, out : &mut W) -> Result<IsNull, Error> 
+  fn to_sql<W: ?Sized>(&self, ty: &::postgres::types::Type, out : &mut W, ctx : &::postgres::types::SessionInfo) -> Result<IsNull, Error> 
     where Self: Sized, W: Write
   {
     use native_types::HValue::*;
     match *self {
-      UInt64V(i)  => (i as i64).to_sql(ty, out),
-      HStringV(ref s) => s.clone().to_sql(ty, out),
-      BlobV(ref b)    => b.to_sql(ty, out),
-      ListV(ref l)    => ArrayBase::from_vec(l.iter().map(|x|{Some(x.clone())}).collect(), 0).to_sql(ty, out)
+      UInt64V(i)  => (i as i64).to_sql(ty, out, ctx),
+      HStringV(ref s) => s.clone().to_sql(ty, out, ctx),
+      BlobV(ref b)    => b.to_sql(ty, out, ctx),
+      ListV(ref l)    => Array::from_vec(l.iter().map(|x|{Some(x.clone())}).collect(), 0).to_sql(ty, out, ctx)
     }
   }
   fn accepts(_ty: &::postgres::types::Type) -> bool {
      true // It varies wildly based on the type, so we approximate as yes
   }
-  fn to_sql_checked(&self, ty: &::postgres::types::Type, out: &mut Write) -> Result<IsNull, Error> {
+  fn to_sql_checked(&self, ty: &::postgres::types::Type, out: &mut Write, ctx : &::postgres::types::SessionInfo) -> Result<IsNull, Error> {
     use native_types::HValue::*;
     match *self {
-      UInt64V(i)  => (i as i64).to_sql_checked(ty, out),
-      HStringV(ref s) => s.clone().to_sql_checked(ty, out),
-      BlobV(ref b)    => b.to_sql_checked(ty, out),
-      ListV(ref l)    => ArrayBase::from_vec(l.iter().map(|x|{Some(x.clone())}).collect(), 0).to_sql_checked(ty, out)
+      UInt64V(i)  => (i as i64).to_sql_checked(ty, out, ctx),
+      HStringV(ref s) => s.clone().to_sql_checked(ty, out, ctx),
+      BlobV(ref b)    => b.to_sql_checked(ty, out, ctx),
+      ListV(ref l)    => Array::from_vec(l.iter().map(|x|{Some(x.clone())}).collect(), 0).to_sql_checked(ty, out, ctx)
     }
   }
 }
@@ -454,9 +455,9 @@ impl FactDB for PgDB {
           HType::Blob        => BlobV(row.get(idx)),
           HType::List(ref inner) => {
             match **inner {
-              HType::UInt64  => ListV(row.get::<usize, ArrayBase<Option<i64>>>(idx).values().map(|x|{(x.clone().expect("Unexpected null array entry") as u64).to_hvalue()}).collect()),
-              HType::HString => ListV(row.get::<usize, ArrayBase<Option<String>>>(idx).values().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
-              HType::Blob    => ListV(row.get::<usize, ArrayBase<Option<Vec<u8>>>>(idx).values().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
+              HType::UInt64  => ListV(row.get::<usize, Array<Option<i64>>>(idx).iter().map(|x|{(x.clone().expect("Unexpected null array entry") as u64).to_hvalue()}).collect()),
+              HType::HString => ListV(row.get::<usize, Array<Option<String>>>(idx).iter().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
+              HType::Blob    => ListV(row.get::<usize, Array<Option<Vec<u8>>>>(idx).iter().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
               HType::List(_) => panic!("Nested lists not implemented in Postgres backend")
             }
           }

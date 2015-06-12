@@ -20,8 +20,8 @@ pub enum DB {
 pub enum ControlError {
   NoDB,
   AnyErr(Box<Error>),
-  PgConnect(::postgres::ConnectError),
-  PgErr(::postgres::Error),
+  PgConnect(::postgres::error::ConnectError),
+  PgErr(::postgres::error::Error),
   PgDbErr(pg_db::DBError)
 }
 
@@ -63,12 +63,12 @@ impl Error for ControlError {
   }
 } 
 
-impl From<::postgres::ConnectError> for ControlError {
-  fn from(ce : ::postgres::ConnectError) -> ControlError {PgConnect(ce)}
+impl From<::postgres::error::ConnectError> for ControlError {
+  fn from(ce : ::postgres::error::ConnectError) -> ControlError {PgConnect(ce)}
 }
 
-impl From<::postgres::Error> for ControlError {
-  fn from(e : ::postgres::Error) -> ControlError {PgErr(e)}
+impl From<::postgres::error::Error> for ControlError {
+  fn from(e : ::postgres::error::Error) -> ControlError {PgErr(e)}
 }
 
 impl From<pg_db::DBError> for ControlError {
