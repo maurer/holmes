@@ -12,7 +12,7 @@ pub fn main () {
 
   let mut opts = Options::new();
   let default_addr = "127.0.0.1:8080";
-  opts.optopt("-a", "address", "address to listen on", default_addr);
+  opts.optopt("a", "address", "address to listen on", default_addr);
   opts.optflag("h", "help", "print this help menu");
   opts.optflag("", "dump-capnp", "dump the protocol definition file");
   let matches = match opts.parse(&args[1..]) {
@@ -31,7 +31,7 @@ pub fn main () {
   let addr = &matches.opt_str("address").unwrap_or(default_addr.to_string());
   let mut server =
     Server::new(addr,
-                DB::Postgres("postgresql://localhost/holmes".to_string()));
+                DB::Postgres("postgresql://holmes@localhost/holmes".to_string()));
   {&server.boot().unwrap();}
   &server.join();
 }
