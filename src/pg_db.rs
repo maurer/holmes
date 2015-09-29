@@ -120,7 +120,7 @@ pub struct PgDB {
 impl PgDB {
  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
     let conn = try!(Connection::connect(conn_str, &SslMode::None));
-    
+
     //Create schemas
     try!(conn.execute("create schema if not exists facts", &[]));
     try!(conn.execute("create schema if not exists clauses", &[]));
@@ -198,7 +198,7 @@ impl PgDB {
     }).collect();
     let stmt = format!("insert into facts.{} values ({})",
                        pred.name,
-                       args.connect(", "));
+                       args.join(", "));
     self.insert_by_name.insert(pred.name.clone(), stmt);
   }
 
@@ -220,7 +220,7 @@ impl PgDB {
 
     let clause_str = format!("(id serial primary key, {})", types.iter().enumerate().map(|(idx, h_type)| {
       format!("var{} int4, val{} {}", idx, idx, h_type_to_sql_type(h_type))
-    }).collect::<Vec<String>>().connect(", "));
+    }).collect::<Vec<String>>().join(", "));
 
     try!(self.conn.execute(&format!("create table facts.{} {}", name, table_str), &[]));
     try!(self.conn.execute(&format!("create table clauses.{} {}", name, clause_str), &[]));
@@ -407,7 +407,7 @@ impl FactDB for PgDB {
     }
     //Make sure we're never empty on bound variables
     var_names.push("0".to_string());
-    let vars = format!("{}", var_names.connect(", "));
+    let vars = format!("{}", var_names.join(", "));
     tables.reverse();
     restricts.reverse();
     let main_table = tables.pop().unwrap();
@@ -417,15 +417,15 @@ impl FactDB for PgDB {
         if join.len() == 0 {
           format!("JOIN {} ", table)
         } else {
-          format!("JOIN {} ON {}", table, join.connect(" AND "))
+          format!("JOIN {} ON {}", table, join.join(" AND "))
         }
       }).collect();
-    let join_query = join_blocks.connect(" ");
+    let join_query = join_blocks.join(" ");
     let where_clause = {
       if where_clause.len() == 0 {
         String::new()
       } else {
-        format!("WHERE {}", where_clause.connect(" AND "))
+        format!("WHERE {}", where_clause.join(" AND "))
       }
     };
     let raw_stmt = 
