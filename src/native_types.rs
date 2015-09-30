@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::string::{ToString, String};
 use std::borrow::ToOwned;
 
-use capnp::traits::FromStructReader;
+use capnp::traits::{OwnedStruct};
 
 pub type PredId = u64;
 
@@ -149,7 +149,7 @@ pub struct HFunc {
   pub run : Box<Fn(Vec<HValue>) -> Vec<HValue> + 'static + Send>
 }
 
-pub fn convert_type<'a> (type_reader : holmes::h_type::Reader<'a>)
+pub fn convert_type(type_reader : <holmes::h_type::Owned as OwnedStruct>::Reader)
    -> HType {
   match type_reader.which() {
     Ok(holmes::h_type::Uint64(())) => UInt64,
@@ -161,12 +161,12 @@ pub fn convert_type<'a> (type_reader : holmes::h_type::Reader<'a>)
   }
 }
 
-pub fn convert_types<'a> (types_reader : struct_list::Reader<'a, holmes::h_type::Reader<'a>>)
+pub fn convert_types(types_reader : struct_list::Reader<holmes::h_type::Owned>)
   -> Vec<HType> {
   convert_many(types_reader, convert_type)
 }
 
-pub fn convert_val<'a> (val_reader : holmes::val::Reader<'a>)
+pub fn convert_val(val_reader : <holmes::val::Owned as OwnedStruct>::Reader)
   -> HValue {
   match val_reader.which() {
     Ok(holmes::val::Uint64(v)) => UInt64V(v),
@@ -205,7 +205,7 @@ pub fn capnp_type<'a> (mut type_builder : holmes::h_type::Builder<'a>,
   }
 }
 
-pub fn convert_vals<'a> (args_reader : struct_list::Reader<'a, holmes::val::Reader<'a>>)
+pub fn convert_vals(args_reader : struct_list::Reader<holmes::val::Owned>)
   -> Vec<HValue> {
   let mut args = Vec::new();
   for arg_reader in args_reader.iter() {
@@ -214,7 +214,7 @@ pub fn convert_vals<'a> (args_reader : struct_list::Reader<'a, holmes::val::Read
   args
 }
 
-pub fn convert_expr<'a>(expr_reader : holmes::expr::Reader<'a>) -> Expr {
+pub fn convert_expr(expr_reader : <holmes::expr::Owned as OwnedStruct>::Reader) -> Expr {
   match expr_reader.which() {
     Ok(holmes::expr::Var(v)) => EVar(v),
     Ok(holmes::expr::Val(val)) => EVal(convert_val(val.unwrap())),
@@ -243,7 +243,7 @@ pub fn capnp_expr<'a>(mut expr_builder : holmes::expr::Builder<'a>, expr : &Expr
   }
 }
 
-pub fn convert_where<'a>(where_reader : holmes::where_clause::Reader<'a>) -> WhereClause {
+pub fn convert_where(where_reader : <holmes::where_clause::Owned as OwnedStruct>::Reader) -> WhereClause {
   WhereClause {
     asgns : convert_many(where_reader.get_lhs().unwrap(),
                          convert_bind_expr),
@@ -265,7 +265,7 @@ pub fn capnp_where<'a>(mut where_builder : holmes::where_clause::Builder<'a>,
   }
 }
 
-pub fn convert_body_expr<'a>(body_expr_reader : holmes::body_expr::Reader<'a>) -> MatchExpr {
+pub fn convert_body_expr(body_expr_reader : <holmes::body_expr::Owned as OwnedStruct>::Reader) -> MatchExpr {
   match body_expr_reader.which() {
     Ok(holmes::body_expr::Unbound(())) => Unbound,
     Ok(holmes::body_expr::Var(v)) => Var(v),
@@ -275,7 +275,7 @@ pub fn convert_body_expr<'a>(body_expr_reader : holmes::body_expr::Reader<'a>) -
   }
 }
 
-pub fn convert_bind_expr<'a>(bind_expr_reader : holmes::bind_expr::Reader<'a>) -> BindExpr {
+pub fn convert_bind_expr(bind_expr_reader : <holmes::bind_expr::Owned as OwnedStruct>::Reader) -> BindExpr {
   match bind_expr_reader.which() {
     Ok(holmes::bind_expr::Normal(body_expr_reader)) => Normal(convert_body_expr(body_expr_reader.unwrap())),
     Ok(holmes::bind_expr::Iterate(body_expr_reader)) => Iterate(convert_body_expr(body_expr_reader.unwrap())),
@@ -283,7 +283,7 @@ pub fn convert_bind_expr<'a>(bind_expr_reader : holmes::bind_expr::Reader<'a>) -
   }
 }
 
-pub fn convert_clause<'a>(clause_reader : holmes::body_clause::Reader<'a>)
+pub fn convert_clause(clause_reader : <holmes::body_clause::Owned as OwnedStruct>::Reader)
                          -> Clause {
   let pred = clause_reader.get_predicate().unwrap();
   Clause {
@@ -293,15 +293,15 @@ pub fn convert_clause<'a>(clause_reader : holmes::body_clause::Reader<'a>)
   }
 }
 
-pub fn convert_many<'a, T : FromStructReader<'a>, U,
-                     F : Fn(T) -> U>(
-    reader   : struct_list::Reader<'a, T>,
+pub fn convert_many<T : for <'a> OwnedStruct<'a>, U,
+                    F : Fn(<T as OwnedStruct>::Reader) -> U>(
+    reader   : struct_list::Reader<T>,
     conv_one : F) -> Vec<U> {
   reader.iter().map(conv_one).collect()
 }
 
-pub fn convert_clauses<'a>(clauses_reader : struct_list::Reader<'a,
-                       holmes::body_clause::Reader<'a>>) ->
+pub fn convert_clauses(clauses_reader : struct_list::Reader<
+                       holmes::body_clause::Owned>) ->
                        Vec<Clause> {
   convert_many(clauses_reader, convert_clause)
 }

@@ -1,5 +1,5 @@
 //Derived heavily from ez_rpc.rs in capnp-rpc-rust
-use capnp::{ReaderOptions};
+use capnp::message::ReaderOptions;
 use capnp::private::capability::{ClientHook};
 use capnp::capability::{Server};
 use capnp_rpc::rpc::{RpcConnectionState};

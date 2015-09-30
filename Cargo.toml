@@ -13,13 +13,13 @@ repository = "https://github.com/maurer/holmes"
 name = "holmes"
 
 [build-dependencies]
-capnpc = "0.2.3"
+capnpc = "*"
 
 [dependencies]
-capnp = "0.2.4"
-capnp-rpc = "0.2.3"
-postgres = "0.9"
-postgres_array = "0.5"
+capnp = "*"
+capnp-rpc = "*"
+postgres = { features = [ "unix_socket" ] }
+postgres_array = "*"
 rustc-serialize = "*"
 getopts = "*"
 
