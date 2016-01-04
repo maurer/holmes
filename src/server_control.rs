@@ -97,7 +97,7 @@ impl<'a> DB {
         let mut params = try!(str.into_connect_params().map_err(PgConnectStr));
         let old_db = try!(params.database.ok_or(NoDB));
         params.database = Some("postgres".to_owned());
-        let conn = try!(Connection::connect(params, &SslMode::None));
+        let conn = try!(Connection::connect(params, SslMode::None));
         let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '{}' AND pid <> pg_backend_pid()", &old_db);
         try!(conn.execute(&disco_query, &[]));
         let drop_query = format!("DROP DATABASE {}", &old_db);
@@ -112,7 +112,7 @@ impl<'a> DB {
         let mut params = try!(str.into_connect_params().map_err(PgConnectStr));
         let old_db = try!(params.database.ok_or(NoDB));
         params.database = Some("postgres".to_owned());
-        let conn = try!(Connection::connect(params, &SslMode::None));
+        let conn = try!(Connection::connect(params, SslMode::None));
         let create_query = format!("CREATE DATABASE {}", &old_db);
         let _ = conn.execute(&create_query, &[]);
       }

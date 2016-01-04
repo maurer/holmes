@@ -119,7 +119,7 @@ pub struct PgDB {
 
 impl PgDB {
  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
-    let conn = try!(Connection::connect(conn_str, &SslMode::None));
+    let conn = try!(Connection::connect(conn_str, SslMode::None));
 
     //Create schemas
     try!(conn.execute("create schema if not exists facts", &[]));
@@ -143,7 +143,7 @@ impl PgDB {
     {
       let pred_stmt = try!(pg_db.conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
       let pred_types = try!(pred_stmt.query(&[]));
-      for type_entry in pred_types {
+      for type_entry in pred_types.iter() {
         let name : String = type_entry.get(0);
         let h_type_str : String = type_entry.get(1);
         let h_type : HType = match FromStr::from_str(&h_type_str) {
