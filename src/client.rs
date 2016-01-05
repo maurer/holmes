@@ -26,7 +26,7 @@ impl holmes::h_func::Server for Func {
       {
         let input_len = self.h_func.input_types.len() as u32;
         let mut inputs = results.borrow().init_input_types(input_len);
-        for i in (0..input_len) {
+        for i in 0..input_len {
           capnp_type(inputs.borrow().get(i),
                      &self.h_func.input_types[i as usize])
         }
@@ -34,7 +34,7 @@ impl holmes::h_func::Server for Func {
       {
         let output_len = self.h_func.output_types.len() as u32;
         let mut outputs = results.borrow().init_output_types(output_len);
-        for i in (0..output_len) {
+        for i in 0..output_len {
           capnp_type(outputs.borrow().get(i),
                      &self.h_func.output_types[i as usize])
         }
