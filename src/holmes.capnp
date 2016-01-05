@@ -1,4 +1,8 @@
 @0xaaef86128cdda946;
+
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("holmes");
+
 interface Holmes {
   # Values
   struct Val {
@@ -85,7 +89,7 @@ interface Holmes {
 
   # Add a fact to the extensional database
   newFact @1 (fact :Fact);
-  
+
   # Ask the server to search or expand the intensional database
   # searching for a set of facts that matches a body clause
   # Returns the list of satisfying assignments to the body clauses.
