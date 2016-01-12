@@ -8,7 +8,7 @@ static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;
 
 pub fn wrap<A>(test : Vec<&Fn(&mut Holmes) -> Result<A>>) {
   let port_num = DB_NUM.fetch_add(1, SeqCst);
-  let db_addr = format!("postgresql://holmes@%2Ftmp/holmes_test{}", port_num);
+  let db_addr = format!("postgresql://holmes:holmes@localhost/holmes_test{}", port_num);
   let db = DB::Postgres(db_addr);
   for action in test.iter() {
     let mut holmes = Holmes::new(db.clone()).unwrap();

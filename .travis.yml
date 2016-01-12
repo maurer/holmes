@@ -1,20 +1,9 @@
 language: rust
 addons:
   postgresql: 9.3
-
-before_install:
-  - yes | sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  - sudo apt-get update
-install:
-  - sudo apt-get install g++-4.8 gcc-4.8 git
-  - git clone https://github.com/kentonv/capnproto.git
-  - export CC=gcc-4.8
-  - export CXX=g++-4.8
-  - cd capnproto/c++
-  - ./setup-autotools.sh
-  - autoreconf -i
-  - ./configure && make -j5 && sudo make install && cd ../..
-
+before_script:
+  - createuser -U postgres -ld holmes
+  - psql -c "ALTER USER holmes UNENCRYPTED PASSWORD 'holmes'" -U postgres
 after_success:
   - sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev
   - wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
