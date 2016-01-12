@@ -1,37 +1,31 @@
-use holmes::server_control::*;
-use holmes::client::*;
 use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 
-static PORT : AtomicIsize = ATOMIC_ISIZE_INIT;
+pub use holmes::*;
+pub use holmes::native_types::{ToHValue, HValue, Expr};
 
-pub fn server_wrap(test : Vec<&Fn(&mut Client) -> ()>) {
-  let port_num = PORT.fetch_add(1, SeqCst);
-  let addr = format!("127.0.0.1:{}", 13370 + port_num);
+static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;
+
+pub fn wrap<A>(test : Vec<&Fn(&mut Holmes) -> Result<A>>) {
+  let port_num = DB_NUM.fetch_add(1, SeqCst);
   let db_addr = format!("postgresql://holmes@%2Ftmp/holmes_test{}", port_num);
   let db = DB::Postgres(db_addr);
-  {
-    let mut server =
-        Server::new(&addr, db);
-    &server.boot().unwrap();
-    for action in test.iter() {
-      let mut client = Client::new(&addr).unwrap();
-      action(&mut client);
-      &server.reboot().unwrap();
-    }
-    &server.destroy().unwrap();
+  for action in test.iter() {
+    let mut holmes = Holmes::new(db.clone()).unwrap();
+    action(&mut holmes).unwrap();
   }
+  Holmes::new(db).unwrap().destroy().unwrap();
 }
 
-pub fn server_single(test : &Fn(&mut Client) -> ()) {
-  server_wrap(vec![test])
+pub fn single<A>(test : &Fn(&mut Holmes) -> Result<A>) {
+  wrap(vec![test])
 }
 
-pub fn should_fail<A, B, F>(f : F) -> Box<Fn(&mut Client) -> Result<(), ()>>
-  where F : 'static + Fn(&mut Client) -> Result<A, B> {
-  Box::new(move|client : &mut Client| {
-    match f(client) {
-      Ok(_) => Err(()),
+pub fn should_fail<A, F>(f : F) -> Box<Fn(&mut Holmes) -> Result<()>>
+  where F : 'static + Fn(&mut Holmes) -> Result<A> {
+  Box::new(move|holmes : &mut Holmes| {
+    match f(holmes) {
+      Ok(_) => Err(Error::NoDB), //TODO put something more reasonable here?
       Err(_) => Ok(())
     }
   })

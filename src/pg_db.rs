@@ -1,5 +1,4 @@
 use native_types::*;
-use native_types::HType::*;
 use std::*;
 
 use std::convert::From;
@@ -224,7 +223,7 @@ impl PgDB {
 
     try!(self.conn.execute(&format!("create table facts.{} {}", name, table_str), &[]));
     try!(self.conn.execute(&format!("create table clauses.{} {}", name, clause_str), &[]));
-    return Ok(());
+    Ok(())
   }
 
   fn insert_fact(&mut self, fact : &Fact) -> Result<bool, DBError> {
@@ -290,7 +289,7 @@ impl FactDB for PgDB {
     self.pred_by_name.get(name)
   }
 
-  fn new_predicate(&mut self, pred : Predicate) -> PredResponse {
+  fn new_predicate(&mut self, pred : &Predicate) -> PredResponse {
     use fact_db::PredResponse::*;
     if !valid_name(&pred.name) {
       return PredicateInvalid("Invalid name: Use lowercase and underscores only".to_string());
@@ -316,7 +315,7 @@ impl FactDB for PgDB {
     }
     
     self.gen_insert_stmt(&pred);
-    self.pred_by_name.insert(pred.name.clone(), pred);
+    self.pred_by_name.insert(pred.name.clone(), pred.clone());
     PredResponse::PredicateCreated
   }
 

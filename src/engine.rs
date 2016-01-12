@@ -3,7 +3,7 @@ use std::collections::hash_map::HashMap;
 use native_types::*;
 
 pub struct Engine {
-  fact_db : Box<FactDB + Send>,
+  fact_db : Box<FactDB>,
   funcs   : HashMap<String, HFunc>
 }
 
@@ -15,6 +15,28 @@ pub enum Error {
   Db(String)
 }
 use self::Error::*;
+
+impl ::std::fmt::Display for Error {
+  fn fmt(&self, fmt : &mut ::std::fmt::Formatter)
+        -> ::std::result::Result<(), ::std::fmt::Error> {
+    match *self {
+      Invalid(ref s) => fmt.write_fmt(format_args!("Invalid request: {}", s)),
+      Internal(ref s) => fmt.write_fmt(format_args!("Internal problem (bug): {}", s)),
+      Type(ref s) => fmt.write_fmt(format_args!("Type error: {}", s)),
+      Db(ref s) => fmt.write_fmt(format_args!("FactDB problem: {}", s))
+    }
+  }
+}
+impl ::std::error::Error for Error {
+  fn description(&self) -> &str {
+    match *self {
+      Invalid(_) => "Invalid request",
+      Internal(_) => "Internal error (bug)",
+      Type(_) => "Type mismatch",
+      Db(_) => "Error in interaction with FactDB"
+    }
+  }
+}
 
 fn substitute(clause : &Clause, ans : &Vec<HValue>) -> Fact {
   use native_types::MatchExpr::*;
@@ -31,20 +53,20 @@ fn substitute(clause : &Clause, ans : &Vec<HValue>) -> Fact {
 }
 
 impl Engine {
-  pub fn new(db : Box<FactDB + Send>) -> Engine {
+  pub fn new(db : Box<FactDB>) -> Engine {
     Engine {
       fact_db : db,
       funcs   : HashMap::new(),
     }
   }
 
-  pub fn new_predicate(&mut self, pred : Predicate) -> Result<(), Error> {
-    
+  pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), Error> {
+
     // Verify we have at least one argument
     if pred.types.len() == 0 {
       return Err(Invalid("Predicates must have at least one argument.".to_string()));
     }
-    
+
     // Check for existing predicates/type issues
     match self.fact_db.get_predicate(&pred.name) {
       Some(p) => {
