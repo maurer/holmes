@@ -1,17 +1,44 @@
+sudo: false
 language: rust
 addons:
   postgresql: 9.3
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+
+rust:
+  - nightly
+  - beta
+  - stable
+
 before_script:
-  - createuser -U postgres -ld holmes
-  - psql -c "ALTER USER holmes UNENCRYPTED PASSWORD 'holmes'" -U postgres
+  # Make a holmes:holmes user for the tests
+  - |
+      createuser -U postgres -ld holmes
+      psql -c "ALTER USER holmes UNENCRYPTED PASSWORD 'holmes'" -U postgres
+  # Install travis-cargo
+  - |
+      pip install 'travis-cargo<0.2' --user &&
+      export PATH=$HOME/.local/bin:$PATH
+
+# Replace cargo with travis-cargo
+script:
+  - travis-cargo build
+  - travis-cargo test
+  - travis-cargo bench
+  - travis-cargo --only stable doc
+
+# If we built successfully,
 after_success:
-  - sudo apt-get install libcurl4-openssl-dev libelf-dev libdw-dev
-  - wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
-  - tar xzf master.tar.gz
-  - mkdir kcov-master/build
-  - cd kcov-master/build
-  - cmake ..
-  - make
-  - sudo make install
-  - cd ../..
-  - kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo,/out target/kcov target/debug/lib-*
+  # Upload coverage data
+  - travis-cargo coveralls --no-sudo --verify
+  # Upload docs if we're on master and using rustc-stable
+  - travis-cargo --only stable doc-upload
+
+env:
+  global:
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+    - secure: "AR0+7nwUGLC+rCgMfpw43/MyMQAnVcVrLsZocMuCdHm+5iDb3oFxiTMibYzzXuOXAmFHjQozKMgswlPSamMgLHlVDCCII635smHFEJoOFC9ttlNkIa0OF8YmewK133m7IH4n7QbKUw+Kghmi9ZGkrujIrcGGNeZLvme5FIeEKI8="
