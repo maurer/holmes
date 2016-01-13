@@ -41,4 +41,5 @@ after_success:
 env:
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-    - secure: "AR0+7nwUGLC+rCgMfpw43/MyMQAnVcVrLsZocMuCdHm+5iDb3oFxiTMibYzzXuOXAmFHjQozKMgswlPSamMgLHlVDCCII635smHFEJoOFC9ttlNkIa0OF8YmewK133m7IH4n7QbKUw+Kghmi9ZGkrujIrcGGNeZLvme5FIeEKI8="
+    # Encrypted GH_TOKEN
+    - secure: "awK80V+34o170L1R6veE45eoDtzzVqxG4d1FLZxleTpOw41YsFczcCNxsUJPo0u60P24z0GRpMW7bB0QfSbsnk9zYNQ/iQTywysaqeCBLl5tpH2ESw2JRB27JD88j3WfZ2duazyJKERy7O9IPdOWlCdlw1g5ATIJMs+casI7Ces="
