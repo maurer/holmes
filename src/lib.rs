@@ -268,7 +268,7 @@ macro_rules! hexpr {
 
 #[macro_export]
 macro_rules! rule {
-  ($holmes:ident, $($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*,
+  ($holmes:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
    {$(let $($bind:tt),* = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
     let mut vars : HashMap<String, u32> = HashMap::new();
@@ -278,10 +278,10 @@ macro_rules! rule {
         pred_name : stringify!($body_name).to_string(),
         args : vec![$(clause_match!(vars, n, $mb)),*]
       }),*],
-      head : vec![$(::holmes::native_types::Clause {
+      head : ::holmes::native_types::Clause {
         pred_name : stringify!($head_name).to_string(),
         args : vec![$(clause_match!(vars, n, $m)),*]
-      }),*],
+      },
       wheres : vec! [$(::holmes::native_types::WhereClause {
         asgns : vec![$(::holmes::native_types::BindExpr::Normal(clause_match!(vars, n, $bind))),*],
         rhs   : hexpr!(vars, n, $hexpr)

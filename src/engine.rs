@@ -163,9 +163,7 @@ impl Engine {
                 }
               }
             }
-            for head_clause in rule.head.iter() {
-              assert!(self.new_fact(&substitute(&head_clause, &ans)).is_ok());
-            }
+            assert!(self.new_fact(&substitute(&rule.head, &ans)).is_ok());
           }
         }
       }

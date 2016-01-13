@@ -127,7 +127,7 @@ pub use native_types::Expr::*;
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct Rule {
-  pub head  : Vec<Clause>,
+  pub head  : Clause,
   pub body  : Vec<Clause>,
   pub wheres : Vec<WhereClause>
 }
