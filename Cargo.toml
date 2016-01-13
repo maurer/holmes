@@ -3,23 +3,13 @@
 name = "holmes"
 version = "0.0.1"
 authors = [ "Matthew Maurer <maurer@matthewmaurer.org>" ]
-build = "build.rs"
 license = "MIT"
 description = "Holmes Inference System"
 repository = "https://github.com/maurer/holmes"
 
-[[bin]]
-
-name = "holmes"
-
-[build-dependencies]
-capnpc = "0.2.3"
-
 [dependencies]
-capnp = "0.2.4"
-capnp-rpc = "0.2.3"
-postgres = "0.9"
-postgres_array = "0.5"
+postgres = { features = [ "unix_socket" ] }
+postgres_array = "*"
 rustc-serialize = "*"
 getopts = "*"
 

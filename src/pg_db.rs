@@ -1,5 +1,4 @@
 use native_types::*;
-use native_types::HType::*;
 use std::*;
 
 use std::convert::From;
@@ -119,8 +118,8 @@ pub struct PgDB {
 
 impl PgDB {
  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
-    let conn = try!(Connection::connect(conn_str, &SslMode::None));
-    
+    let conn = try!(Connection::connect(conn_str, SslMode::None));
+
     //Create schemas
     try!(conn.execute("create schema if not exists facts", &[]));
     try!(conn.execute("create schema if not exists clauses", &[]));
@@ -143,7 +142,7 @@ impl PgDB {
     {
       let pred_stmt = try!(pg_db.conn.prepare("select pred_name, type from predicates ORDER BY pred_name, ordinal"));
       let pred_types = try!(pred_stmt.query(&[]));
-      for type_entry in pred_types {
+      for type_entry in pred_types.iter() {
         let name : String = type_entry.get(0);
         let h_type_str : String = type_entry.get(1);
         let h_type : HType = match FromStr::from_str(&h_type_str) {
@@ -198,7 +197,7 @@ impl PgDB {
     }).collect();
     let stmt = format!("insert into facts.{} values ({})",
                        pred.name,
-                       args.connect(", "));
+                       args.join(", "));
     self.insert_by_name.insert(pred.name.clone(), stmt);
   }
 
@@ -220,11 +219,11 @@ impl PgDB {
 
     let clause_str = format!("(id serial primary key, {})", types.iter().enumerate().map(|(idx, h_type)| {
       format!("var{} int4, val{} {}", idx, idx, h_type_to_sql_type(h_type))
-    }).collect::<Vec<String>>().connect(", "));
+    }).collect::<Vec<String>>().join(", "));
 
     try!(self.conn.execute(&format!("create table facts.{} {}", name, table_str), &[]));
     try!(self.conn.execute(&format!("create table clauses.{} {}", name, clause_str), &[]));
-    return Ok(());
+    Ok(())
   }
 
   fn insert_fact(&mut self, fact : &Fact) -> Result<bool, DBError> {
@@ -290,7 +289,7 @@ impl FactDB for PgDB {
     self.pred_by_name.get(name)
   }
 
-  fn new_predicate(&mut self, pred : Predicate) -> PredResponse {
+  fn new_predicate(&mut self, pred : &Predicate) -> PredResponse {
     use fact_db::PredResponse::*;
     if !valid_name(&pred.name) {
       return PredicateInvalid("Invalid name: Use lowercase and underscores only".to_string());
@@ -316,7 +315,7 @@ impl FactDB for PgDB {
     }
     
     self.gen_insert_stmt(&pred);
-    self.pred_by_name.insert(pred.name.clone(), pred);
+    self.pred_by_name.insert(pred.name.clone(), pred.clone());
     PredResponse::PredicateCreated
   }
 
@@ -407,7 +406,7 @@ impl FactDB for PgDB {
     }
     //Make sure we're never empty on bound variables
     var_names.push("0".to_string());
-    let vars = format!("{}", var_names.connect(", "));
+    let vars = format!("{}", var_names.join(", "));
     tables.reverse();
     restricts.reverse();
     let main_table = tables.pop().unwrap();
@@ -417,15 +416,15 @@ impl FactDB for PgDB {
         if join.len() == 0 {
           format!("JOIN {} ", table)
         } else {
-          format!("JOIN {} ON {}", table, join.connect(" AND "))
+          format!("JOIN {} ON {}", table, join.join(" AND "))
         }
       }).collect();
-    let join_query = join_blocks.connect(" ");
+    let join_query = join_blocks.join(" ");
     let where_clause = {
       if where_clause.len() == 0 {
         String::new()
       } else {
-        format!("WHERE {}", where_clause.connect(" AND "))
+        format!("WHERE {}", where_clause.join(" AND "))
       }
     };
     let raw_stmt = 
