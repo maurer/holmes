@@ -157,12 +157,12 @@ impl Holmes {
   }
   pub fn reg_func(&mut self,
                   name : String,
-                  input_types : Vec<native_types::HType>,
-                  output_types : Vec<native_types::HType>,
-                  func : Box<Fn(Vec<native_types::HValue>) -> Vec<native_types::HValue>>) -> Result<()> {
+                  input_type  : native_types::HType,
+                  output_type : native_types::HType,
+                  func : Box<Fn(native_types::HValue) -> native_types::HValue>) -> Result<()> {
     self.engine.reg_func(name, native_types::HFunc {
-      input_types : input_types,
-      output_types : output_types,
+      input_type  : input_type,
+      output_type : output_type,
       run : func
     });
     Ok(())
@@ -170,10 +170,17 @@ impl Holmes {
 }
 
 #[macro_export]
-macro_rules! htype {
+macro_rules! htype_raw {
   (string) => { ::holmes::native_types::HType::HString};
   (blob  ) => { ::holmes::native_types::HType::Blob};
   (uint64) => { ::holmes::native_types::HType::UInt64};
+}
+
+#[macro_export]
+macro_rules! htype {
+  ([$t:tt]) => { ::holmes::native_types::HType::List(Box::new(htype!($t))) };
+  (($($t:tt),*)) => { ::holmes::native_types::HType::Tuple(vec![$(htype!($t)),*]) };
+  ($i:ident) => { htype_raw!($i) };
 }
 
 #[macro_export]
@@ -189,13 +196,13 @@ macro_rules! holmes_exec {
 
 #[macro_export]
 macro_rules! predicate {
-  ($holmes:ident, $pred_name:ident($($t:ident),*)) => {
+  ($holmes:ident, $pred_name:ident($($t:tt),*)) => {
     $holmes.add_predicate(&::holmes::native_types::Predicate {
       name  : stringify!($pred_name).to_string(),
       types : vec![$(htype!($t),)*]
     })
   };
-  ($pred_name:ident($($t:ident),*)) => { |holmes : &mut Holmes| {
+  ($pred_name:ident($($t:tt),*)) => { |holmes : &mut Holmes| {
     let res : Result<()> = predicate!(holmes, $pred_name($($t),*));
     res
   }};
@@ -216,6 +223,15 @@ macro_rules! fact {
 }
 
 #[macro_export]
+macro_rules! bind_match {
+  ($vars:ident, $n:ident, [$bm:tt]) => { ::holmes::native_types::BindExpr::Iterate(Box::new(bind_match!($vars, $n, $bm))) };
+  ($vars:ident, $n:ident, |$($bm:tt),*|) => {
+    ::holmes::native_types::BindExpr::Destructure(vec![$(bind_match!($vars, $n, $bm)),*])
+  };
+  ($vars:ident, $n:ident, $cm:tt) => { ::holmes::native_types::BindExpr::Normal(clause_match!($vars, $n, $cm)) };
+}
+
+#[macro_export]
 macro_rules! clause_match {
   ($vars:ident, $n:ident, [_]) => { ::holmes::native_types::MatchExpr::Unbound };
   ($vars:ident, $n:ident, ($v:expr)) => { ::holmes::native_types::MatchExpr::HConst($v.to_hvalue()) };
@@ -225,9 +241,9 @@ macro_rules! clause_match {
     match $vars.entry(stringify!($m).to_string()) {
       Occupied(entry) => Var(*entry.get()),
       Vacant(entry) => {
-        $n = $n.wrapping_add(1);
-        entry.insert($n);
-        Var($n)
+        $n = $n + 1;
+        entry.insert($n - 1);
+        Var($n - 1)
       }
     }
   }};
@@ -237,8 +253,8 @@ macro_rules! clause_match {
 macro_rules! query {
   ($holmes:ident, $($pred_name:ident($($m:tt),*))&*) => {{
     use std::collections::HashMap;
-    let mut vars : HashMap<String, u32> = HashMap::new();
-    let mut n : u32 = 0xffffffff;
+    let mut vars : HashMap<String, ::holmes::native_types::HVar> = HashMap::new();
+    let mut n : ::holmes::native_types::HVar = 0;
     $holmes.query(&vec![$(::holmes::native_types::Clause {
       pred_name : stringify!($pred_name).to_string(),
       args : vec![$(clause_match!(vars, n, $m)),*]
@@ -269,10 +285,10 @@ macro_rules! hexpr {
 #[macro_export]
 macro_rules! rule {
   ($holmes:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
-   {$(let $($bind:tt),* = $hexpr:tt);*}) => {{
+   {$(let $bind:tt = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
-    let mut vars : HashMap<String, u32> = HashMap::new();
-    let mut n : u32 = 0xffffffff;
+    let mut vars : HashMap<String, ::holmes::native_types::HVar> = HashMap::new();
+    let mut n : ::holmes::native_types::HVar = 0;
     $holmes.add_rule(&::holmes::native_types::Rule {
       body : vec![$(::holmes::native_types::Clause {
         pred_name : stringify!($body_name).to_string(),
@@ -283,7 +299,29 @@ macro_rules! rule {
         args : vec![$(clause_match!(vars, n, $m)),*]
       },
       wheres : vec! [$(::holmes::native_types::WhereClause {
-        asgns : vec![$(::holmes::native_types::BindExpr::Normal(clause_match!(vars, n, $bind))),*],
+        lhs   : bind_match!(vars, n, $bind),
+        rhs   : hexpr!(vars, n, $hexpr)
+      }),*]
+    })
+  }};
+  ($holmes:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
+   {$(let $($bind:tt),* = $hexpr:tt);*}) => {{
+    use std::collections::HashMap;
+    let mut vars : HashMap<String, ::holmes::native_types::HVar> = HashMap::new();
+    let mut n : ::holmes::native_types::HVar = 0;
+    $holmes.add_rule(&::holmes::native_types::Rule {
+      body : vec![$(::holmes::native_types::Clause {
+        pred_name : stringify!($body_name).to_string(),
+        args : vec![$(clause_match!(vars, n, $mb)),*]
+      }),*],
+      head : ::holmes::native_types::Clause {
+        pred_name : stringify!($head_name).to_string(),
+        args : vec![$(clause_match!(vars, n, $m)),*]
+      },
+      wheres : vec! [$(::holmes::native_types::WhereClause {
+        lhs   : ::holmes::native_types::BindExpr::Destructure(
+                  vec![$(::holmes::native_types::BindExpr::Normal(
+                    clause_match!(vars, n, $bind))),*]),
         rhs   : hexpr!(vars, n, $hexpr)
       }),*]
     })
@@ -303,15 +341,15 @@ macro_rules! rule {
 
 #[macro_export]
 macro_rules! func {
-  ($holmes:ident, let $name:ident : [$($src:ident),*] -> [$($dst:ident),*] = $body:expr) => {
+  ($holmes:ident, let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
     $holmes.reg_func(stringify!($name).to_string(),
-                     vec![$(htype!($src)),*],
-                     vec![$(htype!($dst)),*],
+                     htype!($src),
+                     htype!($dst),
                      Box::new($body))
   };
-  (let $name:ident : [$($src:ident),*] -> [$($dst:ident),*] = $body:expr) => {
+  (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
     |holmes : &mut Holmes| {
-      func!(holmes, let $name : [$($src),*] -> [$($dst),*] = $body)
+      func!(holmes, let $name : $src -> $dst = $body)
     }
   };
 }

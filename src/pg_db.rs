@@ -270,6 +270,7 @@ fn h_type_to_sql_type(h_type : &HType) -> String {
       type_str.push_str("[]");
       type_str
     }
+    Tuple(_) => panic!("Tuples are not represented")
   }
 }
 
@@ -381,7 +382,7 @@ impl FactDB for PgDB {
       for (idx, arg) in clause.args.iter().enumerate() {
         match arg {
           &MatchExpr::Unbound => (),
-          &MatchExpr::Var(var) => if var >= var_names.len() as u32 {
+          &MatchExpr::Var(var) => if var >= var_names.len() {
               var_names.push(
                 format!("{}.arg{}", alias_name, idx));
               var_types.push(self.pred_by_name[&clause.pred_name].types[idx].clone());
@@ -457,11 +458,13 @@ impl FactDB for PgDB {
               HType::UInt64  => ListV(row.get::<usize, Array<Option<i64>>>(idx).iter().map(|x|{(x.clone().expect("Unexpected null array entry") as u64).to_hvalue()}).collect()),
               HType::HString => ListV(row.get::<usize, Array<Option<String>>>(idx).iter().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
               HType::Blob    => ListV(row.get::<usize, Array<Option<Vec<u8>>>>(idx).iter().map(|x|{(x.clone().expect("Unexpected null array entry")).to_hvalue()}).collect()),
-              HType::List(_) => panic!("Nested lists not implemented in Postgres backend")
+              HType::List(_) => panic!("Nested lists not implemented in Postgres backend"),
+              HType::Tuple(_) => panic!("Tuples not implemented in Postgres backend")
             }
           }
+          HType::Tuple(_) => panic!("Tuples not implemented in Postgres backend")
         }
-      }).collect() 
+      }).collect()
     }).collect();
     anss.dedup();
     SearchAns(anss)
@@ -469,7 +472,7 @@ impl FactDB for PgDB {
 
   fn new_rule(&mut self, rule : &Rule) -> RuleResponse {
     use fact_db::RuleResponse::*;
-    
+
     //Persist the rule
     match self.insert_rule(&rule) {
       Err(e) => return RuleFail(format!("Issue creating rule: {:?}", e)),

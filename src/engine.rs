@@ -119,52 +119,104 @@ impl Engine {
     }
   }
 
-  fn eval(&self, expr : &Expr, subs : &Vec<HValue>) -> Vec<HValue> {
-    use native_types::Expr::*;
-    match *expr {
-      EVar(var) => vec![subs[var as usize].clone()],
-      EVal(ref val) => vec![val.clone()],
-      EApp(ref fun_name, ref args) => {
-        let arg_vals = args.iter().map(|arg_expr|{
-          let v = self.eval(arg_expr, subs);
-          v[0].clone()
-        }).collect();
-        (self.funcs[fun_name].run)(arg_vals)
+  fn bind(&self, lhs : &BindExpr, rhs : HValue, state : &Vec<HValue>) -> Vec<Vec<HValue>> {
+    match *lhs {
+      // If we are unbound, we no-op
+      Normal(Unbound) => vec![state.clone()],
+      // To bind to a variable,
+      Normal(Var(v))  => {
+        // If the variable is defined, check equality
+        if v < state.len() {
+          if state[v] == rhs {
+            vec![state.clone()]
+          } else {
+            vec![]
+          }
+        // If the variable is to be defined, define it
+        } else if v == state.len() {
+          let mut next = state.clone();
+          next.push(rhs.clone());
+          vec![next]
+        // Otherwise it is a malformed binding
+        } else {
+            panic!("Variable out of range")
+        }
+      }
+      Normal(HConst(ref v)) => {
+        if *v == rhs {
+          vec![state.clone()]
+        } else {
+          vec![]
+        }
+      }
+      Destructure(ref lhss) => {
+        let rhss = match rhs {
+          ListV(ref rhss) => rhss.iter(),
+          _ => panic!("Attempted to destructure non-list")
+        };
+        let mut next = vec![state.clone()];
+        for (lhs, rhs) in lhss.iter().zip(rhss) {
+          let mut next_next = vec![];
+          for state in next {
+            next_next.extend(self.bind(lhs, rhs.clone(), &state));
+          }
+          next = next_next;
+        }
+        next
+      },
+      Iterate(ref inner) => {
+        let rhss = match rhs {
+          ListV(ref rhss) => rhss.iter(),
+          _ => panic!("Attempted to destructure non-list")
+        };
+        rhss.flat_map(|rhs| {
+          self.bind(inner, rhs.clone(), &state)
+        }).collect()
       }
     }
   }
+
+  fn eval(&self, expr : &Expr, subs : &Vec<HValue>) -> HValue {
+    use native_types::Expr::*;
+    match *expr {
+      EVar(var) => subs[var as usize].clone(),
+      EVal(ref val) => val.clone(),
+      EApp(ref fun_name, ref args) => {
+        let arg_vals : Vec<HValue> = args.iter().map(|arg_expr|{
+          self.eval(arg_expr, subs)
+        }).collect();
+        let arg = if arg_vals.len() == 1 {
+          arg_vals[0].clone()
+        } else {
+          ListV(arg_vals)
+        };
+        (self.funcs[fun_name].run)(arg)
+      }
+    }
+  }
+
 
   fn run_rule(&mut self, rule : &Rule) {
     use fact_db::SearchResponse::*;
     match self.fact_db.search_facts(&rule.body) {
       SearchAns(anss) => {
-        //TODO: support anything other than one match, then wheres
-        'ans: for ans in anss {
-          if self.fact_db.rule_cache_miss(&rule, &ans) {
-            let mut ans = ans.clone();
-            for where_clause in rule.wheres.iter() {
-              let resp = self.eval(&where_clause.rhs, &ans);
-              for (lhs, rhs) in where_clause.asgns.iter().zip(resp.iter()) {
-                use native_types::MatchExpr::*;
-                use native_types::BindExpr::*;
-                match *lhs {
-                  Normal(Unbound)   => (),
-                  Normal(HConst(ref v)) => {
-                    if *v != *rhs {
-                      continue 'ans
-                    }
-                  }
-                  Normal(Var(n)) => {
-                    //Definition should be next to be defined.
-                    assert!(n as usize == ans.len());
-                    ans.push(rhs.clone());
-                  }
-                  Iterate(_) => unimplemented!()
-                }
-              }
-            }
-            assert!(self.new_fact(&substitute(&rule.head, &ans)).is_ok());
+        let mut states : Vec<Vec<HValue>> =
+            anss.iter()
+                .filter(|ans| {self.fact_db.rule_cache_miss(&rule, &ans)})
+                .map(|ans| {ans.clone()})
+                .collect();
+
+        for where_clause in rule.wheres.iter() {
+          let mut next_states : Vec<Vec<HValue>> = Vec::new();
+          for state in states {
+            let resp = self.eval(&where_clause.rhs, &state);
+            next_states.extend(
+              self.bind(&where_clause.lhs, resp, &state));
           }
+          states = next_states;
+        }
+        for state in states {
+          assert!(self.new_fact(&substitute(&rule.head, &state)).is_ok());
         }
       }
       SearchInvalid(s) => panic!("Internal invalid search query {}", s),

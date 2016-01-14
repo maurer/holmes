@@ -9,7 +9,8 @@ pub enum HType {
   UInt64,
   HString,
   Blob,
-  List(Box<HType>)
+  List(Box<HType>),
+  Tuple(Vec<HType>)
 }
 pub use native_types::HType::*;
 
@@ -77,7 +78,8 @@ impl ToString for HType {
       UInt64       => "uint64".to_string(),
       HString      => "string".to_string(),
       Blob         => "blob".to_string(),
-      List(ref ty) => format!("[{}]", ty.to_string())
+      List(ref ty) => format!("[{}]", ty.to_string()),
+      Tuple(ref tys) => format!("({})", tys.iter().map(|x| { x.to_string() }).collect::<Vec<String>>().join(", "))
     }
   }
 }
@@ -94,7 +96,7 @@ pub struct Fact {
   pub args : Vec<HValue>
 }
 
-pub type HVar = u32;
+pub type HVar = usize;
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub enum MatchExpr {
@@ -107,7 +109,8 @@ pub use native_types::MatchExpr::*;
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub enum BindExpr {
   Normal(MatchExpr),
-  Iterate(MatchExpr)
+  Destructure(Vec<BindExpr>),
+  Iterate(Box<BindExpr>)
 }
 pub use native_types::BindExpr::*;
 
@@ -134,12 +137,12 @@ pub struct Rule {
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq,RustcDecodable,RustcEncodable)]
 pub struct WhereClause {
-  pub asgns : Vec<BindExpr>,
+  pub lhs : BindExpr,
   pub rhs : Expr
 }
 
 pub struct HFunc {
-  pub input_types  : Vec<HType>,
-  pub output_types : Vec<HType>,
-  pub run : Box<Fn(Vec<HValue>) -> Vec<HValue>>
+  pub input_type   : HType,
+  pub output_type  : HType,
+  pub run : Box<Fn(HValue) -> HValue>
 }
