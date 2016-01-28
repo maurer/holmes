@@ -273,13 +273,13 @@ pub fn var_to_evar(var : MatchExpr) -> Expr {
 #[macro_export]
 macro_rules! hexpr {
   ($vars:ident, $n:ident, [$hexpr_name:ident]) => {
-    var_to_evar(clause_match!($vars, $n, $hexpr_name))
+    ::holmes::var_to_evar(clause_match!($vars, $n, $hexpr_name))
   };
   ($vars:ident, $n:ident, ($hexpr:expr)) => {
-    Expr::EVal(::holmes::native_types::ToHValue::to_hvalue($hexpr))
+    ::holmes::native_types::Expr::EVal(::holmes::native_types::ToHValue::to_hvalue($hexpr))
   };
   ($vars:ident, $n:ident, {$hexpr_func:ident($($hexpr_arg:tt),*)}) => {
-    Expr::EApp(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
+    ::holmes::native_types::Expr::EApp(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
   };
 }
 
