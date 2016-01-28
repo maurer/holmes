@@ -188,7 +188,7 @@ macro_rules! holmes_exec {
   ($holmes:ident, { $( $action:expr );* }) => {
       {
         $( try!($action($holmes)); );*
-        let res : Result<()> = Ok(());
+        let res : ::holmes::Result<()> = Ok(());
         res
       }
   };
@@ -203,7 +203,7 @@ macro_rules! predicate {
     })
   };
   ($pred_name:ident($($t:tt),*)) => { |holmes : &mut Holmes| {
-    let res : Result<()> = predicate!(holmes, $pred_name($($t),*));
+    let res : ::holmes::Result<()> = predicate!(holmes, $pred_name($($t),*));
     res
   }};
 }
@@ -217,7 +217,7 @@ macro_rules! fact {
     })
   };
   ($pred_name:ident($($a:expr),*)) => { |holmes : &mut Holmes| {
-    let res : Result<()> = fact!(holmes, $pred_name($($a),*));
+    let res : ::holmes::Result<()> = fact!(holmes, $pred_name($($a),*));
     res
   }};
 }
