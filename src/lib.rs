@@ -213,7 +213,7 @@ macro_rules! fact {
   ($holmes:ident, $pred_name:ident($($a:expr),*)) => {
     $holmes.add_fact(&::holmes::native_types::Fact {
       pred_name : stringify!($pred_name).to_string(),
-      args : vec![$($a.to_hvalue()),*]
+      args : vec![$(::holmes::native_types::ToHValue::to_hvalue($a)),*]
     })
   };
   ($pred_name:ident($($a:expr),*)) => { |holmes : &mut Holmes| {
@@ -234,7 +234,8 @@ macro_rules! bind_match {
 #[macro_export]
 macro_rules! clause_match {
   ($vars:ident, $n:ident, [_]) => { ::holmes::native_types::MatchExpr::Unbound };
-  ($vars:ident, $n:ident, ($v:expr)) => { ::holmes::native_types::MatchExpr::HConst($v.to_hvalue()) };
+  ($vars:ident, $n:ident, ($v:expr)) => {
+      ::holmes::native_types::MatchExpr::HConst(::holmes::native_types::ToHValue::to_hvalue($v)) };
   ($vars:ident, $n:ident, $m:ident) => {{
     use std::collections::hash_map::Entry::*;
     use ::holmes::native_types::MatchExpr::*;
@@ -275,7 +276,7 @@ macro_rules! hexpr {
     var_to_evar(clause_match!($vars, $n, $hexpr_name))
   };
   ($vars:ident, $n:ident, ($hexpr:expr)) => {
-    Expr::EVal($hexpr.to_hvalue())
+    Expr::EVal(::holmes::native_types::ToHValue::to_hvalue($hexpr))
   };
   ($vars:ident, $n:ident, {$hexpr_func:ident($($hexpr_arg:tt),*)}) => {
     Expr::EApp(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
