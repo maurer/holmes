@@ -321,8 +321,7 @@ macro_rules! rule {
       },
       wheres : vec! [$(::holmes::native_types::WhereClause {
         lhs   : ::holmes::native_types::BindExpr::Destructure(
-                  vec![$(::holmes::native_types::BindExpr::Normal(
-                    clause_match!(vars, n, $bind))),*]),
+                  vec![$(bind_match!(vars, n, $bind)),*]),
         rhs   : hexpr!(vars, n, $hexpr)
       }),*]
     })
