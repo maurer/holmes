@@ -224,8 +224,8 @@ macro_rules! fact {
 
 #[macro_export]
 macro_rules! bind_match {
-  ($vars:ident, $n:ident, [$bm:tt]) => { ::holmes::native_types::BindExpr::Iterate(Box::new(bind_match!($vars, $n, $bm))) };
-  ($vars:ident, $n:ident, |$($bm:tt),*|) => {
+  ($vars:ident, $n:ident, [ $bm:tt ]) => { ::holmes::native_types::BindExpr::Iterate(Box::new(bind_match!($vars, $n, $bm))) };
+  ($vars:ident, $n:ident, {$($bm:tt),*}) => {
     ::holmes::native_types::BindExpr::Destructure(vec![$(bind_match!($vars, $n, $bm)),*])
   };
   ($vars:ident, $n:ident, $cm:tt) => { ::holmes::native_types::BindExpr::Normal(clause_match!($vars, $n, $cm)) };
