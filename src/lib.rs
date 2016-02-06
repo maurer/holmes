@@ -7,6 +7,11 @@ pub mod pg_db;
 pub mod engine;
 
 pub mod native_types;
+pub mod db_types;
+use db_types::values::Value;
+use db_types::types::Type;
+
+use std::sync::Arc;
 
 #[derive (Clone)]
 pub enum DB {
@@ -149,17 +154,20 @@ impl Holmes {
                       -> Result<()> {
     self.engine.new_fact(fact).map_err(|e| {EngineErr(e)})
   }
-  pub fn query(&mut self, query : &Vec<native_types::Clause>) -> Result<Vec<Vec<native_types::HValue>>> {
+  pub fn query(&mut self, query : &Vec<native_types::Clause>) -> Result<Vec<Vec<Arc<Value>>>> {
     self.engine.derive(query).map_err(|e| {EngineErr(e)})
+  }
+  pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
+    self.engine.get_type(name)
   }
   pub fn add_rule(&mut self, rule : &native_types::Rule) -> Result<()> {
     self.engine.new_rule(rule).map_err(|e| {EngineErr(e)})
   }
   pub fn reg_func(&mut self,
                   name : String,
-                  input_type  : native_types::HType,
-                  output_type : native_types::HType,
-                  func : Box<Fn(native_types::HValue) -> native_types::HValue>) -> Result<()> {
+                  input_type  : Arc<Type>,
+                  output_type : Arc<Type>,
+                  func : Box<Fn(Arc<Value>) -> Arc<Value>>) -> Result<()> {
     self.engine.reg_func(name, native_types::HFunc {
       input_type  : input_type,
       output_type : output_type,
@@ -170,17 +178,10 @@ impl Holmes {
 }
 
 #[macro_export]
-macro_rules! htype_raw {
-  (string) => { ::holmes::native_types::HType::HString};
-  (blob  ) => { ::holmes::native_types::HType::Blob};
-  (uint64) => { ::holmes::native_types::HType::UInt64};
-}
-
-#[macro_export]
 macro_rules! htype {
-  ([$t:tt]) => { ::holmes::native_types::HType::List(Box::new(htype!($t))) };
-  (($($t:tt),*)) => { ::holmes::native_types::HType::Tuple(vec![$(htype!($t)),*]) };
-  ($i:ident) => { htype_raw!($i) };
+  ($holmes:ident, [$t:tt]) => { ::std::sync::Arc::new(::holmes::db_types::types::List::new(htype!($holmes, $t))) };
+  ($holmes:ident, ($($t:tt),*)) => { ::std::sync::Arc::new(::holmes::db_types::types::Tuple::new(vec![$(htype!($holmes, $t)),*])) };
+  ($holmes:ident, $i:ident) => { $holmes.get_type(stringify!($i)).unwrap() };
 }
 
 #[macro_export]
@@ -196,12 +197,13 @@ macro_rules! holmes_exec {
 
 #[macro_export]
 macro_rules! predicate {
-  ($holmes:ident, $pred_name:ident($($t:tt),*)) => {
+  ($holmes:ident, $pred_name:ident($($t:tt),*)) => {{
+    let types = vec![$(htype!($holmes, $t),)*];
     $holmes.add_predicate(&::holmes::native_types::Predicate {
       name  : stringify!($pred_name).to_string(),
-      types : vec![$(htype!($t),)*]
+      types : types
     })
-  };
+  }};
   ($pred_name:ident($($t:tt),*)) => { |holmes : &mut Holmes| {
     let res : ::holmes::Result<()> = predicate!(holmes, $pred_name($($t),*));
     res
@@ -213,7 +215,7 @@ macro_rules! fact {
   ($holmes:ident, $pred_name:ident($($a:expr),*)) => {
     $holmes.add_fact(&::holmes::native_types::Fact {
       pred_name : stringify!($pred_name).to_string(),
-      args : vec![$(::holmes::native_types::ToHValue::to_hvalue($a)),*]
+      args : vec![$(::holmes::db_types::values::ToValue::to_value($a)),*]
     })
   };
   ($pred_name:ident($($a:expr),*)) => { |holmes : &mut Holmes| {
@@ -235,7 +237,7 @@ macro_rules! bind_match {
 macro_rules! clause_match {
   ($vars:ident, $n:ident, [_]) => { ::holmes::native_types::MatchExpr::Unbound };
   ($vars:ident, $n:ident, ($v:expr)) => {
-      ::holmes::native_types::MatchExpr::HConst(::holmes::native_types::ToHValue::to_hvalue($v)) };
+      ::holmes::native_types::MatchExpr::Const(::holmes::db_types::values::ToValue::to_value($v)) };
   ($vars:ident, $n:ident, $m:ident) => {{
     use std::collections::hash_map::Entry::*;
     use ::holmes::native_types::MatchExpr::*;
@@ -276,7 +278,7 @@ macro_rules! hexpr {
     ::holmes::var_to_evar(clause_match!($vars, $n, $hexpr_name))
   };
   ($vars:ident, $n:ident, ($hexpr:expr)) => {
-    ::holmes::native_types::Expr::EVal(::holmes::native_types::ToHValue::to_hvalue($hexpr))
+    ::holmes::native_types::Expr::EVal(::holmes::db_types::values::ToValue::to_value($hexpr))
   };
   ($vars:ident, $n:ident, {$hexpr_func:ident($($hexpr_arg:tt),*)}) => {
     ::holmes::native_types::Expr::EApp(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
@@ -341,12 +343,13 @@ macro_rules! rule {
 
 #[macro_export]
 macro_rules! func {
-  ($holmes:ident, let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
+  ($holmes:ident, let $name:ident : $src:tt -> $dst:tt = $body:expr) => {{
+    let src = htype!($holmes, $src);
+    let dst = htype!($holmes, $dst);
     $holmes.reg_func(stringify!($name).to_string(),
-                     htype!($src),
-                     htype!($dst),
+                     src, dst,
                      Box::new($body))
-  };
+  }};
   (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
     |holmes : &mut Holmes| {
       func!(holmes, let $name : $src -> $dst = $body)

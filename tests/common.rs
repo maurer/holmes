@@ -2,7 +2,10 @@ use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 
 pub use holmes::*;
-pub use holmes::native_types::{ToHValue, HValue, Expr};
+pub use holmes::db_types::values::ToValue;
+pub use holmes::db_types::values::Value;
+pub use std::sync::Arc;
+pub use holmes::db_types::values;
 
 static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;
 

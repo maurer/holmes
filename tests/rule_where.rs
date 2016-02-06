@@ -4,7 +4,7 @@ use common::*;
 pub fn register_where_rule() {
   single(&|holmes : &mut Holmes| {
     holmes_exec!(holmes, {
-      predicate!(test_pred(string, blob, uint64));
+      predicate!(test_pred(string, bytes, uint64));
       rule!(test_pred(("bar"), (vec![2;2]), x) <= test_pred(("foo"), [_], x), {
         let (42) = (42)})
     })
@@ -15,14 +15,14 @@ pub fn register_where_rule() {
 pub fn where_const() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
-      predicate!(test_pred(string, blob, uint64));
+      predicate!(test_pred(string, bytes, uint64));
       rule!(test_pred(("bar"), (vec![2;2]), x) <= test_pred(("foo"), [_], [_]), {
           let x = (42)
       });
       fact!(test_pred("foo", vec![0;1], 16))
     }));
     assert_eq!(query!(holmes, test_pred(("bar"), x, y)).unwrap(),
-               vec![vec![vec![2;2].to_hvalue(), 42.to_hvalue()]]);
+               vec![vec![vec![2;2].to_value(), 42.to_value()]]);
     Ok(())
   })
 }
@@ -31,10 +31,10 @@ pub fn where_const() {
 pub fn where_plus_two() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
-      predicate!(test_pred(string, blob, uint64));
-      func!(let plus_two : [uint64] -> uint64 = |v : HValue| {
-        match v {
-          HValue::UInt64V(n) => HValue::UInt64V(n + 2),
+      predicate!(test_pred(string, bytes, uint64));
+      func!(let plus_two : [uint64] -> uint64 = |v : Arc<Value>| {
+        match v.get().downcast_ref::<u64>() {
+          Some(n) => (n + 2).to_value(),
           _ => panic!("BAD TYPE")
         }
       });
@@ -44,7 +44,7 @@ pub fn where_plus_two() {
       fact!(test_pred("foo", vec![0;1], 16))
     }));
     assert_eq!(query!(holmes, test_pred(("bar"), x, y)).unwrap(),
-               vec![vec![vec![2;2].to_hvalue(), 18.to_hvalue()]]);
+               vec![vec![vec![2;2].to_value(), 18.to_value()]]);
     Ok(())
   })
 }
@@ -53,12 +53,12 @@ pub fn where_plus_two() {
 pub fn where_destructure() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
-      predicate!(test_pred(uint64, blob, uint64));
-      func!(let succs : [uint64] -> (uint64, uint64) = |v : HValue| {
-        match v {
-          HValue::UInt64V(n) => HValue::ListV(vec![
-            HValue::UInt64V(n + 1),
-            HValue::UInt64V(n + 2)]),
+      predicate!(test_pred(uint64, bytes, uint64));
+      func!(let succs : [uint64] -> (uint64, uint64) = |v : Arc<Value>| {
+        match v.get().downcast_ref::<u64>() {
+          Some(n) => Arc::new(values::List::new(vec![
+            (n + 1).to_value(),
+            (n + 2).to_value()])),
           _ => panic!("BAD TYPE")
         }
       });
@@ -68,7 +68,7 @@ pub fn where_destructure() {
       fact!(test_pred(3, vec![0;1], 16))
     }));
     assert_eq!(query!(holmes, test_pred(y, (vec![2;2]), z)).unwrap(),
-               vec![vec![17.to_hvalue(), 18.to_hvalue()]]);
+               vec![vec![17.to_value(), 18.to_value()]]);
     Ok(())
   })
 }
@@ -77,12 +77,12 @@ pub fn where_destructure() {
 pub fn where_iter() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
-      predicate!(test_pred(uint64, blob, uint64));
-      func!(let succs : [uint64] -> [uint64] = |v : HValue| {
-        match v {
-          HValue::UInt64V(n) => HValue::ListV(vec![
-            HValue::UInt64V(n + 1),
-            HValue::UInt64V(n + 2)]),
+      predicate!(test_pred(uint64, bytes, uint64));
+      func!(let succs : [uint64] -> [uint64] = |v : Arc<Value>| {
+        match v.get().downcast_ref::<u64>() {
+          Some(n) => Arc::new(values::List::new(vec![
+            (n + 1).to_value(),
+            (n + 2).to_value()])),
           _ => panic!("BAD TYPE")
         }
       });
@@ -92,7 +92,7 @@ pub fn where_iter() {
       fact!(test_pred(3, vec![0;1], 16))
     }));
     assert_eq!(query!(holmes, test_pred([_], (vec![2;2]), x)).unwrap(),
-               vec![vec![17.to_hvalue()], vec![18.to_hvalue()]]);
+               vec![vec![17.to_value()], vec![18.to_value()]]);
     Ok(())
   })
 }

@@ -5,8 +5,8 @@ pub fn reg_func() {
   single(&|holmes : &mut Holmes| {
     func!(holmes,
       let test_func : uint64 -> uint64 =
-        |_v : HValue| {
-          42.to_hvalue()
+        |_v : Arc<Value>| {
+          42.to_value()
         })
   })
 }
