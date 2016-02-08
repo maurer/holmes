@@ -4,24 +4,19 @@ use std::sync::atomic::Ordering::SeqCst;
 pub use holmes::*;
 pub use holmes::db_types::values::ToValue;
 pub use holmes::db_types::values::Value;
+pub use holmes::db_types::types::Type;
 pub use std::sync::Arc;
 pub use holmes::db_types::values;
 
 static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;
 
-pub fn wrap<A>(test : Vec<&Fn(&mut Holmes) -> Result<A>>) {
+pub fn single<A>(test : &Fn(&mut Holmes) -> Result<A>) {
   let port_num = DB_NUM.fetch_add(1, SeqCst);
   let db_addr = format!("postgresql://holmes:holmes@localhost/holmes_test{}", port_num);
   let db = DB::Postgres(db_addr);
-  for action in test.iter() {
-    let mut holmes = Holmes::new(db.clone()).unwrap();
-    action(&mut holmes).unwrap();
-  }
-  Holmes::new(db).unwrap().destroy().unwrap();
-}
-
-pub fn single<A>(test : &Fn(&mut Holmes) -> Result<A>) {
-  wrap(vec![test])
+  let mut holmes = Holmes::new(db.clone()).unwrap();
+  test(&mut holmes).unwrap();
+  holmes.destroy().unwrap();
 }
 
 pub fn should_fail<A, F>(f : F) -> Box<Fn(&mut Holmes) -> Result<()>>

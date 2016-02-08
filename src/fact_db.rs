@@ -49,4 +49,5 @@ pub trait FactDB: Send {
   fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Arc<Value>>) -> bool;
   fn get_rules(&self, by : RuleBy) -> Vec<Rule>;
   fn get_type(&self, name : &str) -> Option<Arc<Type>>;
+  fn add_type(&mut self, Arc<Type>) -> bool;
 }

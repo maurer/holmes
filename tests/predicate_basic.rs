@@ -22,14 +22,3 @@ pub fn double_register_incompat() {
     should_fail(predicate!(test_pred(string, string, string)))
   })})
 }
-
-#[test]
-pub fn pred_persist() {
-  wrap(vec![&|holmes : &mut Holmes| {
-    predicate!(holmes, test_pred(string, bytes, uint64))
-  }, &|holmes : &mut Holmes| {
-    holmes_exec!(holmes, {
-      should_fail(predicate!(test_pred(string, string, string)))
-    })
-  }]);
-}

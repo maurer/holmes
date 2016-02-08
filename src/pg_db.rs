@@ -106,7 +106,7 @@ impl PgDB {
         let h_type_str : String = type_entry.get(1);
         let h_type = match pg_db.get_type(&h_type_str) {
             Some(ty) => ty,
-            None => return Err(TypeParseError("Type not in registry".to_owned()))
+            None => return Err(TypeParseError(format!("Type not in registry: {}", h_type_str)))
           };
         match pred_by_name.entry(name.clone()) {
           Vacant(entry) => {
@@ -188,6 +188,15 @@ fn valid_name(name : &String) -> bool {
 }
 
 impl FactDB for PgDB {
+  fn add_type(&mut self, type_ : Arc<Type>) -> bool {
+    //TODO get proper errors, remove unwrap/bool
+    if !self.named_types.contains_key(type_.name().unwrap()) {
+      self.named_types.insert(type_.name().unwrap().to_owned(), type_.clone());
+      true
+    } else {
+      false
+    }
+  }
   fn get_type(&self, type_str : &str) -> Option<Arc<Type>> {
     self.named_types.get(type_str).map(|x|{x.clone()})
   }

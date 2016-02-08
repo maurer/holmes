@@ -134,7 +134,7 @@ pub mod types {
     fn name(&self) -> Option<&'static str> {
       None
     }
-    fn extract(&self, rows : &mut RowIter) -> Arc<Value> {
+    fn extract(&self, _rows : &mut RowIter) -> Arc<Value> {
       panic!("List support disabled, will be re-enabled via arrays maybe")
     }
     fn repr(&self) -> Vec<::std::string::String> {

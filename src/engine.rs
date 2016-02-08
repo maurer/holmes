@@ -65,6 +65,9 @@ impl Engine {
   pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
     self.fact_db.get_type(name)
   }
+  pub fn add_type(&mut self, type_ : Arc<Type>) -> bool {
+    self.fact_db.add_type(type_)
+  }
   pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), Error> {
 
     // Verify we have at least one argument

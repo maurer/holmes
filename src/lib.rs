@@ -160,6 +160,9 @@ impl Holmes {
   pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
     self.engine.get_type(name)
   }
+  pub fn add_type(&mut self, type_ : Arc<Type>) -> bool {
+    self.engine.add_type(type_)
+  }
   pub fn add_rule(&mut self, rule : &native_types::Rule) -> Result<()> {
     self.engine.new_rule(rule).map_err(|e| {EngineErr(e)})
   }
