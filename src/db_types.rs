@@ -27,10 +27,23 @@ pub trait HashTO {
   fn hash_to(&self, &mut Hasher);
 }
 
-impl <T : Hash> HashTO for T {
-  fn hash_to(&self, _h : &mut Hasher) {
+struct HashProxy<'a> {
+  pub hasher : &'a mut Hasher
+}
+
+impl <'a> Hasher for HashProxy<'a> {
+  fn finish(&self) -> u64 {
+    self.hasher.finish()
+  }
+  fn write(&mut self, bytes : &[u8]) {
+    self.hasher.write(bytes)
+  }
+}
+
+impl <T : Hash + Sized> HashTO for T {
+  fn hash_to(&self, h : &mut Hasher) {
     //TODO: all data structures will be terrible until this is fixed
-    //self.hash(h)
+    self.hash(&mut HashProxy { hasher : h })
   }
 }
 
