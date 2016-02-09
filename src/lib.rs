@@ -21,7 +21,7 @@ pub enum Error {
   NoDB,
   PgConnect(::postgres::error::ConnectError),
   PgErr(::postgres::error::Error),
-  PgDbErr(pg_db::DBError),
+  PgDbErr(pg_db::Error),
   IOErr(::std::io::Error),
   PgConnectStr(Box<::std::error::Error + Send + Sync>),
   EngineErr(engine::Error)
@@ -81,8 +81,8 @@ impl From<::postgres::error::Error> for Error {
   fn from(e : ::postgres::error::Error) -> Error {PgErr(e)}
 }
 
-impl From<pg_db::DBError> for Error {
-  fn from(e : pg_db::DBError) -> Error {PgDbErr(e)}
+impl From<pg_db::Error> for Error {
+  fn from(e : pg_db::Error) -> Error {PgDbErr(e)}
 }
 
 impl From<engine::Error> for Error {

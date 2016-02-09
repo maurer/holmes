@@ -1,14 +1,14 @@
 use native_types::*;
-use std::*;
 use db_types::{types, RowIter};
 use db_types::values::Value;
 use db_types::types::Type;
 
 use std::convert::From;
 use std::fmt::{Formatter};
+use std::fmt;
 
 use postgres::{Connection, SslMode};
-use postgres::error::{Error, ConnectError};
+use postgres as pg;
 
 use std::collections::HashSet;
 use std::collections::hash_map::{HashMap};
@@ -21,52 +21,51 @@ type ClauseId = (String, i32);
 type WhereId = i32;
 
 #[derive(Debug)]
-pub enum DBError {
-  ConnectError(ConnectError),
-  Error(Error),
-  TypeError(String),
-  InternalError(String),
-  ArgError(String)
-}
-use pg_db::DBError::TypeError;
-use pg_db::DBError::InternalError;
-use pg_db::DBError::ArgError;
-
-impl From<Error> for DBError {
-  fn from(x : Error) -> DBError {DBError::Error(x)}
-}
-impl From<ConnectError> for DBError {
-  fn from(x : ConnectError) -> DBError {DBError::ConnectError(x)}
+pub enum Error {
+  Connect(pg::error::ConnectError),
+  Db(pg::error::Error),
+  Type(String),
+  Internal(String),
+  Arg(String)
 }
 
-impl ::std::fmt::Display for DBError {
+impl From<pg::error::Error> for Error {
+  fn from(x : pg::error::Error) -> Error {Error::Db(x)}
+}
+impl From<pg::error::ConnectError> for Error {
+  fn from(x : pg::error::ConnectError) -> Error {Error::Connect(x)}
+}
+
+impl ::std::fmt::Display for Error {
   fn fmt (&self, fmt : &mut Formatter) -> fmt::Result {
     match *self {
-      DBError::ConnectError(ref x) => x.fmt(fmt),
-      DBError::Error(ref x) => x.fmt(fmt),
-      DBError::TypeError(ref s) =>
+      Error::Connect(ref x) => x.fmt(fmt),
+      Error::Db(ref x) => x.fmt(fmt),
+      Error::Type(ref s) =>
         fmt.write_str(&format!("Could not parse db type: {}",
                                s.clone())),
-      DBError::InternalError(ref s) =>
+      Error::Internal(ref s) =>
         fmt.write_str(&format!("PgDB Internal Error: {}",
                                s.clone())),
-      DBError::ArgError(ref s) =>
+      Error::Arg(ref s) =>
         fmt.write_str(&format!("Bad argument: {}", s))
     }
   }
 }
 
-impl ::std::error::Error for DBError {
+impl ::std::error::Error for Error {
   fn description(&self) -> &str {
     match *self {
-      DBError::ConnectError(ref x) => x.description(),
-      DBError::Error(ref x) => x.description(),
-      DBError::TypeError(_) => "Could not parse db types",
-      DBError::InternalError(_) => "PgDB Internal Error",
-      DBError::ArgError(_) => "Bad argument: {}"
+      Error::Connect(ref x) => x.description(),
+      Error::Db(ref x) => x.description(),
+      Error::Type(_) => "Could not parse db types",
+      Error::Internal(_) => "PgDB Internal Error",
+      Error::Arg(_) => "Bad argument: {}"
     }
   }
 }
+
+pub type Result<T> = ::std::result::Result<T, Error>;
 
 pub struct PgDB {
   conn              : Connection,
@@ -78,7 +77,7 @@ pub struct PgDB {
 }
 
 impl PgDB {
-  pub fn new(conn_str : &str) -> Result<PgDB, DBError> {
+  pub fn new(conn_str : &str) -> Result<PgDB> {
     let conn = try!(Connection::connect(conn_str, SslMode::None));
 
     //Create schemas
@@ -110,7 +109,7 @@ impl PgDB {
         let h_type_str : String = type_entry.get(1);
         let h_type = match pg_db.get_type(&h_type_str) {
             Some(ty) => ty,
-            None => return Err(TypeError(format!("Type not in registry: {}", h_type_str)))
+            None => return Err(Error::Type(format!("Type not in registry: {}", h_type_str)))
           };
         match pred_by_name.entry(name.clone()) {
           Vacant(entry) => {
@@ -149,7 +148,7 @@ impl PgDB {
     self.insert_by_name.insert(pred.name.clone(), stmt);
   }
 
-  fn insert_predicate(&self, pred : &Predicate) -> Result<(), DBError> {
+  fn insert_predicate(&self, pred : &Predicate) -> Result<()> {
     let &Predicate {ref name, ref types} = pred;
     for (ordinal, type_) in types.iter().enumerate() {
       try!(self.conn.execute("insert into predicates \
@@ -164,10 +163,10 @@ impl PgDB {
     Ok(())
   }
 
-  pub fn insert_fact(&mut self, fact : &Fact) -> Result<bool, DBError> {
+  pub fn insert_fact(&mut self, fact : &Fact) -> Result<bool> {
     let stmt : String = try!(self.insert_by_name
       .get(&fact.pred_name)
-      .ok_or(InternalError("Insert Statement Missing"
+      .ok_or(Error::Internal("Insert Statement Missing"
                            .to_string()))).clone();
     let argrefs : Vec<&ToSql> = fact.args.iter().flat_map(|x|{x.to_sql().into_iter()}).collect();
     let inserted = try!(self.conn.execute(&stmt, &argrefs)) > 0;
@@ -184,13 +183,13 @@ impl PgDB {
       }
     }
   }
-  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<(), DBError> {
+  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<()> {
     let name = type_.name().unwrap();
     if !self.named_types.contains_key(name) {
       self.named_types.insert(name.to_owned(), type_.clone());
       Ok(())
     } else {
-      Err(TypeError(format!("{} already registered", name)))
+      Err(Error::Type(format!("{} already registered", name)))
     }
   }
   pub fn get_type(&self, type_str : &str) -> Option<Arc<Type>> {
@@ -202,23 +201,23 @@ impl PgDB {
   pub fn get_predicate(&self, pred_name : &str) -> Option<&Predicate> {
     self.pred_by_name.get(pred_name)
   }
-  pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), DBError> {
+  pub fn new_predicate(&mut self, pred : &Predicate) -> Result<()> {
     if !valid_name(&pred.name) {
-      return Err(ArgError("Invalid name: Use lowercase and underscores only".to_string()))
+      return Err(Error::Arg("Invalid name: Use lowercase and underscores only".to_string()))
     }
     if self.pred_by_name.contains_key(&pred.name) {
-      return Err(ArgError(format!("Predicate {} already registered.", &pred.name)))
+      return Err(Error::Arg(format!("Predicate {} already registered.", &pred.name)))
     }
     try!(self.insert_predicate(&pred));
     self.gen_insert_stmt(&pred);
     self.pred_by_name.insert(pred.name.clone(), pred.clone());
     Ok(())
   }
-  pub fn search_facts(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Arc<Value>>>,DBError> {
+  pub fn search_facts(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Arc<Value>>>> {
 
     //Check there is at least one clause
     if query.len() == 0 {
-      return Err(ArgError("Empty search query".to_string()));
+      return Err(Error::Arg("Empty search query".to_string()));
     };
 
     //Check that clauses:
@@ -230,7 +229,7 @@ impl PgDB {
       for clause in query.iter() {
         let pred = match self.pred_by_name.get(&clause.pred_name) {
           Some(pred) => pred,
-          None => return Err(ArgError(format!("{} is not a registered predicate.", clause.pred_name))),
+          None => return Err(Error::Arg(format!("{} is not a registered predicate.", clause.pred_name))),
         };
         for (idx, slot) in clause.args.iter().enumerate() {
           match *slot {
@@ -241,9 +240,9 @@ impl PgDB {
                 if v == var_type.len() {
                   var_type.push(pred.types[idx].clone())
                 } else if v > var_type.len() {
-                  return Err(ArgError(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v)))
+                  return Err(Error::Arg(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v)))
                 } else if var_type[v] != pred.types[idx].clone() {
-                  return Err(ArgError(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx])))
+                  return Err(Error::Arg(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx])))
                 }
               }
           }
@@ -318,13 +317,13 @@ impl PgDB {
     let res_stmt = self.conn.prepare(&raw_stmt);
     let stmt = match res_stmt {
       Ok(stmt) => stmt,
-      Err(e) => return Err(InternalError(
+      Err(e) => return Err(Error::Internal(
         format!("Preparing statement failed: {}\n{:?}", raw_stmt, e)))
     };
     let res_rows = stmt.query(&vals);
     let rows = match res_rows {
       Ok(rows) => rows,
-      Err(e)   => return Err(InternalError(
+      Err(e)   => return Err(Error::Internal(
         format!("Executing query failed: {:?}", e)))
     };
 
