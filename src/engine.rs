@@ -3,8 +3,8 @@ use native_types::*;
 use db_types::values::Value;
 use db_types::types::Type;
 use db_types::values;
-use pg_db::PgDB;
-use pg_db;
+use pg::PgDB;
+use pg;
 use std::sync::Arc;
 
 pub struct Engine {
@@ -20,8 +20,8 @@ pub enum Error {
   Db(String)
 }
 
-impl ::std::convert::From<pg_db::Error> for Error {
-  fn from(dbe : pg_db::Error) -> Self {
+impl ::std::convert::From<pg::Error> for Error {
+  fn from(dbe : pg::Error) -> Self {
     Error::Db(format!("{:?}", dbe))
   }
 }

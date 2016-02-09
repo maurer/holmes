@@ -2,7 +2,7 @@ extern crate postgres;
 extern crate postgres_array;
 extern crate rustc_serialize;
 
-pub mod pg_db;
+pub mod pg;
 pub mod engine;
 
 pub mod native_types;
@@ -21,7 +21,7 @@ pub enum Error {
   NoDB,
   PgConnect(::postgres::error::ConnectError),
   PgErr(::postgres::error::Error),
-  PgDbErr(pg_db::Error),
+  PgDbErr(pg::Error),
   IOErr(::std::io::Error),
   PgConnectStr(Box<::std::error::Error + Send + Sync>),
   EngineErr(engine::Error)
@@ -30,7 +30,7 @@ pub enum Error {
 use self::Error::*;
 
 use engine::Engine;
-use pg_db::PgDB;
+use pg::PgDB;
 use native_types::*;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
@@ -81,8 +81,8 @@ impl From<::postgres::error::Error> for Error {
   fn from(e : ::postgres::error::Error) -> Error {PgErr(e)}
 }
 
-impl From<pg_db::Error> for Error {
-  fn from(e : pg_db::Error) -> Error {PgDbErr(e)}
+impl From<pg::Error> for Error {
+  fn from(e : pg::Error) -> Error {PgDbErr(e)}
 }
 
 impl From<engine::Error> for Error {
