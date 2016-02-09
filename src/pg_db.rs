@@ -6,7 +6,6 @@ use db_types::types::Type;
 
 use std::convert::From;
 use std::fmt::{Formatter};
-use fact_db::*;
 
 use postgres::{Connection, SslMode};
 use postgres::error::{Error, ConnectError};
@@ -25,11 +24,13 @@ type WhereId = i32;
 pub enum DBError {
   ConnectError(ConnectError),
   Error(Error),
-  TypeParseError(String),
-  InternalError(String)
+  TypeError(String),
+  InternalError(String),
+  ArgError(String)
 }
-use pg_db::DBError::TypeParseError;
+use pg_db::DBError::TypeError;
 use pg_db::DBError::InternalError;
+use pg_db::DBError::ArgError;
 
 impl From<Error> for DBError {
   fn from(x : Error) -> DBError {DBError::Error(x)}
@@ -43,12 +44,14 @@ impl ::std::fmt::Display for DBError {
     match *self {
       DBError::ConnectError(ref x) => x.fmt(fmt),
       DBError::Error(ref x) => x.fmt(fmt),
-      DBError::TypeParseError(ref s) =>
+      DBError::TypeError(ref s) =>
         fmt.write_str(&format!("Could not parse db type: {}",
                                s.clone())),
       DBError::InternalError(ref s) =>
         fmt.write_str(&format!("PgDB Internal Error: {}",
-                               s.clone()))
+                               s.clone())),
+      DBError::ArgError(ref s) =>
+        fmt.write_str(&format!("Bad argument: {}", s))
     }
   }
 }
@@ -58,8 +61,9 @@ impl ::std::error::Error for DBError {
     match *self {
       DBError::ConnectError(ref x) => x.description(),
       DBError::Error(ref x) => x.description(),
-      DBError::TypeParseError(_) => "Could not parse db types",
-      DBError::InternalError(_) => "PgDB Internal Error"
+      DBError::TypeError(_) => "Could not parse db types",
+      DBError::InternalError(_) => "PgDB Internal Error",
+      DBError::ArgError(_) => "Bad argument: {}"
     }
   }
 }
@@ -106,7 +110,7 @@ impl PgDB {
         let h_type_str : String = type_entry.get(1);
         let h_type = match pg_db.get_type(&h_type_str) {
             Some(ty) => ty,
-            None => return Err(TypeParseError(format!("Type not in registry: {}", h_type_str)))
+            None => return Err(TypeError(format!("Type not in registry: {}", h_type_str)))
           };
         match pred_by_name.entry(name.clone()) {
           Vacant(entry) => {
@@ -160,7 +164,7 @@ impl PgDB {
     Ok(())
   }
 
-  fn insert_fact(&mut self, fact : &Fact) -> Result<bool, DBError> {
+  pub fn insert_fact(&mut self, fact : &Fact) -> Result<bool, DBError> {
     let stmt : String = try!(self.insert_by_name
       .get(&fact.pred_name)
       .ok_or(InternalError("Insert Statement Missing"
@@ -171,7 +175,7 @@ impl PgDB {
   }
 
 
-  fn add_rule_cache(&mut self, rule : &Rule) {
+  pub fn new_rule(&mut self, rule : &Rule) {
     let a_rule : Arc<Rule> = Arc::new(rule.clone());
     for pred in &rule.body {
       match self.rule_by_pred_name.entry(pred.pred_name.clone()) {
@@ -180,86 +184,41 @@ impl PgDB {
       }
     }
   }
-
-}
-
-fn valid_name(name : &String) -> bool {
-  name.chars().all( |ch| match ch { 'a'...'z' | '_' => true, _ => false } )
-}
-
-impl FactDB for PgDB {
-  fn add_type(&mut self, type_ : Arc<Type>) -> bool {
-    //TODO get proper errors, remove unwrap/bool
-    if !self.named_types.contains_key(type_.name().unwrap()) {
-      self.named_types.insert(type_.name().unwrap().to_owned(), type_.clone());
-      true
+  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<(), DBError> {
+    let name = type_.name().unwrap();
+    if !self.named_types.contains_key(name) {
+      self.named_types.insert(name.to_owned(), type_.clone());
+      Ok(())
     } else {
-      false
+      Err(TypeError(format!("{} already registered", name)))
     }
   }
-  fn get_type(&self, type_str : &str) -> Option<Arc<Type>> {
+  pub fn get_type(&self, type_str : &str) -> Option<Arc<Type>> {
     self.named_types.get(type_str).map(|x|{x.clone()})
   }
-  fn get_rules(&self, by : RuleBy) -> Vec<Rule> {
-    match by {
-      RuleBy::Pred(name) => {
-        match self.rule_by_pred_name.get(&name) {
-          Some(rules) => rules.iter().map(|ref x|{(***x).clone()}).collect(),
-          None => Vec::new()
-        }
-      }
-    }
+  pub fn get_rules(&self, pred_name : &str) -> Vec<Arc<Rule>> {
+    self.rule_by_pred_name.get(pred_name).map(|x|{x.clone()}).unwrap_or(Vec::new())
   }
-
-  fn get_predicate(&self, name : &str) -> Option<&Predicate> {
-    self.pred_by_name.get(name)
+  pub fn get_predicate(&self, pred_name : &str) -> Option<&Predicate> {
+    self.pred_by_name.get(pred_name)
   }
-
-  fn new_predicate(&mut self, pred : &Predicate) -> PredResponse {
-    use fact_db::PredResponse::*;
+  pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), DBError> {
     if !valid_name(&pred.name) {
-      return PredicateInvalid("Invalid name: Use lowercase and underscores only".to_string());
+      return Err(ArgError("Invalid name: Use lowercase and underscores only".to_string()))
     }
-
-    //Check if we already have a predicate by this name
-    match self.pred_by_name.get(&pred.name) {
-      Some(p) => {
-        if pred.types == p.types {
-          //Types match, we're legal
-          return PredicateExists;
-        } else {
-          //Types don't match, throw error
-          return PredicateTypeMismatch;
-        }
-      }
-      None => ()
+    if self.pred_by_name.contains_key(&pred.name) {
+      return Err(ArgError(format!("Predicate {} already registered.", &pred.name)))
     }
-
-    match self.insert_predicate(&pred) {
-      Ok(()) => {}
-      Err(e) => {return PredFail(format!("{:?}", e));}
-    }
-
+    try!(self.insert_predicate(&pred));
     self.gen_insert_stmt(&pred);
     self.pred_by_name.insert(pred.name.clone(), pred.clone());
-    PredResponse::PredicateCreated
+    Ok(())
   }
-
-  fn new_fact(&mut self, fact : &Fact) -> FactResponse {
-    use fact_db::FactResponse::*;
-    match self.insert_fact(&fact) {
-      Ok(true)   => FactCreated,
-      Ok(false)  => FactExists,
-      Err(e)     => FactFail(format!("{:?}", e))
-    }
-  }
-
-  fn search_facts(&self, query : &Vec<Clause>) -> SearchResponse {
-    use fact_db::SearchResponse::*;
+  pub fn search_facts(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Arc<Value>>>,DBError> {
 
     //Check there is at least one clause
     if query.len() == 0 {
-      return SearchInvalid("Empty search query".to_string());
+      return Err(ArgError("Empty search query".to_string()));
     };
 
     //Check that clauses:
@@ -271,7 +230,7 @@ impl FactDB for PgDB {
       for clause in query.iter() {
         let pred = match self.pred_by_name.get(&clause.pred_name) {
           Some(pred) => pred,
-          None => return SearchInvalid(format!("{} is not a registered predicate.", clause.pred_name)),
+          None => return Err(ArgError(format!("{} is not a registered predicate.", clause.pred_name))),
         };
         for (idx, slot) in clause.args.iter().enumerate() {
           match *slot {
@@ -282,9 +241,9 @@ impl FactDB for PgDB {
                 if v == var_type.len() {
                   var_type.push(pred.types[idx].clone())
                 } else if v > var_type.len() {
-                  return SearchInvalid(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v));
+                  return Err(ArgError(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v)))
                 } else if var_type[v] != pred.types[idx].clone() {
-                  return SearchInvalid(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx]))
+                  return Err(ArgError(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx])))
                 }
               }
           }
@@ -359,14 +318,14 @@ impl FactDB for PgDB {
     let res_stmt = self.conn.prepare(&raw_stmt);
     let stmt = match res_stmt {
       Ok(stmt) => stmt,
-      Err(e) => return SearchFail(
-        format!("Preparing statement failed: {}\n{:?}", raw_stmt, e))
+      Err(e) => return Err(InternalError(
+        format!("Preparing statement failed: {}\n{:?}", raw_stmt, e)))
     };
     let res_rows = stmt.query(&vals);
     let rows = match res_rows {
       Ok(rows) => rows,
-      Err(e)   => return SearchFail(
-        format!("Executing query failed: {:?}", e))
+      Err(e)   => return Err(InternalError(
+        format!("Executing query failed: {:?}", e)))
     };
 
     let mut anss : Vec<Vec<Arc<Value>>> = rows.iter().map(|row| {
@@ -376,19 +335,9 @@ impl FactDB for PgDB {
       }).collect()
     }).collect();
     anss.dedup();
-    SearchAns(anss)
+    Ok(anss)
   }
-
-  fn new_rule(&mut self, rule : &Rule) -> RuleResponse {
-    use fact_db::RuleResponse::*;
-
-    //Enter rule into rulecache
-    self.add_rule_cache(&rule);
-
-    RuleAdded
-  }
-
-  fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Arc<Value>>) -> bool {
+  pub fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Arc<Value>>) -> bool {
     //TODO: persist the cache
     match self.rule_exec_cache.entry(rule.clone()) {
       Vacant(entry) => {
@@ -404,5 +353,9 @@ impl FactDB for PgDB {
       }
     }
   }
- 
+
+}
+
+fn valid_name(name : &String) -> bool {
+  name.chars().all( |ch| match ch { 'a'...'z' | '_' => true, _ => false } )
 }

@@ -2,7 +2,6 @@ extern crate postgres;
 extern crate postgres_array;
 extern crate rustc_serialize;
 
-pub mod fact_db;
 pub mod pg_db;
 pub mod engine;
 
@@ -32,7 +31,6 @@ use self::Error::*;
 
 use engine::Engine;
 use pg_db::PgDB;
-use fact_db::FactDB;
 use native_types::*;
 
 pub type Result<T> = ::std::result::Result<T, Error>;
@@ -112,7 +110,7 @@ impl<'a> DB {
     }
     Ok(())
   }
-  fn create(&self) -> Result<Box<FactDB>> {
+  fn create(&self) -> Result<PgDB> {
     match self {
       &DB::Postgres(ref str) => {
         use postgres::{Connection, SslMode, IntoConnectParams};
@@ -123,7 +121,7 @@ impl<'a> DB {
         let create_query = format!("CREATE DATABASE {}", &old_db);
         //TODO accept success or db already exists, not other errors
         let _ = conn.execute(&create_query, &[]);
-        Ok(Box::new(try!(PgDB::new(str))))
+        Ok(try!(PgDB::new(str)))
       }
     }
   }
@@ -160,8 +158,8 @@ impl Holmes {
   pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
     self.engine.get_type(name)
   }
-  pub fn add_type(&mut self, type_ : Arc<Type>) -> bool {
-    self.engine.add_type(type_)
+  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<()> {
+    self.engine.add_type(type_).map_err(|e| {EngineErr(e)})
   }
   pub fn add_rule(&mut self, rule : &native_types::Rule) -> Result<()> {
     self.engine.new_rule(rule).map_err(|e| {EngineErr(e)})

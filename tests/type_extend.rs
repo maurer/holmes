@@ -67,7 +67,7 @@ impl BoolValue {
 #[test]
 pub fn add_bool() {
   single(&|holmes : &mut Holmes| {
-    assert!(holmes.add_type(Arc::new(BoolType)));
+    try!(holmes.add_type(Arc::new(BoolType)));
     try!(predicate!(holmes, type_pred(uint64, bool)));
     try!(fact!(holmes, type_pred(32, BoolValue::new(false))));
     try!(fact!(holmes, type_pred(42, BoolValue::new(true))));

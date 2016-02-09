@@ -1,13 +1,13 @@
-use fact_db::FactDB;
 use std::collections::hash_map::HashMap;
 use native_types::*;
 use db_types::values::Value;
 use db_types::types::Type;
 use db_types::values;
+use pg_db::{PgDB, DBError};
 use std::sync::Arc;
 
 pub struct Engine {
-  fact_db : Box<FactDB>,
+  fact_db : PgDB,
   funcs   : HashMap<String, HFunc>
 }
 
@@ -17,6 +17,12 @@ pub enum Error {
   Internal(String),
   Type(String),
   Db(String)
+}
+
+impl ::std::convert::From<DBError> for Error {
+  fn from(dbe : DBError) -> Self {
+    Error::Db(format!("{:?}", dbe))
+  }
 }
 
 impl ::std::fmt::Display for Error {
@@ -56,7 +62,7 @@ fn substitute(clause : &Clause, ans : &Vec<Arc<Value>>) -> Fact {
 }
 
 impl Engine {
-  pub fn new(db : Box<FactDB>) -> Engine {
+  pub fn new(db : PgDB) -> Engine {
     Engine {
       fact_db : db,
       funcs   : HashMap::new(),
@@ -65,8 +71,8 @@ impl Engine {
   pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
     self.fact_db.get_type(name)
   }
-  pub fn add_type(&mut self, type_ : Arc<Type>) -> bool {
-    self.fact_db.add_type(type_)
+  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<(), Error> {
+    Ok(try!(self.fact_db.add_type(type_)))
   }
   pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), Error> {
 
@@ -87,16 +93,7 @@ impl Engine {
       None => ()
     }
 
-    // Have the FactDb persist it
-    {
-      use fact_db::PredResponse::*;
-      match self.fact_db.new_predicate(pred) {
-        PredicateInvalid(msg) => Err(Error::Db(msg)),
-        PredicateTypeMismatch => panic!("PredicateTypeMismatch should be masked against"),
-        PredFail(msg) => Err(Error::Internal(msg)),
-        PredicateExists | PredicateCreated => Ok(())
-      }
-    }
+    Ok(try!(self.fact_db.new_predicate(pred)))
   }
 
   pub fn new_fact(&mut self, fact : &Fact) -> Result<(), Error> {
@@ -110,20 +107,15 @@ impl Engine {
       None => return Err(Error::Invalid("Predicate not registered".to_string()))
     }
     {
-      use fact_db::FactResponse::*;
-      use fact_db::RuleBy;
-      match self.fact_db.new_fact(&fact) {
-        FactCreated => {
-          for rule in self.fact_db.get_rules(RuleBy::Pred(fact.pred_name.clone())) {
+      match try!(self.fact_db.insert_fact(&fact)) {
+        true => {
+          for rule in self.fact_db.get_rules(&fact.pred_name) {
             self.run_rule(&rule);
           }
-          Ok(())
         }
-        FactExists => Ok(()),
-        FactTypeMismatch => Err(Error::Type("Fact type mismatch".to_string())),
-        FactPredUnreg(_) => panic!("FactPredUnreg should be impossible"),
-        FactFail(msg) => Err(Error::Internal(msg))
+        _ => ()
       }
+      Ok(())
     }
   }
 
@@ -205,58 +197,35 @@ impl Engine {
 
 
   fn run_rule(&mut self, rule : &Rule) {
-    use fact_db::SearchResponse::*;
-    match self.fact_db.search_facts(&rule.body) {
-      SearchAns(anss) => {
-        let mut states : Vec<Vec<Arc<Value>>> =
-            anss.iter()
-                .filter(|ans| {self.fact_db.rule_cache_miss(&rule, &ans)})
-                .map(|ans| {ans.clone()})
-                .collect();
+    let anss = self.fact_db.search_facts(&rule.body).unwrap();
+    let mut states : Vec<Vec<Arc<Value>>> =
+        anss.iter()
+            .filter(|ans| {self.fact_db.rule_cache_miss(&rule, &ans)})
+            .map(|ans| {ans.clone()})
+            .collect();
 
-        for where_clause in rule.wheres.iter() {
-          let mut next_states : Vec<Vec<Arc<Value>>> = Vec::new();
-          for state in states {
-            let resp = self.eval(&where_clause.rhs, &state);
-            next_states.extend(
-              self.bind(&where_clause.lhs, resp, &state));
-          }
-          states = next_states;
-        }
-        for state in states {
-          assert!(self.new_fact(&substitute(&rule.head, &state)).is_ok());
-        }
+    for where_clause in rule.wheres.iter() {
+      let mut next_states : Vec<Vec<Arc<Value>>> = Vec::new();
+      for state in states {
+        let resp = self.eval(&where_clause.rhs, &state);
+        next_states.extend(
+          self.bind(&where_clause.lhs, resp, &state));
       }
-      SearchInvalid(s) => panic!("Internal invalid search query {}", s),
-      SearchFail(s) => panic!("Search procedure failure {}", s),
-      SearchNone => ()
+      states = next_states;
+    }
+    for state in states {
+      assert!(self.new_fact(&substitute(&rule.head, &state)).is_ok());
     }
   }
 
   pub fn derive(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Arc<Value>>>, Error> {
-    use fact_db::SearchResponse::*;
-    match self.fact_db.search_facts(query) {
-      SearchNone => Ok(vec![]),
-      SearchAns(ans) => Ok(ans),
-      SearchInvalid(err) => Err(Error::Invalid(format!("{:?}", err))),
-      SearchFail(err) => Err(Error::Internal(format!("{:?}", err))),
-    }
+    Ok(try!(self.fact_db.search_facts(query)))
   }
 
   pub fn new_rule(&mut self, rule : &Rule) -> Result<(), Error> {
-    use fact_db::RuleResponse::*;
-    match self.fact_db.new_rule(rule) {
-      RuleAdded => {
-        self.run_rule(rule);
-        Ok(())
-      }
-      RuleFail(msg) => {
-        Err(Error::Internal(msg))
-      }
-      RuleInvalid(msg) => {
-        Err(Error::Invalid(msg))
-      }
-    }
+    self.fact_db.new_rule(rule);
+    self.run_rule(rule);
+    Ok(())
   }
   pub fn reg_func(&mut self, name : String, func : HFunc) {
       self.funcs.insert(name, func);
