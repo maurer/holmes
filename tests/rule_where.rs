@@ -32,7 +32,7 @@ pub fn where_plus_two() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
-      func!(let plus_two : [uint64] -> uint64 = |v : Arc<Value>| {
+      func!(let plus_two : [uint64] -> uint64 = |v : Value| {
         match v.get().downcast_ref::<u64>() {
           Some(n) => (n + 2).to_value(),
           _ => panic!("BAD TYPE")
@@ -54,11 +54,11 @@ pub fn where_destructure() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
       predicate!(test_pred(uint64, bytes, uint64));
-      func!(let succs : [uint64] -> (uint64, uint64) = |v : Arc<Value>| {
+      func!(let succs : [uint64] -> (uint64, uint64) = |v : Value| {
         match v.get().downcast_ref::<u64>() {
-          Some(n) => Arc::new(values::List::new(vec![
+          Some(n) => values::List::new(vec![
             (n + 1).to_value(),
-            (n + 2).to_value()])),
+            (n + 2).to_value()]),
           _ => panic!("BAD TYPE")
         }
       });
@@ -78,11 +78,11 @@ pub fn where_iter() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
       predicate!(test_pred(uint64, bytes, uint64));
-      func!(let succs : [uint64] -> [uint64] = |v : Arc<Value>| {
+      func!(let succs : [uint64] -> [uint64] = |v : Value| {
         match v.get().downcast_ref::<u64>() {
-          Some(n) => Arc::new(values::List::new(vec![
+          Some(n) => values::List::new(vec![
             (n + 1).to_value(),
-            (n + 2).to_value()])),
+            (n + 2).to_value()]),
           _ => panic!("BAD TYPE")
         }
       });

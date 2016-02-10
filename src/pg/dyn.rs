@@ -1,4 +1,8 @@
+//! This module provides extensible, dynamically typed persistable values for
+//! use in the Holmes language and postgres db.
+
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
 pub trait HashTO {
   fn hash_to(&self, &mut Hasher);
@@ -19,22 +23,25 @@ impl <'a> Hasher for HashProxy<'a> {
 
 impl <T : Hash + Sized> HashTO for T {
   fn hash_to(&self, h : &mut Hasher) {
-    //TODO: all data structures will be terrible until this is fixed
     self.hash(&mut HashProxy { hasher : h })
   }
 }
 
+pub type Type = Arc<self::types::TypeT>;
+pub type Value = Arc<self::values::ValueT>;
+
 pub mod types {
   use super::values;
-  use super::values::Value;
   use super::super::RowIter;
   use std::any::Any;
   use std::fmt;
   use std::sync::Arc;
   use std::hash::{Hash, Hasher};
   use super::HashTO;
+  use super::Type;
+  use super::Value;
 
-  pub trait Type : Sync + Send + HashTO + Any {
+  pub trait TypeT : Sync + Send + HashTO + Any {
     // For a registered type, name() will provide the way to add it to a
     // predicate, and the thing to pattern match against when loading from the
     // db.
@@ -43,7 +50,7 @@ pub mod types {
     // Takes in an iterator over the row, then attempts to read a value.
     // Since the underlying .get() will panic, I'm not including an additional
     // error reporting path (for now)
-    fn extract(&self, &mut RowIter) -> Arc<Value>;
+    fn extract(&self, &mut RowIter) -> Value;
     // Generates the database representation of the fields required. For example,
     // for a bitvector this would be
     // vec!["bytea".to_string(), "int64".to_string()]
@@ -54,45 +61,45 @@ pub mod types {
     // Check equality
     // This should be symmetric, but we have no way to enforce it within the
     // type system of rust.
-    fn inner_eq(&self, &Type) -> bool;
+    fn inner_eq(&self, &TypeT) -> bool;
   }
 
-  impl Hash for Type {
+  impl Hash for TypeT {
     fn hash<H : Hasher>(&self, hasher : &mut H) {
       self.hash_to(hasher)
     }
   }
 
-  impl fmt::Debug for Type {
+  impl fmt::Debug for TypeT {
     fn fmt(&self, f : &mut fmt::Formatter) -> fmt::Result {
       write!(f, "[Name: {:?}, Repr: {:?}]", self.name(), self.repr())
     }
   }
 
-  impl Eq for Type {}
-  impl PartialEq for Type {
-    fn eq(&self, t : &Type) -> bool {
+  impl Eq for TypeT {}
+  impl PartialEq for TypeT {
+    fn eq(&self, t : &TypeT) -> bool {
       self.inner_eq(t)
     }
   }
 
   #[derive(Debug,Clone,Hash)]
   pub struct Tuple {
-    elements : Vec<Arc<Type>>
+    elements : Vec<Type>
   }
 
   impl Tuple {
-    pub fn new(elems : Vec<Arc<Type>>) -> Self {
-      Tuple { elements : elems }
+    pub fn new(elems : Vec<Type>) -> Arc<Self> {
+      Arc::new(Tuple { elements : elems })
     }
   }
 
-  impl Type for Tuple {
+  impl TypeT for Tuple {
     fn name(&self) -> Option<&'static str> {
       None
     }
-    fn extract(&self, rows : &mut RowIter) -> Arc<Value> {
-      Arc::new(values::Tuple::new(self.elements.iter().map(|elem| {elem.extract(rows)}).collect()))
+    fn extract(&self, rows : &mut RowIter) -> Value {
+      values::Tuple::new(self.elements.iter().map(|elem| {elem.extract(rows)}).collect())
     }
     fn repr(&self) -> Vec<::std::string::String> {
       self.elements.iter().flat_map(|elem| {elem.repr()}).collect()
@@ -100,7 +107,7 @@ pub mod types {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Type) -> bool {
+    fn inner_eq(&self, other : &TypeT) -> bool {
       match other.inner().downcast_ref::<Self>() {
         Some(tup) => self.elements == tup.elements,
         // If the target is not a tuple, our types are not equal.
@@ -111,20 +118,20 @@ pub mod types {
 
   #[derive(Debug,Clone,Hash)]
   pub struct List {
-    elem : Arc<Type>
+    elem : Type
   }
 
   impl List {
-    pub fn new(elem : Arc<Type>) -> Self {
-      List { elem : elem }
+    pub fn new(elem : Type) -> Arc<Self> {
+      Arc::new(List { elem : elem })
     }
   }
 
-  impl Type for List {
+  impl TypeT for List {
     fn name(&self) -> Option<&'static str> {
       None
     }
-    fn extract(&self, _rows : &mut RowIter) -> Arc<Value> {
+    fn extract(&self, _rows : &mut RowIter) -> Value {
       panic!("List support disabled, will be re-enabled via arrays maybe")
     }
     fn repr(&self) -> Vec<::std::string::String> {
@@ -133,7 +140,7 @@ pub mod types {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Type) -> bool {
+    fn inner_eq(&self, other : &TypeT) -> bool {
       match other.inner().downcast_ref::<Self>() {
         Some(ref tup) => self.elem == tup.elem.clone(),
         // If the target is not a tuple, our types are not equal.
@@ -142,20 +149,20 @@ pub mod types {
     }
   }
 
-  pub fn default_types() -> Vec<Arc<Type>> {
+  pub fn default_types() -> Vec<Type> {
     vec![Arc::new(UInt64), Arc::new(String), Arc::new(Bytes)]
   }
 
   #[derive(Debug,Clone,Hash)]
   pub struct UInt64;
 
-  impl Type for UInt64 {
+  impl TypeT for UInt64 {
     fn name(&self) -> Option<&'static str> {
       Some("uint64")
     }
-    fn extract(&self, rows : &mut RowIter) -> Arc<Value> {
+    fn extract(&self, rows : &mut RowIter) -> Value {
       let x : i64 = rows.next().unwrap();
-      Arc::new(values::UInt64::new(x as u64))
+      values::UInt64::new(x as u64)
     }
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["int8".to_string()]
@@ -163,7 +170,7 @@ pub mod types {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Type) -> bool {
+    fn inner_eq(&self, other : &TypeT) -> bool {
       match other.inner().downcast_ref::<Self>() {
         Some(_) => true,
         _ => false
@@ -174,12 +181,12 @@ pub mod types {
   #[derive(Debug,Clone,Hash)]
   pub struct String;
 
-  impl Type for String {
+  impl TypeT for String {
     fn name(&self) -> Option<&'static str> {
       Some("string")
     }
-    fn extract(&self, rows : &mut RowIter) -> Arc<Value> {
-      Arc::new(values::String::new(rows.next().unwrap()))
+    fn extract(&self, rows : &mut RowIter) -> Value {
+      values::String::new(rows.next().unwrap())
     }
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["varchar".to_string()]
@@ -187,7 +194,7 @@ pub mod types {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Type) -> bool {
+    fn inner_eq(&self, other : &TypeT) -> bool {
       match other.inner().downcast_ref::<Self>() {
         Some(_) => true,
         _ => false
@@ -198,12 +205,12 @@ pub mod types {
   #[derive(Debug,Clone,Hash)]
   pub struct Bytes;
 
-  impl Type for Bytes {
+  impl TypeT for Bytes {
     fn name(&self) -> Option<&'static str> {
       Some("bytes")
     }
-    fn extract(&self, rows : &mut RowIter) -> Arc<Value> {
-      Arc::new(values::Bytes::new(rows.next().unwrap()))
+    fn extract(&self, rows : &mut RowIter) -> Value {
+      values::Bytes::new(rows.next().unwrap())
     }
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["bytea".to_string()]
@@ -211,7 +218,7 @@ pub mod types {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Type) -> bool {
+    fn inner_eq(&self, other : &TypeT) -> bool {
       match other.inner().downcast_ref::<Self>() {
         Some(_) => true,
         _ => false
@@ -224,16 +231,17 @@ pub mod types {
 pub mod values {
   use postgres::types::ToSql;
   use std::any::Any;
-  use super::types;
-  use super::types::Type;
   use super::HashTO;
   use std::sync::Arc;
   use std::hash::{Hash, Hasher};
   use std::fmt;
+  use super::Type;
+  use super::Value;
+  use super::types;
 
-  pub trait Value : Sync + Send + HashTO + fmt::Debug + Any {
+  pub trait ValueT : Sync + Send + HashTO + fmt::Debug + Any {
     // Returns the type, needed if you want to do type checking, or tuple values
-    fn type_(&self) -> Arc<Type>;
+    fn type_(&self) -> Type;
     // Get a rust dynamic type, to be used by someone who was typed in the holmes
     // language, and so knows what they're actually getting
     fn get(&self) -> &Any;
@@ -243,37 +251,37 @@ pub mod values {
     // Escape hatch
     fn inner(&self) -> &Any;
     // Used to test equality, to implement PartialEq
-    fn inner_eq(&self, other : &Value) -> bool;
+    fn inner_eq(&self, other : &ValueT) -> bool;
   }
 
-  impl Hash for Value {
+  impl Hash for ValueT {
     fn hash<H : Hasher>(&self, hasher : &mut H) {
       self.hash_to(hasher)
     }
   }
 
   pub trait ToValue {
-    fn to_value(self) -> Arc<Value>;
+    fn to_value(self) -> Value;
   }
 
-  impl Eq for Value {}
-  impl PartialEq for Value {
-    fn eq(&self, other : &Value) -> bool {
+  impl Eq for ValueT {}
+  impl PartialEq for ValueT {
+    fn eq(&self, other : &ValueT) -> bool {
       self.inner_eq(other)
     }
   }
 
   #[derive(Debug,Clone,PartialEq,Hash)]
   pub struct List {
-    elements : Vec<Arc<Value>>,
+    elements : Vec<Value>,
   }
 
-  impl Value for List {
-    fn type_(&self) -> Arc<Type> {
+  impl ValueT for List {
+    fn type_(&self) -> Type {
       match self.elements.first() {
-        Some(e) => Arc::new(types::List::new(e.type_())),
+        Some(e) => types::List::new(e.type_()),
         //TODO have some kind of poly type to default to? Equal to everything?
-        None => Arc::new(types::List::new(Arc::new(types::UInt64)))
+        None => types::List::new(Arc::new(types::UInt64))
       }
     }
     fn get(&self) -> &Any {
@@ -285,7 +293,7 @@ pub mod values {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Value) -> bool {
+    fn inner_eq(&self, other : &ValueT) -> bool {
       let other_typed : &List = match other.inner().downcast_ref::<Self>() {
         Some(x) => x,
         None => return false
@@ -295,20 +303,20 @@ pub mod values {
   }
 
   impl List {
-    pub fn new(elements : Vec<Arc<Value>>) -> Self {
-      List { elements : elements }
+    pub fn new(elements : Vec<Value>) -> Arc<Self> {
+      Arc::new(List { elements : elements })
     }
   }
 
 
   #[derive(Debug,Clone,PartialEq,Hash)]
   pub struct Tuple {
-    elements : Vec<Arc<Value>>,
+    elements : Vec<Value>,
   }
 
-  impl Value for Tuple {
-    fn type_(&self) -> Arc<Type> {
-      Arc::new(types::Tuple::new(self.elements.iter().map(|val| {val.type_()}).collect()))
+  impl ValueT for Tuple {
+    fn type_(&self) -> Type {
+      types::Tuple::new(self.elements.iter().map(|val| {val.type_()}).collect())
     }
     fn get(&self) -> &Any {
       &self.elements as &Any
@@ -319,7 +327,7 @@ pub mod values {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Value) -> bool {
+    fn inner_eq(&self, other : &ValueT) -> bool {
       let other_typed : &Tuple = match other.inner().downcast_ref::<Self>() {
         Some(x) => x,
         None => return false
@@ -329,8 +337,8 @@ pub mod values {
   }
 
   impl Tuple {
-    pub fn new(elements : Vec<Arc<Value>>) -> Self {
-      Tuple { elements : elements }
+    pub fn new(elements : Vec<Value>) -> Arc<Self> {
+      Arc::new(Tuple { elements : elements })
     }
   }
 
@@ -341,28 +349,28 @@ pub mod values {
   }
 
   impl ToValue for u64 {
-    fn to_value(self) -> Arc<Value> {
-      Arc::new(UInt64::new(self))
+    fn to_value(self) -> Value {
+      UInt64::new(self)
     }
   }
   impl ToValue for ::std::string::String {
-    fn to_value(self) -> Arc<Value> {
-      Arc::new(String::new(self))
+    fn to_value(self) -> Value {
+      String::new(self)
     }
   }
   impl ToValue for Vec<u8> {
-    fn to_value(self) -> Arc<Value> {
-      Arc::new(Bytes::new(self))
+    fn to_value(self) -> Value {
+      Bytes::new(self)
     }
   }
   impl ToValue for &'static str {
-    fn to_value(self) -> Arc<Value> {
-      Arc::new(String::new(self.to_string()))
+    fn to_value(self) -> Value {
+      String::new(self.to_string())
     }
   }
 
-  impl Value for UInt64 {
-    fn type_(&self) -> Arc<Type> {
+  impl ValueT for UInt64 {
+    fn type_(&self) -> Type {
       Arc::new(types::UInt64)
     }
     fn get(&self) -> &Any {
@@ -374,7 +382,7 @@ pub mod values {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Value) -> bool {
+    fn inner_eq(&self, other : &ValueT) -> bool {
       let other_typed : &UInt64 = match other.inner().downcast_ref::<Self>() {
         Some(x) => x,
         None => return false
@@ -384,8 +392,8 @@ pub mod values {
   }
 
   impl UInt64 {
-    pub fn new(val : u64) -> Self {
-      UInt64 { val : val, sql : val as i64 }
+    pub fn new(val : u64) -> Arc<Self> {
+      Arc::new(UInt64 { val : val, sql : val as i64 })
     }
   }
 
@@ -394,8 +402,8 @@ pub mod values {
     val : ::std::string::String,
   }
 
-  impl Value for String {
-    fn type_(&self) -> Arc<Type> {
+  impl ValueT for String {
+    fn type_(&self) -> Type {
       Arc::new(types::String)
     }
     fn get(&self) -> &Any {
@@ -407,7 +415,7 @@ pub mod values {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Value) -> bool {
+    fn inner_eq(&self, other : &ValueT) -> bool {
       let other_typed : &String = match other.inner().downcast_ref::<Self>() {
         Some(x) => x,
         None => return false
@@ -417,8 +425,8 @@ pub mod values {
   }
 
   impl String {
-    pub fn new(val : ::std::string::String) -> Self {
-      String { val : val }
+    pub fn new(val : ::std::string::String) -> Arc<Self> {
+      Arc::new(String { val : val })
     }
   }
 
@@ -427,8 +435,8 @@ pub mod values {
     val : Vec<u8>,
   }
 
-  impl Value for Bytes {
-    fn type_(&self) -> Arc<Type> {
+  impl ValueT for Bytes {
+    fn type_(&self) -> Type {
       Arc::new(types::Bytes)
     }
     fn get(&self) -> &Any {
@@ -440,7 +448,7 @@ pub mod values {
     fn inner(&self) -> &Any {
       self as &Any
     }
-    fn inner_eq(&self, other : &Value) -> bool {
+    fn inner_eq(&self, other : &ValueT) -> bool {
       let other_typed : &Bytes = match other.inner().downcast_ref::<Self>() {
         Some(x) => x,
         None => return false
@@ -450,8 +458,8 @@ pub mod values {
   }
 
   impl Bytes {
-    pub fn new(val : Vec<u8>) -> Self {
-      Bytes { val : val }
+    pub fn new(val : Vec<u8>) -> Arc<Self> {
+      Arc::new(Bytes { val : val })
     }
   }
 

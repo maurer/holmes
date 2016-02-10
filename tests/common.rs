@@ -4,8 +4,7 @@ pub use std::sync::Arc;
 
 pub use holmes::*;
 pub use holmes::pg::dyn::values::ToValue;
-pub use holmes::pg::dyn::values::Value;
-pub use holmes::pg::dyn::types::Type;
+pub use holmes::pg::dyn::{Value, Type};
 pub use holmes::pg::dyn::values;
 
 static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;

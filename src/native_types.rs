@@ -1,18 +1,16 @@
-use pg::dyn::values::Value;
-use pg::dyn::types::Type;
-use std::sync::Arc;
+use pg::dyn::{Value, Type};
 pub type PredId = u64;
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Predicate {
   pub name  : String,
-  pub types : Vec<Arc<Type>>
+  pub types : Vec<Type>
 }
 
 #[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Fact {
   pub pred_name : String,
-  pub args : Vec<Arc<Value>>
+  pub args : Vec<Value>
 }
 
 pub type HVar = usize;
@@ -21,7 +19,7 @@ pub type HVar = usize;
 pub enum MatchExpr {
   Unbound,
   Var(HVar),
-  Const(Arc<Value>)
+  Const(Value)
 }
 pub use native_types::MatchExpr::*;
 
@@ -53,7 +51,7 @@ pub struct Clause {
 #[derive(Clone,Debug,Hash,Eq)]
 pub enum Expr {
   EVar(HVar),
-  EVal(Arc<Value>),
+  EVal(Value),
   EApp(String, Vec<Expr>)
 }
 pub use native_types::Expr::*;
@@ -83,7 +81,7 @@ pub struct WhereClause {
 }
 
 pub struct HFunc {
-  pub input_type   : Arc<Type>,
-  pub output_type  : Arc<Type>,
-  pub run : Box<Fn(Arc<Value>) -> Arc<Value>>
+  pub input_type   : Type,
+  pub output_type  : Type,
+  pub run : Box<Fn(Value) -> Value>
 }

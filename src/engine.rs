@@ -2,18 +2,16 @@ use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use native_types::*;
-use pg::dyn::values::Value;
-use pg::dyn::types::Type;
+use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use pg::PgDB;
 use pg;
-use std::sync::Arc;
 
 pub struct Engine {
   fact_db    : PgDB,
   funcs      : HashMap<String, HFunc>,
   rules      : HashMap<String, Vec<Rule>>,
-  exec_cache : HashMap<Rule, HashSet<Vec<Arc<Value>>>>
+  exec_cache : HashMap<Rule, HashSet<Vec<Value>>>
 }
 
 #[derive(Debug)]
@@ -53,7 +51,7 @@ impl ::std::error::Error for Error {
   }
 }
 
-fn substitute(clause : &Clause, ans : &Vec<Arc<Value>>) -> Fact {
+fn substitute(clause : &Clause, ans : &Vec<Value>) -> Fact {
   use native_types::MatchExpr::*;
   Fact {
     pred_name : clause.pred_name.clone(),
@@ -76,10 +74,10 @@ impl Engine {
       exec_cache : HashMap::new(),
     }
   }
-  pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
+  pub fn get_type(&self, name : &str) -> Option<Type> {
     self.fact_db.get_type(name)
   }
-  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<(), Error> {
+  pub fn add_type(&mut self, type_ : Type) -> Result<(), Error> {
     Ok(try!(self.fact_db.add_type(type_)))
   }
   pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), Error> {
@@ -125,7 +123,7 @@ impl Engine {
     }
   }
 
-  fn bind(&self, lhs : &BindExpr, rhs : Arc<Value>, state : &Vec<Arc<Value>>) -> Vec<Vec<Arc<Value>>> {
+  fn bind(&self, lhs : &BindExpr, rhs : Value, state : &Vec<Value>) -> Vec<Vec<Value>> {
     match *lhs {
       // If we are unbound, we no-op
       Normal(Unbound) => vec![state.clone()],
@@ -156,7 +154,7 @@ impl Engine {
         }
       }
       Destructure(ref lhss) => {
-        let rhss = match rhs.get().downcast_ref::<Vec<Arc<Value>>>() {
+        let rhss = match rhs.get().downcast_ref::<Vec<Value>>() {
           Some(ref rhss) => rhss.iter(),
           _ => panic!("Attempted to destructure non-list")
         };
@@ -171,7 +169,7 @@ impl Engine {
         next
       },
       Iterate(ref inner) => {
-        let rhss = match rhs.get().downcast_ref::<Vec<Arc<Value>>>() {
+        let rhss = match rhs.get().downcast_ref::<Vec<Value>>() {
           Some(ref rhss) => rhss.iter(),
           _ => panic!("Attempted to destructure non-list")
         };
@@ -182,26 +180,26 @@ impl Engine {
     }
   }
 
-  fn eval(&self, expr : &Expr, subs : &Vec<Arc<Value>>) -> Arc<Value> {
+  fn eval(&self, expr : &Expr, subs : &Vec<Value>) -> Value {
     use native_types::Expr::*;
     match *expr {
       EVar(var) => subs[var as usize].clone(),
       EVal(ref val) => val.clone(),
       EApp(ref fun_name, ref args) => {
-        let arg_vals : Vec<Arc<Value>> = args.iter().map(|arg_expr|{
+        let arg_vals : Vec<Value> = args.iter().map(|arg_expr|{
           self.eval(arg_expr, subs)
         }).collect();
         let arg = if arg_vals.len() == 1 {
           arg_vals[0].clone()
         } else {
-          Arc::new(values::Tuple::new(arg_vals)) as Arc<Value>
+          values::Tuple::new(arg_vals) as Value
         };
         (self.funcs[fun_name].run)(arg)
       }
     }
   }
 
-  fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Arc<Value>>)
+  fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Value>)
     -> bool {
     match self.exec_cache.entry(rule.clone()) {
       Vacant(entry) => {
@@ -223,14 +221,14 @@ impl Engine {
 
   fn run_rule(&mut self, rule : &Rule) {
     let anss = self.fact_db.search_facts(&rule.body).unwrap();
-    let mut states : Vec<Vec<Arc<Value>>> =
+    let mut states : Vec<Vec<Value>> =
         anss.iter()
             .filter(|ans| {self.rule_cache_miss(&rule, &ans)})
             .map(|ans| {ans.clone()})
             .collect();
 
     for where_clause in rule.wheres.iter() {
-      let mut next_states : Vec<Vec<Arc<Value>>> = Vec::new();
+      let mut next_states : Vec<Vec<Value>> = Vec::new();
       for state in states {
         let resp = self.eval(&where_clause.rhs, &state);
         next_states.extend(
@@ -243,7 +241,7 @@ impl Engine {
     }
   }
 
-  pub fn derive(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Arc<Value>>>, Error> {
+  pub fn derive(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Value>>, Error> {
     Ok(try!(self.fact_db.search_facts(query)))
   }
 

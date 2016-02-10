@@ -6,15 +6,13 @@ use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use postgres::types::{FromSql, ToSql};
-use std::sync::Arc;
 
 mod error;
 pub mod dyn;
 
 pub use self::error::{Error, Result};
 use self::dyn::types;
-use self::dyn::types::Type;
-use self::dyn::values::Value;
+use self::dyn::{Type, Value};
 
 pub struct RowIter<'a> {
   row : &'a rows::Row<'a>,
@@ -39,7 +37,7 @@ pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,
   insert_by_name    : HashMap<String, String>,
-  named_types       : HashMap<String, Arc<Type>>
+  named_types       : HashMap<String, Type>
 }
 
 impl PgDB {
@@ -165,7 +163,7 @@ impl PgDB {
   /// This is unstable, and will likely need to be moved to the initialization
   /// of the database object in order to allow reconnecting to an existing
   /// database.
-  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<()> {
+  pub fn add_type(&mut self, type_ : Type) -> Result<()> {
     let name = type_.name().unwrap();
     if !self.named_types.contains_key(name) {
       self.named_types.insert(name.to_owned(), type_.clone());
@@ -179,7 +177,7 @@ impl PgDB {
   /// This function is primarily useful for the DSL shorthand for constructing
   /// queries, since it allows you to use names of types when declaring
   /// functions rather than type objects.
-  pub fn get_type(&self, type_str : &str) -> Option<Arc<Type>> {
+  pub fn get_type(&self, type_str : &str) -> Option<Type> {
     self.named_types.get(type_str).map(|x|{x.clone()})
   }
 
@@ -219,7 +217,7 @@ impl PgDB {
   /// database, returning a list of solution assignments to the bound
   /// variables.
   pub fn search_facts(&self, query : &Vec<Clause>)
-    -> Result<Vec<Vec<Arc<Value>>>> {
+    -> Result<Vec<Vec<Value>>> {
     // Check there is at least one clause
     if query.len() == 0 {
       return Err(Error::Arg("Empty search query".to_string()));
@@ -230,7 +228,7 @@ impl PgDB {
     // * Reference predicates in the database
     // * Only unify variables of equal type
     {
-      let mut var_type : Vec<Arc<Type>> = Vec::new();
+      let mut var_type : Vec<Type> = Vec::new();
       for clause in query.iter() {
         let pred = match self.pred_by_name.get(&clause.pred_name) {
           Some(pred) => pred,
@@ -341,7 +339,7 @@ impl PgDB {
     let stmt = try!(self.conn.prepare(&raw_stmt));
     let rows = try!(stmt.query(&vals));
 
-    let mut anss : Vec<Vec<Arc<Value>>> = rows.iter().map(|row| {
+    let mut anss : Vec<Vec<Value>> = rows.iter().map(|row| {
       let mut row_iter = RowIter::new(&row);
       var_types.iter().map(|type_| {
         type_.extract(&mut row_iter)

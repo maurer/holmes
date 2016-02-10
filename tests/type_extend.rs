@@ -2,14 +2,16 @@ use common::*;
 use std::any::Any;
 use postgres::types::ToSql;
 use holmes::pg::RowIter;
+use holmes::pg::dyn::values::ValueT;
+use holmes::pg::dyn::types::TypeT;
 
 #[derive(Debug,Clone,Hash)]
 struct BoolType;
-impl Type for BoolType {
+impl TypeT for BoolType {
   fn name(&self) -> Option<&'static str> {
     Some("bool")
   }
-  fn extract(&self, rows : &mut RowIter) -> Arc<Value> {
+  fn extract(&self, rows : &mut RowIter) -> Value {
     Arc::new(BoolValue::new(rows.next().unwrap()))
   }
   fn repr(&self) -> Vec<String> {
@@ -18,7 +20,7 @@ impl Type for BoolType {
   fn inner(&self) -> &Any {
     self as &Any
   }
-  fn inner_eq(&self, other : &Type) -> bool {
+  fn inner_eq(&self, other : &TypeT) -> bool {
     match other.inner().downcast_ref::<Self>() {
       Some(_) => true,
       _ => false
@@ -32,13 +34,13 @@ pub struct BoolValue {
 }
 
 impl ToValue for BoolValue {
-  fn to_value(self) -> Arc<Value> {
+  fn to_value(self) -> Value {
     Arc::new(BoolValue::new(self.val))
   }
 }
 
-impl Value for BoolValue {
-  fn type_(&self) -> Arc<Type> {
+impl ValueT for BoolValue {
+  fn type_(&self) -> Type {
     Arc::new(BoolType)
   }
   fn get(&self) -> &Any {
@@ -50,7 +52,7 @@ impl Value for BoolValue {
   fn inner(&self) -> &Any {
     self as &Any
   }
-  fn inner_eq(&self, other : &Value) -> bool {
+  fn inner_eq(&self, other : &ValueT) -> bool {
     match other.inner().downcast_ref::<Self>() {
       Some(x) => self == x,
       _ => false

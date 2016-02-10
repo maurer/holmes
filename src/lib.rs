@@ -6,10 +6,7 @@ pub mod pg;
 pub mod engine;
 
 pub mod native_types;
-use pg::dyn::values::Value;
-use pg::dyn::types::Type;
-
-use std::sync::Arc;
+use pg::dyn::{Value, Type};
 
 #[derive (Clone)]
 pub enum DB {
@@ -151,13 +148,13 @@ impl Holmes {
                       -> Result<()> {
     self.engine.new_fact(fact).map_err(|e| {EngineErr(e)})
   }
-  pub fn query(&mut self, query : &Vec<native_types::Clause>) -> Result<Vec<Vec<Arc<Value>>>> {
+  pub fn query(&mut self, query : &Vec<native_types::Clause>) -> Result<Vec<Vec<Value>>> {
     self.engine.derive(query).map_err(|e| {EngineErr(e)})
   }
-  pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
+  pub fn get_type(&self, name : &str) -> Option<Type> {
     self.engine.get_type(name)
   }
-  pub fn add_type(&mut self, type_ : Arc<Type>) -> Result<()> {
+  pub fn add_type(&mut self, type_ : Type) -> Result<()> {
     self.engine.add_type(type_).map_err(|e| {EngineErr(e)})
   }
   pub fn add_rule(&mut self, rule : &native_types::Rule) -> Result<()> {
@@ -165,9 +162,9 @@ impl Holmes {
   }
   pub fn reg_func(&mut self,
                   name : String,
-                  input_type  : Arc<Type>,
-                  output_type : Arc<Type>,
-                  func : Box<Fn(Arc<Value>) -> Arc<Value>>) -> Result<()> {
+                  input_type  : Type,
+                  output_type : Type,
+                  func : Box<Fn(Value) -> Value>) -> Result<()> {
     self.engine.reg_func(name, native_types::HFunc {
       input_type  : input_type,
       output_type : output_type,
@@ -179,8 +176,8 @@ impl Holmes {
 
 #[macro_export]
 macro_rules! htype {
-  ($holmes:ident, [$t:tt]) => { ::std::sync::Arc::new(::holmes::pg::dyn::types::List::new(htype!($holmes, $t))) };
-  ($holmes:ident, ($($t:tt),*)) => { ::std::sync::Arc::new(::holmes::pg::dyn::types::Tuple::new(vec![$(htype!($holmes, $t)),*])) };
+  ($holmes:ident, [$t:tt]) => { ::holmes::pg::dyn::types::List::new(htype!($holmes, $t)) };
+  ($holmes:ident, ($($t:tt),*)) => { ::holmes::pg::dyn::types::Tuple::new(vec![$(htype!($holmes, $t)),*]) };
   ($holmes:ident, $i:ident) => { $holmes.get_type(stringify!($i)).unwrap() };
 }
 
