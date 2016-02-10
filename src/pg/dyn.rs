@@ -4,6 +4,30 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+/// `HashTO` is a Trait Object-safe version of the Hash trait, using a
+/// reference to a `Hasher` rather than a polymorphic one in order to allow
+/// construction of trait objects.
+///
+/// `HashTO` is implemented automatically for any type implementing `Hash`,
+/// allowing Trait Objects to implement `Hash`. For example:
+///
+/// ```
+/// use holmes::pg::dyn::HashTO;
+/// use std::hash::{Hash, Hasher};
+/// trait Foo : HashTO {}
+/// #[derive(Hash)]
+/// struct Bar;
+/// impl Foo for Bar {}
+/// impl Hash for Foo {
+///   fn hash<H : Hasher>(&self, hasher : &mut H) {
+///     self.hash_to(hasher)
+///   }
+/// }
+/// ```
+///
+/// This trick allows `Value` and `Type` trait objects to be used as keys in
+/// maps by having types implementing the `ValueT` or `TypeT` interface derive
+/// `Hash`.
 pub trait HashTO {
   fn hash_to(&self, &mut Hasher);
 }
@@ -21,16 +45,21 @@ impl <'a> Hasher for HashProxy<'a> {
   }
 }
 
-impl <T : Hash + Sized> HashTO for T {
+impl <T : Hash> HashTO for T {
   fn hash_to(&self, h : &mut Hasher) {
     self.hash(&mut HashProxy { hasher : h })
   }
 }
 
+/// Represents the type of a dynamic value as a threadsafe trait object.
 pub type Type = Arc<self::types::TypeT>;
+/// Represents a dynamic value as a threadsafe trait object.
 pub type Value = Arc<self::values::ValueT>;
 
 pub mod types {
+  //! This module defines the trait new types must implement, along with
+  //! several core types to avoid the need to rewrite basic types every time.
+  //! It is heavily codependent on the `values` module.
   use super::values;
   use super::super::RowIter;
   use std::any::Any;
@@ -41,26 +70,37 @@ pub mod types {
   use super::Type;
   use super::Value;
 
+  /// The TypeT trait defines the interface a new Holmes type must implement
+  /// to be registered.
   pub trait TypeT : Sync + Send + HashTO + Any {
-    // For a registered type, name() will provide the way to add it to a
-    // predicate, and the thing to pattern match against when loading from the
-    // db.
-    // None will be returned if the type is anonymous, such as a tuple or list.
+    /// For a registered type, name() will provide the way to add it to a
+    /// predicate, and the thing to pattern match against when loading from the
+    /// db.
+    /// None will be returned if the type is anonymous, such as a tuple or
+    /// list.
     fn name(&self) -> Option<&'static str>;
-    // Takes in an iterator over the row, then attempts to read a value.
-    // Since the underlying .get() will panic, I'm not including an additional
-    // error reporting path (for now)
+    /// Takes in an iterator over the row, then attempts to read a value of the
+    /// type specified.
     fn extract(&self, &mut RowIter) -> Value;
-    // Generates the database representation of the fields required. For example,
-    // for a bitvector this would be
-    // vec!["bytea".to_string(), "int64".to_string()]
-    // or similar, depending on how you chose to construct the size
+    /// Generates the database representation of the fields required. For
+    /// example,
+    /// for a bitvector this would be
+    /// ```
+    /// vec!["bytea".to_string(), "int64".to_string()]
+    /// ```
+    /// or similar, depending on how you chose to construct the size.
     fn repr(&self) -> Vec<::std::string::String>;
-    // Escape hatch
+    /// Returns a dynamic representation of the trait object.
+    ///
+    /// Trait objects cannot be cast to other trait objects, even if they
+    /// implement the other trait necessarily. In order to access functions
+    /// under the `Any` trait, I have the non-trait-object implementation
+    /// provide access to its &Any representation.
     fn inner(&self) -> &Any;
-    // Check equality
-    // This should be symmetric, but we have no way to enforce it within the
-    // type system of rust.
+    /// Check equality
+    ///
+    /// Similar to `inner`, `inner_eq` exports a `PartialEq` instance from
+    /// the underlying type.
     fn inner_eq(&self, &TypeT) -> bool;
   }
 
@@ -83,12 +123,15 @@ pub mod types {
     }
   }
 
+  /// A tuple of other `Type`s
+  /// This type is anonymous.
   #[derive(Debug,Clone,Hash)]
   pub struct Tuple {
     elements : Vec<Type>
   }
 
   impl Tuple {
+    /// Construct a new tuple from a vector of other types
     pub fn new(elems : Vec<Type>) -> Arc<Self> {
       Arc::new(Tuple { elements : elems })
     }
@@ -116,12 +159,15 @@ pub mod types {
     }
   }
 
+  /// A list of another `Type`
+  /// This type is anonymous.
   #[derive(Debug,Clone,Hash)]
   pub struct List {
     elem : Type
   }
 
   impl List {
+    /// Constructs a list type of the provided element type
     pub fn new(elem : Type) -> Arc<Self> {
       Arc::new(List { elem : elem })
     }
@@ -149,10 +195,13 @@ pub mod types {
     }
   }
 
+  /// Provides a list of provided named types for use by the database
+  /// as a default set of types.
   pub fn default_types() -> Vec<Type> {
     vec![Arc::new(UInt64), Arc::new(String), Arc::new(Bytes)]
   }
 
+  /// Unsigned 64-bit int type
   #[derive(Debug,Clone,Hash)]
   pub struct UInt64;
 
@@ -178,6 +227,8 @@ pub mod types {
     }
   }
 
+  /// `String` type
+  /// Use this for text. If you want to store a buffer, use `Bytes` instead.
   #[derive(Debug,Clone,Hash)]
   pub struct String;
 
@@ -202,6 +253,8 @@ pub mod types {
     }
   }
 
+  /// `Bytes` is for storing raw data
+  /// If you want to store text, use the `String` type.
   #[derive(Debug,Clone,Hash)]
   pub struct Bytes;
 
@@ -229,6 +282,9 @@ pub mod types {
 }
 
 pub mod values {
+  //! This module defines the trait new values must implement, along with
+  //! several core values to instantiate the basic types provided in `types`.
+  //! It is heavily codependent on the `values` module.
   use postgres::types::ToSql;
   use std::any::Any;
   use super::HashTO;
@@ -239,18 +295,31 @@ pub mod values {
   use super::Value;
   use super::types;
 
+  /// This trait defines the interface any value must implement in order to be
+  /// used in the Holmes language.
   pub trait ValueT : Sync + Send + HashTO + fmt::Debug + Any {
-    // Returns the type, needed if you want to do type checking, or tuple values
+    /// Returns the type of the value
+    /// This is needed if to do type checking, or tuple values
     fn type_(&self) -> Type;
-    // Get a rust dynamic type, to be used by someone who was typed in the holmes
-    // language, and so knows what they're actually getting
+    /// Get a rust dynamic type version of the value contained.
+    ///
+    /// Since Holmes is a typed language, the user of this function should
+    /// know what to expect and be able to cast from Any into it.
     fn get(&self) -> &Any;
-    // Converts the value into a list of ToSql trait objects to allow for
-    // insertion into the database via a prepared query
+    /// Converts the value into a list of ToSql trait objects to allow for
+    /// insertion into the database via a prepared query
     fn to_sql(&self) -> Vec<&ToSql>;
-    // Escape hatch
+    /// Returns a dynamic representation of the trait object.
+    ///
+    /// Trait objects cannot be cast to other trait objects, even if they
+    /// implement the other trait necessarily. In order to access functions
+    /// under the `Any` trait, I have the non-trait-object implementation
+    /// provide access to its &Any representation.
     fn inner(&self) -> &Any;
-    // Used to test equality, to implement PartialEq
+    /// Check equality
+    ///
+    /// Similar to `inner`, `inner_eq` exports a `PartialEq` instance from
+    /// the underlying type.
     fn inner_eq(&self, other : &ValueT) -> bool;
   }
 
@@ -260,6 +329,10 @@ pub mod values {
     }
   }
 
+  /// Represents the transformability of some type into a dynamic value.
+  ///
+  /// This is useful both as an easy way to turn Rust values into Holmes
+  /// values, and to allow for the use of literals in the macro DSL system.
   pub trait ToValue {
     fn to_value(self) -> Value;
   }
@@ -271,6 +344,7 @@ pub mod values {
     }
   }
 
+  /// A list of samely typed values.
   #[derive(Debug,Clone,PartialEq,Hash)]
   pub struct List {
     elements : Vec<Value>,
@@ -303,12 +377,14 @@ pub mod values {
   }
 
   impl List {
+    /// Create a dynamic `List` value from a list of `Value`s
     pub fn new(elements : Vec<Value>) -> Arc<Self> {
       Arc::new(List { elements : elements })
     }
   }
 
 
+  /// A tuple of potentially differently typed values.
   #[derive(Debug,Clone,PartialEq,Hash)]
   pub struct Tuple {
     elements : Vec<Value>,
@@ -337,11 +413,13 @@ pub mod values {
   }
 
   impl Tuple {
+    /// Create a dynamic `Tuple` value from a vector of its components.
     pub fn new(elements : Vec<Value>) -> Arc<Self> {
       Arc::new(Tuple { elements : elements })
     }
   }
 
+  /// Holds an unsigned 64-bit int
   #[derive(Debug,PartialEq,Hash)]
   pub struct UInt64 {
     val : u64,
@@ -392,11 +470,13 @@ pub mod values {
   }
 
   impl UInt64 {
+    /// Creates Holmes value holding an unsigned 64-bit integer
     pub fn new(val : u64) -> Arc<Self> {
       Arc::new(UInt64 { val : val, sql : val as i64 })
     }
   }
 
+  /// Holds text
   #[derive(Debug,PartialEq,Hash)]
   pub struct String {
     val : ::std::string::String,
@@ -425,11 +505,13 @@ pub mod values {
   }
 
   impl String {
+    /// Creates a Holmes value holding a `String`
     pub fn new(val : ::std::string::String) -> Arc<Self> {
       Arc::new(String { val : val })
     }
   }
 
+  /// Holds raw data
   #[derive(Debug,PartialEq,Hash)]
   pub struct Bytes {
     val : Vec<u8>,
@@ -458,9 +540,9 @@ pub mod values {
   }
 
   impl Bytes {
+    /// Creates a new Holmes value holding raw data.
     pub fn new(val : Vec<u8>) -> Arc<Self> {
       Arc::new(Bytes { val : val })
     }
   }
-
 }
