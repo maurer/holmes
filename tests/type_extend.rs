@@ -1,7 +1,7 @@
 use common::*;
 use std::any::Any;
 use postgres::types::ToSql;
-use holmes::db_types::RowIter;
+use holmes::pg::RowIter;
 
 #[derive(Debug,Clone,Hash)]
 struct BoolType;

@@ -1,19 +1,39 @@
 use native_types::{Fact, Predicate, MatchExpr, Clause};
-use db_types::{types, RowIter};
-use db_types::values::Value;
-use db_types::types::Type;
 
-use postgres::{Connection, SslMode};
+use postgres::{rows, Connection, SslMode};
 
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-use postgres::types::ToSql;
+use postgres::types::{FromSql, ToSql};
 use std::sync::Arc;
 
 mod error;
+pub mod dyn;
 
 pub use self::error::{Error, Result};
+use self::dyn::types;
+use self::dyn::types::Type;
+use self::dyn::values::Value;
+
+pub struct RowIter<'a> {
+  row : &'a rows::Row<'a>,
+  index : usize
+}
+
+impl <'a> RowIter<'a> {
+  pub fn new(row : &'a rows::Row) -> Self {
+    RowIter {
+      row   : row,
+      index : 0
+    }
+  }
+  pub fn next<T>(&mut self) -> Option<T> where T : FromSql {
+    let idx = self.index;
+    self.index += 1;
+    self.row.get(idx)
+  }
+}
 
 pub struct PgDB {
   conn              : Connection,

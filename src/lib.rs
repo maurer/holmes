@@ -6,9 +6,8 @@ pub mod pg;
 pub mod engine;
 
 pub mod native_types;
-pub mod db_types;
-use db_types::values::Value;
-use db_types::types::Type;
+use pg::dyn::values::Value;
+use pg::dyn::types::Type;
 
 use std::sync::Arc;
 
@@ -180,8 +179,8 @@ impl Holmes {
 
 #[macro_export]
 macro_rules! htype {
-  ($holmes:ident, [$t:tt]) => { ::std::sync::Arc::new(::holmes::db_types::types::List::new(htype!($holmes, $t))) };
-  ($holmes:ident, ($($t:tt),*)) => { ::std::sync::Arc::new(::holmes::db_types::types::Tuple::new(vec![$(htype!($holmes, $t)),*])) };
+  ($holmes:ident, [$t:tt]) => { ::std::sync::Arc::new(::holmes::pg::dyn::types::List::new(htype!($holmes, $t))) };
+  ($holmes:ident, ($($t:tt),*)) => { ::std::sync::Arc::new(::holmes::pg::dyn::types::Tuple::new(vec![$(htype!($holmes, $t)),*])) };
   ($holmes:ident, $i:ident) => { $holmes.get_type(stringify!($i)).unwrap() };
 }
 
@@ -216,7 +215,7 @@ macro_rules! fact {
   ($holmes:ident, $pred_name:ident($($a:expr),*)) => {
     $holmes.add_fact(&::holmes::native_types::Fact {
       pred_name : stringify!($pred_name).to_string(),
-      args : vec![$(::holmes::db_types::values::ToValue::to_value($a)),*]
+      args : vec![$(::holmes::pg::dyn::values::ToValue::to_value($a)),*]
     })
   };
   ($pred_name:ident($($a:expr),*)) => { |holmes : &mut Holmes| {
@@ -238,7 +237,7 @@ macro_rules! bind_match {
 macro_rules! clause_match {
   ($vars:ident, $n:ident, [_]) => { ::holmes::native_types::MatchExpr::Unbound };
   ($vars:ident, $n:ident, ($v:expr)) => {
-      ::holmes::native_types::MatchExpr::Const(::holmes::db_types::values::ToValue::to_value($v)) };
+      ::holmes::native_types::MatchExpr::Const(::holmes::pg::dyn::values::ToValue::to_value($v)) };
   ($vars:ident, $n:ident, $m:ident) => {{
     use std::collections::hash_map::Entry::*;
     use ::holmes::native_types::MatchExpr::*;
@@ -279,7 +278,7 @@ macro_rules! hexpr {
     ::holmes::var_to_evar(clause_match!($vars, $n, $hexpr_name))
   };
   ($vars:ident, $n:ident, ($hexpr:expr)) => {
-    ::holmes::native_types::Expr::EVal(::holmes::db_types::values::ToValue::to_value($hexpr))
+    ::holmes::native_types::Expr::EVal(::holmes::pg::dyn::values::ToValue::to_value($hexpr))
   };
   ($vars:ident, $n:ident, {$hexpr_func:ident($($hexpr_arg:tt),*)}) => {
     ::holmes::native_types::Expr::EApp(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])

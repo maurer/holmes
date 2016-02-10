@@ -1,27 +1,4 @@
-use postgres::rows;
-use postgres::types::FromSql;
 use std::hash::{Hash, Hasher};
-
-//This isn't a real iterator, because it does not have a definitive item type
-//However, it works very much like one...
-pub struct RowIter<'a> {
-  row : &'a rows::Row<'a>,
-  index : usize
-}
-
-impl <'a> RowIter<'a> {
-  pub fn new(row : &'a rows::Row) -> Self {
-    RowIter {
-      row   : row,
-      index : 0
-    }
-  }
-  pub fn next<T>(&mut self) -> Option<T> where T : FromSql {
-    let idx = self.index;
-    self.index += 1;
-    self.row.get(idx)
-  }
-}
 
 pub trait HashTO {
   fn hash_to(&self, &mut Hasher);
@@ -50,7 +27,7 @@ impl <T : Hash + Sized> HashTO for T {
 pub mod types {
   use super::values;
   use super::values::Value;
-  use super::RowIter;
+  use super::super::RowIter;
   use std::any::Any;
   use std::fmt;
   use std::sync::Arc;

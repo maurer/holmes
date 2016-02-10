@@ -1,12 +1,12 @@
 use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
 use std::sync::atomic::Ordering::SeqCst;
+pub use std::sync::Arc;
 
 pub use holmes::*;
-pub use holmes::db_types::values::ToValue;
-pub use holmes::db_types::values::Value;
-pub use holmes::db_types::types::Type;
-pub use std::sync::Arc;
-pub use holmes::db_types::values;
+pub use holmes::pg::dyn::values::ToValue;
+pub use holmes::pg::dyn::values::Value;
+pub use holmes::pg::dyn::types::Type;
+pub use holmes::pg::dyn::values;
 
 static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;
 
