@@ -1,4 +1,6 @@
 use std::collections::hash_map::HashMap;
+use std::collections::HashSet;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use native_types::*;
 use db_types::values::Value;
 use db_types::types::Type;
@@ -8,8 +10,10 @@ use pg;
 use std::sync::Arc;
 
 pub struct Engine {
-  fact_db : PgDB,
-  funcs   : HashMap<String, HFunc>
+  fact_db    : PgDB,
+  funcs      : HashMap<String, HFunc>,
+  rules      : HashMap<String, Vec<Rule>>,
+  exec_cache : HashMap<Rule, HashSet<Vec<Arc<Value>>>>
 }
 
 #[derive(Debug)]
@@ -37,6 +41,7 @@ impl ::std::fmt::Display for Error {
     }
   }
 }
+
 impl ::std::error::Error for Error {
   fn description(&self) -> &str {
     match *self {
@@ -65,8 +70,10 @@ fn substitute(clause : &Clause, ans : &Vec<Arc<Value>>) -> Fact {
 impl Engine {
   pub fn new(db : PgDB) -> Engine {
     Engine {
-      fact_db : db,
-      funcs   : HashMap::new(),
+      fact_db    : db,
+      funcs      : HashMap::new(),
+      rules      : HashMap::new(),
+      exec_cache : HashMap::new(),
     }
   }
   pub fn get_type(&self, name : &str) -> Option<Arc<Type>> {
@@ -108,13 +115,11 @@ impl Engine {
       None => return Err(Error::Invalid("Predicate not registered".to_string()))
     }
     {
-      match try!(self.fact_db.insert_fact(&fact)) {
-        true => {
-          for rule in self.fact_db.get_rules(&fact.pred_name) {
-            self.run_rule(&rule);
-          }
+      if try!(self.fact_db.insert_fact(&fact)) {
+        for rule in self.rules.get(&fact.pred_name)
+                              .unwrap_or(&vec![]).clone() {
+          self.run_rule(&rule);
         }
-        _ => ()
       }
       Ok(())
     }
@@ -196,12 +201,31 @@ impl Engine {
     }
   }
 
+  fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Arc<Value>>)
+    -> bool {
+    match self.exec_cache.entry(rule.clone()) {
+      Vacant(entry) => {
+        let mut cache = HashSet::new();
+        cache.insert(args.clone());
+        entry.insert(cache);
+        true
+      }
+      Occupied(mut entry) => {
+        if !entry.get().contains(args) {
+          entry.get_mut().insert(args.clone());
+          true
+        } else {
+          false
+        }
+      }
+    }
+  }
 
   fn run_rule(&mut self, rule : &Rule) {
     let anss = self.fact_db.search_facts(&rule.body).unwrap();
     let mut states : Vec<Vec<Arc<Value>>> =
         anss.iter()
-            .filter(|ans| {self.fact_db.rule_cache_miss(&rule, &ans)})
+            .filter(|ans| {self.rule_cache_miss(&rule, &ans)})
             .map(|ans| {ans.clone()})
             .collect();
 
@@ -224,10 +248,16 @@ impl Engine {
   }
 
   pub fn new_rule(&mut self, rule : &Rule) -> Result<(), Error> {
-    self.fact_db.new_rule(rule);
+    for pred in &rule.body {
+      match self.rules.entry(pred.pred_name.clone()) {
+        Vacant(entry) => {entry.insert(vec![rule.clone()]);}
+        Occupied(mut entry) => entry.get_mut().push(rule.clone())
+      }
+    }
     self.run_rule(rule);
     Ok(())
   }
+
   pub fn reg_func(&mut self, name : String, func : HFunc) {
       self.funcs.insert(name, func);
   }
