@@ -208,8 +208,8 @@ macro_rules! rule {
 /// Registers a native rust function with the `Holmes` object for use in rules.
 ///
 /// ```c
-/// func!(holmes, let f : uint64 -> string = |x : Value| {
-///   format!("{}", x.get().downcast_ref::<u64>()).to_value()
+/// func!(holmes, let f : uint64 -> string = |x : &u64| {
+///   format!("{}", x)
 /// })
 /// ```
 ///
@@ -224,7 +224,9 @@ macro_rules! func {
     let dst = htype!($holmes, $dst);
     $holmes.reg_func(stringify!($name).to_string(),
                      src, dst,
-                     Box::new($body))
+                     Box::new(|v : Value| {
+                       $body(typed_unpack!(v, $src)).to_value()
+                     }))
   }};
   (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
     |holmes : &mut Holmes| {
@@ -243,6 +245,21 @@ pub mod internal {
   //! the documentation in here may be useful for understanding the EDSL
   //! structure.
 
+  /// Given a value and a type it is believed to be, unpack it to the greatest
+  /// extent possible (e.g. unpack through tupling and lists)
+  #[macro_export]
+  macro_rules! typed_unpack {
+    ($val:expr, [$typ:tt]) => {
+      $val.get().downcast_ref::<Vec<Value>>().unwrap().into_iter().map(|v| {
+        typed_unpack!(v, $typ)
+      }).collect::<Vec<_>>()
+    };
+    ($val:expr, ($($typ:tt),*)) => {{
+      let pack = $val.get().downcast_ref::<Vec<Value>>().unwrap().into_iter();
+      ($(typed_unpack!($typ, pack.next().unwrap())),*)
+    }};
+    ($val:expr, $name:ident) => {$val.get().downcast_ref().unwrap()};
+  }
   /// Constructs a bind match outer object.
   ///
   /// Args:

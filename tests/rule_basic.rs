@@ -5,8 +5,8 @@ pub fn one_step() {
   single(&|holmes : &mut Holmes| {
     try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
-      fact!(test_pred("foo", vec![3;3], 7));
-      rule!(test_pred(("bar"), (vec![2;2]), x) <= test_pred(("foo"), [_], x))
+      fact!(test_pred("foo", vec![3u8;3], 7));
+      rule!(test_pred(("bar"), (vec![2u8;2]), x) <= test_pred(("foo"), [_], x))
     }));
     assert_eq!(query!(holmes, test_pred(("bar"), [_], x)).unwrap(),
                vec![vec![7.to_value()]]);

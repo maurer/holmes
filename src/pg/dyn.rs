@@ -444,6 +444,29 @@ pub mod values {
       Bytes::new(self)
     }
   }
+  impl <T : ToValue> ToValue for Vec<T> {
+    fn to_value(self) -> Value {
+      List::new(self.into_iter().map(|x|{x.to_value()}).collect())
+    }
+  }
+  macro_rules! to_value_tuple {
+    ($($slot:ident),*) => {
+      #[allow(non_snake_case)]
+      impl <$($slot : ToValue),*> ToValue for ($($slot),*) {
+        fn to_value(self) -> Value {
+          let ($($slot),*) = self;
+          Tuple::new(vec![$($slot.to_value()),*])
+        }
+      }
+    };
+  }
+  to_value_tuple!(A, B);
+  to_value_tuple!(A, B, C);
+  to_value_tuple!(A, B, C, D);
+  to_value_tuple!(A, B, C, D, E);
+  to_value_tuple!(A, B, C, D, E, F);
+  to_value_tuple!(A, B, C, D, E, F, G);
+  to_value_tuple!(A, B, C, D, E, F, G, H);
   impl ToValue for &'static str {
     fn to_value(self) -> Value {
       String::new(self.to_string())
