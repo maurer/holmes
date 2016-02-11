@@ -1,7 +1,7 @@
 # Holmes
 
 [![Build Status](https://travis-ci.org/maurer/holmes.svg?branch=master)](https://travis-ci.org/maurer/holmes)
-[![Coverage Status](https://coveralls.io/repos/maurer/holmes/badge.svg)](https://coveralls.io/r/maurer/holmes)
+[![Coverage Status](https://coveralls.io/repos/github/maurer/holmes/badge.svg?branch=master)](https://coveralls.io/github/maurer/holmes?branch=master)
 
 [Documentation](https://maurer.github.io/holmes)
 
