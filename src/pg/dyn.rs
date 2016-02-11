@@ -29,6 +29,8 @@ use std::sync::Arc;
 /// maps by having types implementing the `ValueT` or `TypeT` interface derive
 /// `Hash`.
 pub trait HashTO {
+  /// `hash_to` captures the same functionality as `Hash`'s `hash()`, but in
+  /// a trait object safe way.
   fn hash_to(&self, &mut Hasher);
 }
 
@@ -334,6 +336,7 @@ pub mod values {
   /// This is useful both as an easy way to turn Rust values into Holmes
   /// values, and to allow for the use of literals in the macro DSL system.
   pub trait ToValue {
+    /// Converts a rust native type into a Holmes `Value`
     fn to_value(self) -> Value;
   }
 

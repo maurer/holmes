@@ -1,11 +1,38 @@
-use native_types::{Fact, Predicate, MatchExpr, Clause};
-
-use postgres::{rows, Connection, SslMode};
-
+//! Postgres-based Fact Database
+//!
+//! # Design Notes
+//!
+//! ## Scope
+//!
+//! The general philsophy is that things having to do with persistence go here,
+//! while things related to non-persistent components go in `holmes::engine`.
+//!
+//! In the long run, we would like to persist nearly everything in the
+//! database, so that a client-server model can one bay restored. However,
+//! in the short term this has little benefit, so only the items needing to
+//! use SQL for efficient execution are being included.
+//!
+//! The biggest hurdle here is the persistence of code:
+//!
+//! * How do we store Types?
+//! * How do we store bound functions?
+//!
+//! One possible long term answer is Cap'n' Proto `SturdyRef`s
+//!
+//! ## Other Databases
+//!
+//! For the moment, this is the only implementation, and there are no others
+//! on the horizon, so this interface is not abstract.
+//!
+//! The only major hurdle to using another backend would be figuring out how
+//! to make the `dyn` module abstract over databases.
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
+use postgres::{rows, Connection, SslMode};
 use postgres::types::{FromSql, ToSql};
+
+use engine::types::{Fact, Predicate, MatchExpr, Clause};
 
 mod error;
 pub mod dyn;
@@ -14,18 +41,24 @@ pub use self::error::{Error, Result};
 use self::dyn::types;
 use self::dyn::{Type, Value};
 
+/// An iterator over a `postgres::rows::Row`.
+/// It does not implement the normal iter interface because it does not have
+/// a set item type, but it implements a similar interface for ease of use.
 pub struct RowIter<'a> {
   row : &'a rows::Row<'a>,
   index : usize
 }
 
 impl <'a> RowIter<'a> {
+  /// Create a new row iterator starting at the beginning of the provided row
   pub fn new(row : &'a rows::Row) -> Self {
     RowIter {
       row   : row,
       index : 0
     }
   }
+  /// Gets the next item in the row, using a `FromSql` instance to read it.
+  /// If there is not a next item, returns `None`
   pub fn next<T>(&mut self) -> Option<T> where T : FromSql {
     let idx = self.index;
     self.index += 1;
@@ -33,6 +66,7 @@ impl <'a> RowIter<'a> {
   }
 }
 
+/// Object representing a postgres-backed fact database instance
 pub struct PgDB {
   conn              : Connection,
   pred_by_name      : HashMap<String, Predicate>,

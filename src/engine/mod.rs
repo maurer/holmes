@@ -1,30 +1,48 @@
+//! Holmes/Datalog Execution Engine
+//!
+//! This module contains the logic for rule execution and non-persistent state
+//! maintenance.
+
+pub mod types;
+
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use native_types::*;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use pg::PgDB;
 use pg;
+use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
 
+/// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine {
   fact_db    : PgDB,
-  funcs      : HashMap<String, HFunc>,
+  funcs      : HashMap<String, Func>,
   rules      : HashMap<String, Vec<Rule>>,
   exec_cache : HashMap<Rule, HashSet<Vec<Value>>>
 }
 
+/// `engine::Error` describes ways that an attempt to input or run a Holmes
+/// program could go wrong
 #[derive(Debug)]
 pub enum Error {
+  /// An `Invalid` error means that bad input was given to the engine
+  /// (e.g. the fault is with the caller)
   Invalid(String),
+  /// An `Internal` error should not happen, and indicates a bug within the
+  /// engine
   Internal(String),
+  /// A `Type` error indicates a typing error in the Holmes program being
+  /// operated on
   Type(String),
-  Db(String)
+  /// A `Db` error indicates an error that the underlying fact database
+  /// component has sent up to the engine
+  Db(pg::Error)
 }
 
 impl ::std::convert::From<pg::Error> for Error {
   fn from(dbe : pg::Error) -> Self {
-    Error::Db(format!("{:?}", dbe))
+    Error::Db(dbe)
   }
 }
 
@@ -49,10 +67,16 @@ impl ::std::error::Error for Error {
       Error::Db(_) => "Error in interaction with FactDB"
     }
   }
+  fn cause(&self) -> Option<&::std::error::Error> {
+    match *self {
+      Error::Db(ref dbe) => Some(dbe),
+      Error::Invalid(_) | Error::Internal(_) | Error::Type(_) => None
+    }
+  }
 }
 
 fn substitute(clause : &Clause, ans : &Vec<Value>) -> Fact {
-  use native_types::MatchExpr::*;
+  use self::types::MatchExpr::*;
   Fact {
     pred_name : clause.pred_name.clone(),
     args : clause.args.iter().map(|slot| {
@@ -66,6 +90,7 @@ fn substitute(clause : &Clause, ans : &Vec<Value>) -> Fact {
 }
 
 impl Engine {
+  /// Create a fresh engine by handing it a fact database to use
   pub fn new(db : PgDB) -> Engine {
     Engine {
       fact_db    : db,
@@ -74,12 +99,22 @@ impl Engine {
       exec_cache : HashMap::new(),
     }
   }
+  /// Seach the type registry for a named type
+  /// If present, it returns `Some(type)`, otherwise `None`
   pub fn get_type(&self, name : &str) -> Option<Type> {
     self.fact_db.get_type(name)
   }
+  /// Register a new type
+  /// This type must be a named type (e.g. type.name() should return `Some`)
   pub fn add_type(&mut self, type_ : Type) -> Result<(), Error> {
     Ok(try!(self.fact_db.add_type(type_)))
   }
+  /// Register a new predicate
+  /// This defines the type signature of a predicate and persists it
+  ///
+  /// * Predicates must have at least one argument
+  /// * Predicates must have a unique name
+  /// * While using the `pg` backend, their name must be lowercase ascii or '_'
   pub fn new_predicate(&mut self, pred : &Predicate) -> Result<(), Error> {
 
     // Verify we have at least one argument
@@ -102,6 +137,11 @@ impl Engine {
     Ok(try!(self.fact_db.new_predicate(pred)))
   }
 
+  /// Adds a new fact to the database
+  /// If the fact is already present, a new copy will not be added.
+  ///
+  /// * The relevant predicate must already be registered
+  /// * The fact must be correctly typed
   pub fn new_fact(&mut self, fact : &Fact) -> Result<(), Error> {
     match self.fact_db.get_predicate(&fact.pred_name) {
       Some(ref pred) => {
@@ -123,7 +163,13 @@ impl Engine {
     }
   }
 
+  // In an assignment statement, once the rhs has been computed, binds the
+  // rhs value onto the expression on the left, using the state to check that
+  // already bound variables are bound to the same things
+  // It returns list of output states, each of which is a list of var bindings
   fn bind(&self, lhs : &BindExpr, rhs : Value, state : &Vec<Value>) -> Vec<Vec<Value>> {
+    use self::types::BindExpr::*;
+    use self::types::MatchExpr::*;
     match *lhs {
       // If we are unbound, we no-op
       Normal(Unbound) => vec![state.clone()],
@@ -180,12 +226,13 @@ impl Engine {
     }
   }
 
+  // Evaluates an expression, given a set of bindings to variables
   fn eval(&self, expr : &Expr, subs : &Vec<Value>) -> Value {
-    use native_types::Expr::*;
+    use self::types::Expr::*;
     match *expr {
-      EVar(var) => subs[var as usize].clone(),
-      EVal(ref val) => val.clone(),
-      EApp(ref fun_name, ref args) => {
+      Var(var) => subs[var as usize].clone(),
+      Val(ref val) => val.clone(),
+      App(ref fun_name, ref args) => {
         let arg_vals : Vec<Value> = args.iter().map(|arg_expr|{
           self.eval(arg_expr, subs)
         }).collect();
@@ -199,6 +246,10 @@ impl Engine {
     }
   }
 
+  // Checks whether we have already run this particular rule on this particular
+  // assignment of variables. If we have, it returns false, and we can skip
+  // the rerun. If we have not, it updates the cache so that we have, and
+  // returns true.
   fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Value>)
     -> bool {
     match self.exec_cache.entry(rule.clone()) {
@@ -219,6 +270,9 @@ impl Engine {
     }
   }
 
+  // Run a rule once on all body clause matches we have not yet run it on
+  // This function cascades via `new_rule`
+  // TODO change recursive cascade to iterative cascade
   fn run_rule(&mut self, rule : &Rule) {
     let anss = self.fact_db.search_facts(&rule.body).unwrap();
     let mut states : Vec<Vec<Value>> =
@@ -241,10 +295,13 @@ impl Engine {
     }
   }
 
+  /// Given a query (similar to the rhs of a rule in Datalog), provide the set
+  /// of satisfying answers in the database.
   pub fn derive(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Value>>, Error> {
     Ok(try!(self.fact_db.search_facts(query)))
   }
 
+  /// Register a new rule with the database
   pub fn new_rule(&mut self, rule : &Rule) -> Result<(), Error> {
     for pred in &rule.body {
       match self.rules.entry(pred.pred_name.clone()) {
@@ -256,7 +313,12 @@ impl Engine {
     Ok(())
   }
 
-  pub fn reg_func(&mut self, name : String, func : HFunc) {
+  /// Register a new function with the database, to be called from within a
+  /// rule
+  ///
+  /// Do not attempt to register a function name multiple times.
+  // TODO: stop function reregistration, document restriction
+  pub fn reg_func(&mut self, name : String, func : Func) {
       self.funcs.insert(name, func);
   }
 }
