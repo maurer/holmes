@@ -37,9 +37,10 @@ use engine::types::{Fact, Predicate, MatchExpr, Clause};
 mod error;
 pub mod dyn;
 
-pub use self::error::{Error, Result};
+pub use self::error::Error;
 use self::dyn::types;
 use self::dyn::{Type, Value};
+use fact_db::{FactDB, Result};
 
 /// An iterator over a `postgres::rows::Row`.
 /// It does not implement the normal iter interface because it does not have
@@ -117,8 +118,9 @@ impl PgDB {
         let h_type_str : String = type_entry.get(1);
         let h_type = match db.get_type(&h_type_str) {
           Some(ty) => ty,
-          None => return Err(Error::Type(format!("Type not in registry: {}",
-                                                 h_type_str)))
+          None => return Err(Box::new(
+                               Error::Type(format!("Type not in registry: {}",
+                                                   h_type_str))))
         };
         match db.pred_by_name.entry(name.clone()) {
           Vacant(entry) => {
@@ -179,10 +181,11 @@ impl PgDB {
            &[]));
     Ok(())
   }
-
+}
+impl FactDB for PgDB {
   /// Adds a new fact to the database, returning false if the fact was already
   /// present in the database, and true if it was inserted.
-  pub fn insert_fact(&mut self, fact : &Fact) -> Result<bool> {
+  fn insert_fact(&mut self, fact : &Fact) -> Result<bool> {
     let stmt : String = try!(self.insert_by_name
       .get(&fact.pred_name)
       .ok_or(Error::Internal("Insert Statement Missing"
@@ -197,13 +200,13 @@ impl PgDB {
   /// This is unstable, and will likely need to be moved to the initialization
   /// of the database object in order to allow reconnecting to an existing
   /// database.
-  pub fn add_type(&mut self, type_ : Type) -> Result<()> {
+  fn add_type(&mut self, type_ : Type) -> Result<()> {
     let name = type_.name().unwrap();
     if !self.named_types.contains_key(name) {
       self.named_types.insert(name.to_owned(), type_.clone());
       Ok(())
     } else {
-      Err(Error::Type(format!("{} already registered", name)))
+      Err(Box::new(Error::Type(format!("{} already registered", name))))
     }
   }
 
@@ -211,12 +214,12 @@ impl PgDB {
   /// This function is primarily useful for the DSL shorthand for constructing
   /// queries, since it allows you to use names of types when declaring
   /// functions rather than type objects.
-  pub fn get_type(&self, type_str : &str) -> Option<Type> {
+  fn get_type(&self, type_str : &str) -> Option<Type> {
     self.named_types.get(type_str).map(|x|{x.clone()})
   }
 
   /// Fetches a predicate by name
-  pub fn get_predicate(&self, pred_name : &str) -> Option<&Predicate> {
+  fn get_predicate(&self, pred_name : &str) -> Option<&Predicate> {
     self.pred_by_name.get(pred_name)
   }
 
@@ -229,16 +232,16 @@ impl PgDB {
   /// names rather than using the names of predicates, but this helps a lot
   /// with debugging for now.
   // TODO lift restriction on predicate names
-  pub fn new_predicate(&mut self, pred : &Predicate) -> Result<()> {
+  fn new_predicate(&mut self, pred : &Predicate) -> Result<()> {
     // The predicate name is used as a table name, check it for legality
     if !valid_name(&pred.name) {
-      return Err(Error::Arg(
-              "Invalid name: Use lowercase and underscores only".to_string()))
+      return Err(Box::new(Error::Arg(
+              "Invalid name: Use lowercase and underscores only".to_string())))
     }
     // If this predicate was already registered, fail
     if self.pred_by_name.contains_key(&pred.name) {
-      return Err(Error::Arg(
-              format!("Predicate {} already registered.", &pred.name)))
+      return Err(Box::new(Error::Arg(
+              format!("Predicate {} already registered.", &pred.name))))
     }
 
     try!(self.insert_predicate(&pred));
@@ -250,11 +253,11 @@ impl PgDB {
   /// Attempt to match the right hand side of a datalog rule against the
   /// database, returning a list of solution assignments to the bound
   /// variables.
-  pub fn search_facts(&self, query : &Vec<Clause>)
+  fn search_facts(&self, query : &Vec<Clause>)
     -> Result<Vec<Vec<Value>>> {
     // Check there is at least one clause
     if query.len() == 0 {
-      return Err(Error::Arg("Empty search query".to_string()));
+      return Err(Box::new(Error::Arg("Empty search query".to_string())));
     };
 
     // Check that clauses:
@@ -266,9 +269,9 @@ impl PgDB {
       for clause in query.iter() {
         let pred = match self.pred_by_name.get(&clause.pred_name) {
           Some(pred) => pred,
-          None => return Err(Error::Arg(
+          None => return Err(Box::new(Error::Arg(
                   format!("{} is not a registered predicate.",
-                          clause.pred_name))),
+                          clause.pred_name)))),
         };
         for (idx, slot) in clause.args.iter().enumerate() {
           match *slot {
@@ -279,9 +282,9 @@ impl PgDB {
                 if v == var_type.len() {
                   var_type.push(pred.types[idx].clone())
                 } else if v > var_type.len() {
-                  return Err(Error::Arg(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v)))
+                  return Err(Box::new(Error::Arg(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v))))
                 } else if var_type[v] != pred.types[idx].clone() {
-                  return Err(Error::Arg(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx])))
+                  return Err(Box::new(Error::Arg(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx]))))
                 }
               }
           }

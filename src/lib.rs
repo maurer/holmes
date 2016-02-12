@@ -10,11 +10,13 @@ extern crate postgres_array;
 extern crate rustc_serialize;
 
 pub mod pg;
+pub mod fact_db;
 pub mod engine;
 pub mod edsl;
 
 use pg::dyn::{Value, Type};
 use engine::types::*;
+use fact_db::FactDB;
 
 /// Defines the database connection parameters
 // Right now we just do a postgres connection string, other options
@@ -36,7 +38,7 @@ pub enum Error {
   /// There was a database error when setting up the database
   Pg(::postgres::error::Error),
   /// There was an error in the Holmes fact database layer
-  PgDb(pg::Error),
+  Db(Box<::std::error::Error>),
   /// General IO Error
   IO(::std::io::Error),
   /// Parsing the connection string failed
@@ -62,7 +64,7 @@ impl Display for Error {
       NoDB             => fmt.write_str("No database specified"),
       PgConnect(ref e) => fmt.write_fmt(format_args!("Connection failed: {}", e)),
       Pg(ref e)     => fmt.write_fmt(format_args!("Postgres error: {}", e)),
-      PgDb(ref e)   => fmt.write_fmt(format_args!("Deductive DB (postgres) error: {}", e)),
+      Db(ref e)   => fmt.write_fmt(format_args!("Deductive DB error: {}", e)),
       PgConnectStr(ref e) => fmt.write_fmt(format_args!("Connection string failed to parse: {}", e)),
       IO(ref e) => fmt.write_fmt(format_args!("IO failed: {}", e)),
       Engine(ref e) => fmt.write_fmt(format_args!("Engine Error: {}", e))
@@ -84,7 +86,7 @@ impl ::std::error::Error for Error {
       &NoDB              => "No database specified",
       &PgConnect(ref e)  => e.description(),
       &Pg(ref e)         => e.description(),
-      &PgDb(ref e)       => e.description(),
+      &Db(ref e)         => e.description(),
       &IO(ref e)         => e.description(),
       &Engine(ref e)     => e.description(),
       &PgConnectStr(_)   => "Connection string failed to parse"
@@ -100,8 +102,8 @@ impl From<::postgres::error::Error> for Error {
   fn from(e : ::postgres::error::Error) -> Error {Error::Pg(e)}
 }
 
-impl From<pg::Error> for Error {
-  fn from(e : pg::Error) -> Error {Error::PgDb(e)}
+impl From<Box<::std::error::Error>> for Error {
+  fn from(e : Box<::std::error::Error>) -> Error {Error::Db(e)}
 }
 
 impl From<engine::Error> for Error {
@@ -135,7 +137,7 @@ impl<'a> DB {
     Ok(())
   }
   /// Creates a fresh fact database
-  fn create(&self) -> Result<PgDB> {
+  fn create(&self) -> Result<Box<FactDB>> {
     match self {
       &DB::Postgres(ref str) => {
         use postgres::{Connection, SslMode, IntoConnectParams};
@@ -147,7 +149,7 @@ impl<'a> DB {
         let create_query = format!("CREATE DATABASE {}", &old_db);
         //TODO accept success or db already exists, not other errors
         let _ = conn.execute(&create_query, &[]);
-        Ok(try!(PgDB::new(str)))
+        Ok(Box::new(try!(PgDB::new(str))))
       }
     }
   }

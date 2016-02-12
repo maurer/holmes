@@ -10,13 +10,12 @@ use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
-use pg::PgDB;
-use pg;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
+use fact_db::FactDB;
 
 /// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine {
-  fact_db    : PgDB,
+  fact_db    : Box<FactDB>,
   funcs      : HashMap<String, Func>,
   rules      : HashMap<String, Vec<Rule>>,
   exec_cache : HashMap<Rule, HashSet<Vec<Value>>>
@@ -37,11 +36,11 @@ pub enum Error {
   Type(String),
   /// A `Db` error indicates an error that the underlying fact database
   /// component has sent up to the engine
-  Db(pg::Error)
+  Db(Box<::std::error::Error>)
 }
 
-impl ::std::convert::From<pg::Error> for Error {
-  fn from(dbe : pg::Error) -> Self {
+impl ::std::convert::From<Box<::std::error::Error>> for Error {
+  fn from(dbe : Box<::std::error::Error>) -> Self {
     Error::Db(dbe)
   }
 }
@@ -69,7 +68,7 @@ impl ::std::error::Error for Error {
   }
   fn cause(&self) -> Option<&::std::error::Error> {
     match *self {
-      Error::Db(ref dbe) => Some(dbe),
+      Error::Db(ref dbe) => Some(&**dbe),
       Error::Invalid(_) | Error::Internal(_) | Error::Type(_) => None
     }
   }
@@ -91,7 +90,7 @@ fn substitute(clause : &Clause, ans : &Vec<Value>) -> Fact {
 
 impl Engine {
   /// Create a fresh engine by handing it a fact database to use
-  pub fn new(db : PgDB) -> Engine {
+  pub fn new(db : Box<FactDB>) -> Engine {
     Engine {
       fact_db    : db,
       funcs      : HashMap::new(),
