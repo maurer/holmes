@@ -9,6 +9,7 @@
 //! (indexing, joins, etc).
 use fact_db::{FactDB, Result};
 use pg::dyn::{Value, Type};
+use pg::dyn::types::default_types;
 use engine::types::{Fact, Clause, Predicate, MatchExpr};
 use std::collections::{HashMap, HashSet};
 
@@ -28,7 +29,9 @@ impl MemDB {
   pub fn new() -> MemDB {
     MemDB {
       facts : HashSet::new(),
-      types : HashMap::new(),
+      types : default_types().iter().map(|type_| {
+        (type_.name().unwrap().to_owned(), type_.clone())
+      }).collect(),
       preds : HashMap::new()
     }
   }
