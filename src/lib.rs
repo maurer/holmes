@@ -11,6 +11,7 @@ extern crate rustc_serialize;
 
 pub mod pg;
 pub mod fact_db;
+pub mod mem_db;
 pub mod engine;
 pub mod edsl;
 
