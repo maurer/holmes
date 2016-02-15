@@ -18,15 +18,15 @@ pub mod edsl;
 use pg::dyn::{Value, Type};
 use engine::types::*;
 use fact_db::FactDB;
+use mem_db::MemDB;
 
 /// Defines the database connection parameters
-// Right now we just do a postgres connection string, other options
-// (in memory? other dbs?)
-// would go here eventually for instructions on constructing the Holmes object.
 #[derive (Clone)]
 pub enum DB {
-  /// A postgres database, with a connection string
-  Postgres(String)
+  /// A postgres database, via a connection string
+  Postgres(String),
+  /// A memory backed database, *VERY INEFFICIENT*
+  Memory
 }
 
 /// Ways that a `Holmes` operation might go wrong
@@ -134,6 +134,7 @@ impl<'a> DB {
         let drop_query = format!("DROP DATABASE {}", &old_db);
         try!(conn.execute(&drop_query, &[]));
       }
+      &DB::Memory => ()
     }
     Ok(())
   }
@@ -152,6 +153,7 @@ impl<'a> DB {
         let _ = conn.execute(&create_query, &[]);
         Ok(Box::new(try!(PgDB::new(str))))
       }
+      &DB::Memory => Ok(Box::new(MemDB::new()))
     }
   }
 }
