@@ -2,8 +2,203 @@
 //!
 //! Holmes is a Datalog inspired system for binding codependent analyses
 //! together.
-// TODO extend crate docs with example and tutorial on how to write a Holmes
-// program.
+//!
+//! # Tutorial
+//!
+//! ## Basic Datalog
+//! If you are already familiar with logic languages, this section will likely
+//! be straightforwards for you, but it may still be useful to provide an
+//! overview of basic functions and syntax.
+//!
+//! Datalog is a forward-chaining logic language. This means that a program
+//! written in Datalog consists of a set of rules which "fire" whenever their
+//! requirements are met which operate on a database of facts.
+//!
+//! A predicate represents a property on a list of typed values. For example,
+//! to express the distance between two cities in miles, we might write
+//!
+//! ```
+//! # #[macro_use]
+//! # extern crate holmes;
+//! # use holmes::{Holmes, Result};
+//! # use holmes::DB::Memory;
+//! # fn f () -> Result<()> {
+//! # let mut holmes = try!(Holmes::new(Memory));
+//! # let b = &mut holmes;
+//! # holmes_exec!(b, {
+//! predicate!(distance(string, string, uint64))
+//! # });
+//! # Ok(())
+//! # }
+//! # fn main () {f().unwrap()}
+//! ```
+//!
+//! N.B. while this code is being built via doctests, there are a few lines of
+//! support code above and below being hidden for clarity. See the complete
+//! example at the end of the section for a template.
+//!
+//! Facts are formed by the application of predicates to values. Continuing
+//! with the example from before, we can add a fact to the database for the
+//! predicate we defined
+//!
+//! ```
+//! # #[macro_use]
+//! # extern crate holmes;
+//! # use holmes::{Holmes, Result};
+//! # use holmes::DB::Memory;
+//! # fn f () -> Result<()> {
+//! # let mut holmes = try!(Holmes::new(Memory));
+//! # let b = &mut holmes;
+//! # holmes_exec!(b, {
+//! predicate!(distance(string, string, uint64));
+//! fact!(distance("New York", "Albuquerque", 1810))
+//! # });
+//! # Ok(())
+//! # }
+//! # fn main () {f().unwrap()}
+//! ```
+//!
+//! Rules are formed from a body clause and a head clause.
+//! When the rule body matches, variable assignments from the match are
+//! substituted into the head clause, which is then added to the database.
+//! Here, we might want to add the symmetry property to our previous example,
+//! e.g. "If the distance from A to B is N, then the distance from B to A is
+//! also N".
+//!
+//! ```
+//! # #[macro_use]
+//! # extern crate holmes;
+//! # use holmes::{Holmes, Result};
+//! # use holmes::DB::Memory;
+//! # fn f () -> Result<()> {
+//! # let mut holmes = try!(Holmes::new(Memory));
+//! # let b = &mut holmes;
+//! # holmes_exec!(b, {
+//! predicate!(distance(string, string, uint64));
+//! fact!(distance("New York", "Albuquerque", 1810));
+//! rule!(distance(B, A, N) <= distance(A, B, N))
+//! # });
+//! # Ok(())
+//! # }
+//! # fn main () {f().unwrap()}
+//! ```
+//!
+//! Now that the database has more facts in it than we started with, it makes
+//! sense to be able to query the database and see what is inside.
+//!
+//! ```
+//! # #[macro_use]
+//! # extern crate holmes;
+//! # use holmes::{Holmes, Result};
+//! # use holmes::DB::Memory;
+//! # use holmes::pg::dyn::values::ToValue;
+//! # fn f () -> Result<()> {
+//! # let mut holmes_own = try!(Holmes::new(Memory));
+//! # let holmes = &mut holmes_own;
+//! holmes_exec!(holmes, {
+//!   predicate!(distance(string, string, uint64));
+//!   fact!(distance("New York", "Albuquerque", 1810));
+//!   rule!(distance(B, A, N) <= distance(A, B, N))
+//! });
+//! let mut res = try!(query!(holmes, distance(A, [_], [_])));
+//! # res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
+//! #   ::std::cmp::Ordering::Greater));
+//! assert_eq!(res,
+//!            vec![vec!["Albuquerque".to_value()],
+//!                 vec!["New York".to_value()]]);
+//! # Ok(())
+//! # }
+//! # fn main () {f().unwrap()}
+//! ```
+//!
+//! Let's go one step further, and use a rule to check connectivity between
+//! cities, based on the facts in the database. We want to express "If A
+//! connects to B, and B connects to C, then A connects to C".
+//!
+//! ```
+//! # #[macro_use]
+//! # extern crate holmes;
+//! # use holmes::{Holmes, Result};
+//! # use holmes::DB::Memory;
+//! # use holmes::pg::dyn::values::ToValue;
+//! # fn f () -> Result<()> {
+//! # let mut holmes_own = try!(Holmes::new(Memory));
+//! # let holmes = &mut holmes_own;
+//! holmes_exec!(holmes, {
+//!   predicate!(distance(string, string, uint64));
+//!   fact!(distance("New York", "Albuquerque", 1810));
+//!   fact!(distance("New York", "Las Vegas", 2225));
+//!   fact!(distance("Las Vegas", "Palo Alto", 542));
+//!   fact!(distance("Rome", "Florence", 173));
+//!   rule!(distance(B, A, N) <= distance(A, B, N));
+//!   predicate!(connected(string, string));
+//!   rule!(connected(A, B) <= distance(A, B, [_]));
+//!   rule!(connected(A, C) <= connected(A, B) & connected(B, C))
+//! });
+//! assert_eq!(try!(query!(holmes, connected(("Rome"), ("Las Vegas")))).len(),
+//!            0);
+//! let mut res = try!(query!(holmes, connected(("Palo Alto"), x)));
+//! # res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
+//! #   ::std::cmp::Ordering::Greater));
+//! assert_eq!(res,
+//!            vec![vec!["Albuquerque".to_value()],
+//!                 vec!["Las Vegas".to_value()],
+//!                 vec!["New York".to_value()],
+//!                 vec!["Palo Alto".to_value()]]);
+//! # Ok(())
+//! # }
+//! # fn main () {f().unwrap()}
+//! ```
+//!
+//! Finally, just for reference (so you can actually write your own program
+//! using this) here's the unredacted version of that last example:
+//!
+//! ```
+//! #[macro_use]
+//! extern crate holmes;
+//! use holmes::{Holmes, Result};
+//! use holmes::DB::Memory;
+//! use holmes::pg::dyn::values::ToValue;
+//! fn f () -> Result<()> {
+//!   // I'm using `Memory` in the examples, but you probably don't want to use
+//!   // it in your own code. Check out `Holmes::DB`'s wings to see what your
+//!   // options are. `Memory` is super slow for the moment, and I don't forsee
+//!   // taking time to optimize it.
+//!   let mut holmes_own = try!(Holmes::new(Memory));
+//!   // For the moment, the `holmes_exec` macro needs a &mut ident. I'll
+//!   // try to make this more flexible in the future.
+//!   let holmes = &mut holmes_own;
+//!   holmes_exec!(holmes, {
+//!     predicate!(distance(string, string, uint64));
+//!     fact!(distance("New York", "Albuquerque", 1810));
+//!     fact!(distance("New York", "Las Vegas", 2225));
+//!     fact!(distance("Las Vegas", "Palo Alto", 542));
+//!     fact!(distance("Rome", "Florence", 173));
+//!     rule!(distance(B, A, N) <= distance(A, B, N));
+//!     predicate!(connected(string, string));
+//!     rule!(connected(A, B) <= distance(A, B, [_]));
+//!     rule!(connected(A, C) <= connected(A, B) & connected(B, C))
+//!   });
+//!   assert_eq!(try!(query!(holmes, connected(("Rome"), ("Las Vegas")))).len(),
+//!              0);
+//!   let mut res = try!(query!(holmes, connected(("Palo Alto"), x)));
+//!   // Order is not gauranteed when it comes back from the query, so I
+//!   // sort it in the example to get the doctest to pass. `Value` only has
+//!   // `PartialOrd` implemented for it, since there isn't a clean comparison
+//!   // between `Value`s of different types, so I just default to `Greater`.
+//!   res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
+//!     ::std::cmp::Ordering::Greater));
+//!   assert_eq!(res,
+//!              vec![vec!["Albuquerque".to_value()],
+//!                   vec!["Las Vegas".to_value()],
+//!                   vec!["New York".to_value()],
+//!                   vec!["Palo Alto".to_value()]]);
+//!   Ok(())
+//! }
+//! fn main () {f().unwrap()}
+//! ```
+//!
+// TODO extend crate docs with example and tutorial on how to use functions
 #![warn(missing_docs)]
 extern crate postgres;
 extern crate postgres_array;
