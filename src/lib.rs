@@ -14,6 +14,8 @@
 //! written in Datalog consists of a set of rules which "fire" whenever their
 //! requirements are met which operate on a database of facts.
 //!
+//! ### Predicates
+//!
 //! A predicate represents a property on a list of typed values. For example,
 //! to express the distance between two cities in miles, we might write
 //!
@@ -37,6 +39,8 @@
 //! support code above and below being hidden for clarity. See the complete
 //! example at the end of the section for a template.
 //!
+//! ### Facts
+//!
 //! Facts are formed by the application of predicates to values. Continuing
 //! with the example from before, we can add a fact to the database for the
 //! predicate we defined
@@ -57,6 +61,8 @@
 //! # }
 //! # fn main () {f().unwrap()}
 //! ```
+//!
+//! ### Rules
 //!
 //! Rules are formed from a body clause and a head clause.
 //! When the rule body matches, variable assignments from the match are
@@ -82,6 +88,8 @@
 //! # }
 //! # fn main () {f().unwrap()}
 //! ```
+//!
+//! ### Queries
 //!
 //! Now that the database has more facts in it than we started with, it makes
 //! sense to be able to query the database and see what is inside.
@@ -110,6 +118,8 @@
 //! # }
 //! # fn main () {f().unwrap()}
 //! ```
+//!
+//! ### Recursive Rules
 //!
 //! Let's go one step further, and use a rule to check connectivity between
 //! cities, based on the facts in the database. We want to express "If A
@@ -149,6 +159,8 @@
 //! # }
 //! # fn main () {f().unwrap()}
 //! ```
+//!
+//! ### Complete Example
 //!
 //! Finally, just for reference (so you can actually write your own program
 //! using this) here's the unredacted version of that last example:
