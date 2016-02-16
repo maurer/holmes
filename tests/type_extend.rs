@@ -28,7 +28,7 @@ impl TypeT for BoolType {
   }
 }
 
-#[derive(Debug,PartialEq,Hash)]
+#[derive(Debug,PartialEq,PartialOrd,Hash)]
 pub struct BoolValue {
   val : bool
 }
@@ -57,6 +57,9 @@ impl ValueT for BoolValue {
       Some(x) => self == x,
       _ => false
     }
+  }
+  fn inner_ord(&self, other : &ValueT) -> Option<::std::cmp::Ordering> {
+    other.inner().downcast_ref::<Self>().and_then(|x|self.partial_cmp(x))
   }
 }
 

@@ -296,6 +296,7 @@ pub mod values {
   use super::Type;
   use super::Value;
   use super::types;
+  use std::cmp::Ordering;
 
   /// This trait defines the interface any value must implement in order to be
   /// used in the Holmes language.
@@ -323,6 +324,11 @@ pub mod values {
     /// Similar to `inner`, `inner_eq` exports a `PartialEq` instance from
     /// the underlying type.
     fn inner_eq(&self, other : &ValueT) -> bool;
+    /// Check order
+    ///
+    /// Similar to `inner`, `inner_ord` exports an `Ord` instance form
+    /// the underlying type
+    fn inner_ord(&self, &ValueT) -> Option<Ordering>;
   }
 
   impl Hash for ValueT {
@@ -347,8 +353,14 @@ pub mod values {
     }
   }
 
+  impl PartialOrd for ValueT {
+    fn partial_cmp(&self, other : &ValueT) -> Option<Ordering> {
+      self.inner_ord(other)
+    }
+  }
+
   /// A list of samely typed values.
-  #[derive(Debug,Clone,PartialEq,Hash)]
+  #[derive(Debug,Clone,PartialEq,Hash,PartialOrd,Eq)]
   pub struct List {
     elements : Vec<Value>,
   }
@@ -377,6 +389,11 @@ pub mod values {
       };
       self == other_typed
     }
+    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+        self.partial_cmp(other_typed)
+      })
+    }
   }
 
   impl List {
@@ -388,7 +405,7 @@ pub mod values {
 
 
   /// A tuple of potentially differently typed values.
-  #[derive(Debug,Clone,PartialEq,Hash)]
+  #[derive(Debug,Clone,PartialEq,PartialOrd,Hash)]
   pub struct Tuple {
     elements : Vec<Value>,
   }
@@ -413,6 +430,11 @@ pub mod values {
       };
       self == other_typed
     }
+    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+        self.partial_cmp(other_typed)
+      })
+    }
   }
 
   impl Tuple {
@@ -423,7 +445,7 @@ pub mod values {
   }
 
   /// Holds an unsigned 64-bit int
-  #[derive(Debug,PartialEq,Hash)]
+  #[derive(Debug,PartialEq,PartialOrd,Hash)]
   pub struct UInt64 {
     val : u64,
     sql : i64
@@ -493,6 +515,11 @@ pub mod values {
       };
       self == other_typed
     }
+    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+        self.partial_cmp(other_typed)
+      })
+    }
   }
 
   impl UInt64 {
@@ -503,7 +530,7 @@ pub mod values {
   }
 
   /// Holds text
-  #[derive(Debug,PartialEq,Hash)]
+  #[derive(Debug,PartialEq,PartialOrd,Hash)]
   pub struct String {
     val : ::std::string::String,
   }
@@ -528,6 +555,11 @@ pub mod values {
       };
       self == other_typed
     }
+    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+        self.partial_cmp(other_typed)
+      })
+    }
   }
 
   impl String {
@@ -538,7 +570,7 @@ pub mod values {
   }
 
   /// Holds raw data
-  #[derive(Debug,PartialEq,Hash)]
+  #[derive(Debug,PartialEq,PartialOrd,Hash)]
   pub struct Bytes {
     val : Vec<u8>,
   }
@@ -562,6 +594,11 @@ pub mod values {
         None => return false
       };
       self == other_typed
+    }
+    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+        self.partial_cmp(other_typed)
+      })
     }
   }
 
