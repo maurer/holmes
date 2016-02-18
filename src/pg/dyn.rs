@@ -200,7 +200,31 @@ pub mod types {
   /// Provides a list of provided named types for use by the database
   /// as a default set of types.
   pub fn default_types() -> Vec<Type> {
-    vec![Arc::new(UInt64), Arc::new(String), Arc::new(Bytes)]
+    vec![Arc::new(UInt64), Arc::new(String), Arc::new(Bytes), Arc::new(Bool)]
+  }
+
+  /// Boolean type
+  #[derive(Debug,Clone,Hash)]
+  pub struct Bool;
+  impl TypeT for Bool {
+    fn name(&self) -> Option<&'static str> {
+      Some("bool")
+    }
+    fn extract(&self, rows : &mut RowIter) -> Value {
+      values::Bool::new(rows.next().unwrap())
+    }
+    fn repr(&self) -> Vec<::std::string::String> {
+      vec!["bool".to_string()]
+    }
+    fn inner(&self) -> &Any {
+      self as &Any
+    }
+    fn inner_eq(&self, other : &TypeT) -> bool {
+      match other.inner().downcast_ref::<Self>() {
+        Some(_) => true,
+        _ => false
+      }
+    }
   }
 
   /// Unsigned 64-bit int type
@@ -444,11 +468,51 @@ pub mod values {
     }
   }
 
-  /// Holds an unsigned 64-bit int
+  /// Holds a boolean
   #[derive(Debug,PartialEq,PartialOrd,Hash)]
-  pub struct UInt64 {
-    val : u64,
-    sql : i64
+  pub struct Bool {
+    val : bool
+  }
+
+  impl Bool {
+    /// Creates a new boolean Holmes value
+    pub fn new(b : bool) -> Arc<Self> {
+      Arc::new(Bool { val : b })
+    }
+  }
+
+  impl ValueT for Bool {
+    fn type_(&self) -> Type {
+      Arc::new(types::Bool)
+    }
+    fn get(&self) -> &Any {
+      &self.val as &Any
+    }
+    fn to_sql(&self) -> Vec<&ToSql> {
+      vec![&self.val]
+    }
+    fn inner(&self) -> &Any {
+      self as &Any
+    }
+    fn inner_eq(&self, other : &ValueT) -> bool {
+      let other_typed : &Bool = match other.inner().downcast_ref::<Self>() {
+        Some(x) => x,
+        None => return false
+      };
+      self == other_typed
+    }
+    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+        self.partial_cmp(other_typed)
+      })
+    }
+  }
+
+
+  impl ToValue for bool {
+    fn to_value(self) -> Value {
+      Bool::new(self)
+    }
   }
 
   impl ToValue for u64 {
@@ -493,6 +557,13 @@ pub mod values {
     fn to_value(self) -> Value {
       String::new(self.to_string())
     }
+  }
+
+  /// Holds an unsigned 64-bit int
+  #[derive(Debug,PartialEq,PartialOrd,Hash)]
+  pub struct UInt64 {
+    val : u64,
+    sql : i64
   }
 
   impl ValueT for UInt64 {

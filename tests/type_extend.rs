@@ -9,7 +9,7 @@ use holmes::pg::dyn::types::TypeT;
 struct BoolType;
 impl TypeT for BoolType {
   fn name(&self) -> Option<&'static str> {
-    Some("bool")
+    Some("bool2")
   }
   fn extract(&self, rows : &mut RowIter) -> Value {
     Arc::new(BoolValue::new(rows.next().unwrap()))
@@ -73,7 +73,7 @@ impl BoolValue {
 pub fn add_bool() {
   single(&|holmes : &mut Holmes| {
     try!(holmes.add_type(Arc::new(BoolType)));
-    try!(predicate!(holmes, type_pred(uint64, bool)));
+    try!(predicate!(holmes, type_pred(uint64, bool2)));
     try!(fact!(holmes, type_pred(32, BoolValue::new(false))));
     try!(fact!(holmes, type_pred(42, BoolValue::new(true))));
     assert_eq!(try!(query!(holmes, type_pred((32), x))),
