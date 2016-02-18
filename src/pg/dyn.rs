@@ -1,5 +1,6 @@
 //! This module provides extensible, dynamically typed persistable values for
 //! use in the Holmes language and postgres db.
+//TODO put a demo on custom types in here
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
