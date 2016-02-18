@@ -68,7 +68,7 @@ macro_rules! predicate {
       types : types
     })
   }};
-  ($pred_name:ident($($t:tt),*)) => { |holmes : &mut Holmes| {
+  ($pred_name:ident($($t:tt),*)) => { |holmes : &mut ::holmes::Holmes| {
     let res : ::holmes::Result<()> = predicate!(holmes, $pred_name($($t),*));
     res
   }};
@@ -93,7 +93,7 @@ macro_rules! fact {
       args : vec![$(::holmes::pg::dyn::values::ToValue::to_value($a)),*]
     })
   };
-  ($pred_name:ident($($a:expr),*)) => { |holmes : &mut Holmes| {
+  ($pred_name:ident($($a:expr),*)) => { |holmes : &mut ::holmes::Holmes| {
     let res : ::holmes::Result<()> = fact!(holmes, $pred_name($($a),*));
     res
   }};
@@ -193,12 +193,12 @@ macro_rules! rule {
     })
   }};
   ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*) => {
-    |holmes : &mut Holmes| {
+    |holmes : &mut ::holmes::Holmes| {
       rule!(holmes, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {})
     }
   };
   ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
-    |holmes : &mut Holmes| {
+    |holmes : &mut ::holmes::Holmes| {
       rule!(holmes, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
     }
   };
@@ -224,12 +224,12 @@ macro_rules! func {
     let dst = htype!($holmes, $dst);
     $holmes.reg_func(stringify!($name).to_string(),
                      src, dst,
-                     Box::new(|v : Value| {
+                     Box::new(|v : ::holmes::pg::dyn::Value| {
                        $body(typed_unpack!(v, $src)).to_value()
                      }))
   }};
   (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
-    |holmes : &mut Holmes| {
+    |holmes : &mut ::holmes::Holmes| {
       func!(holmes, let $name : $src -> $dst = $body)
     }
   };
@@ -250,13 +250,15 @@ pub mod internal {
   #[macro_export]
   macro_rules! typed_unpack {
     ($val:expr, [$typ:tt]) => {
-      $val.get().downcast_ref::<Vec<Value>>().unwrap().into_iter().map(|v| {
+      $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>().unwrap()
+          .into_iter().map(|v| {
         typed_unpack!(v, $typ)
       }).collect::<Vec<_>>()
     };
     ($val:expr, ($($typ:tt),*)) => {{
-      let pack = $val.get().downcast_ref::<Vec<Value>>().unwrap().into_iter();
-      ($(typed_unpack!($typ, pack.next().unwrap())),*)
+      let mut pack = $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>()
+                         .unwrap().into_iter();
+      ($(typed_unpack!(pack.next().unwrap(), $typ)),*)
     }};
     ($val:expr, $name:ident) => {$val.get().downcast_ref().unwrap()};
   }
