@@ -14,7 +14,7 @@
 macro_rules! htype {
   ($holmes:ident, [$t:tt]) => { ::holmes::pg::dyn::types::List::new(htype!($holmes, $t)) };
   ($holmes:ident, ($($t:tt),*)) => { ::holmes::pg::dyn::types::Tuple::new(vec![$(htype!($holmes, $t)),*]) };
-  ($holmes:ident, $i:ident) => { $holmes.get_type(stringify!($i)).unwrap() };
+  ($holmes:ident, $i:ident) => { $holmes.get_type(stringify!($i)).expect(&format!("Type not present in database: {}", stringify!($i))) };
 }
 
 /// Shorthand notation for performing many actions with the same holmes context
@@ -250,17 +250,17 @@ pub mod internal {
   #[macro_export]
   macro_rules! typed_unpack {
     ($val:expr, [$typ:tt]) => {
-      $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>().unwrap()
+      $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>().expect("Dynamic list unpack failed")
           .into_iter().map(|v| {
         typed_unpack!(v, $typ)
       }).collect::<Vec<_>>()
     };
     ($val:expr, ($($typ:tt),*)) => {{
       let mut pack = $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>()
-                         .unwrap().into_iter();
-      ($(typed_unpack!(pack.next().unwrap(), $typ)),*)
+                         .expect("Dynamic tuple unpack failed").into_iter();
+      ($(typed_unpack!(pack.next().expect("Dynamic tuple too short"), $typ)),*)
     }};
-    ($val:expr, $name:ident) => {$val.get().downcast_ref().unwrap()};
+    ($val:expr, $name:ident) => {$val.get().downcast_ref().expect("Dynamic base type unpack failed")};
   }
   /// Constructs a bind match outer object.
   ///
