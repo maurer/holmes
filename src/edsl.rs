@@ -225,7 +225,7 @@ macro_rules! func {
     $holmes.reg_func(stringify!($name).to_string(),
                      src, dst,
                      Box::new(|v : ::holmes::pg::dyn::Value| {
-                       $body(typed_unpack!(v, $src)).to_value()
+                       ::holmes::pg::dyn::values::ToValue::to_value($body(typed_unpack!(v, $src)))
                      }))
   }};
   (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
