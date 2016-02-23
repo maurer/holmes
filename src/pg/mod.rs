@@ -372,7 +372,6 @@ impl FactDB for PgDB {
       format!("SELECT {} FROM {} {} {}",
               vars, main_table, join_query,
               where_clause);
-    println!("{}", raw_stmt);
     let stmt = try!(self.conn.prepare(&raw_stmt));
     let rows = try!(stmt.query(&vals));
 
