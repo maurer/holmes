@@ -290,7 +290,7 @@ impl Engine {
       states = next_states;
     }
     for state in states {
-      assert!(self.new_fact(&substitute(&rule.head, &state)).is_ok());
+      self.new_fact(&substitute(&rule.head, &state)).unwrap();
     }
   }
 

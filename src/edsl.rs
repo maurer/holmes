@@ -260,7 +260,7 @@ pub mod internal {
                          .expect("Dynamic tuple unpack failed").into_iter();
       ($(typed_unpack!(pack.next().expect("Dynamic tuple too short"), $typ)),*)
     }};
-    ($val:expr, $name:ident) => {$val.get().downcast_ref().expect("Dynamic base type unpack failed")};
+    ($val:expr, $name:ident) => {$val.get().downcast_ref().expect(concat!("Dynamic base type unpack failed for ", stringify!($name)))};
   }
   /// Constructs a bind match outer object.
   ///
