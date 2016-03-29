@@ -310,6 +310,27 @@ pub mod values {
   use super::types;
   use std::cmp::Ordering;
 
+  #[macro_export]
+  macro_rules! valuet_boiler {
+      () => {
+        fn inner(&self) -> &Any {
+          self as &Any
+        }
+        fn inner_eq(&self, other : &ValueT) -> bool {
+          let other_typed = match other.inner().downcast_ref::<Self>() {
+            Some(x) => x,
+            None => return false
+          };
+          self == other_typed
+        }
+        fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+          other.inner().downcast_ref::<Self>().and_then(|other_typed|{
+            self.partial_cmp(other_typed)
+          })
+        }
+      }
+  }
+ 
   /// This trait defines the interface any value must implement in order to be
   /// used in the Holmes language.
   pub trait ValueT : Sync + Send + HashTO + fmt::Debug + Any {
@@ -391,21 +412,7 @@ pub mod values {
     fn to_sql(&self) -> Vec<&ToSql> {
       panic!("List SQL disabled")
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &ValueT) -> bool {
-      let other_typed : &List = match other.inner().downcast_ref::<Self>() {
-        Some(x) => x,
-        None => return false
-      };
-      self == other_typed
-    }
-    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
-      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
-        self.partial_cmp(other_typed)
-      })
-    }
+    valuet_boiler!();
   }
 
   impl List {
@@ -432,21 +439,7 @@ pub mod values {
     fn to_sql(&self) -> Vec<&ToSql> {
       self.elements.iter().flat_map(|val| val.to_sql()).collect()
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &ValueT) -> bool {
-      let other_typed : &Tuple = match other.inner().downcast_ref::<Self>() {
-        Some(x) => x,
-        None => return false
-      };
-      self == other_typed
-    }
-    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
-      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
-        self.partial_cmp(other_typed)
-      })
-    }
+    valuet_boiler!();
   }
 
   impl Tuple {
@@ -479,21 +472,7 @@ pub mod values {
     fn to_sql(&self) -> Vec<&ToSql> {
       vec![&self.val]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &ValueT) -> bool {
-      let other_typed : &Bool = match other.inner().downcast_ref::<Self>() {
-        Some(x) => x,
-        None => return false
-      };
-      self == other_typed
-    }
-    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
-      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
-        self.partial_cmp(other_typed)
-      })
-    }
+    valuet_boiler!();
   }
 
 
@@ -564,21 +543,7 @@ pub mod values {
     fn to_sql(&self) -> Vec<&ToSql> {
       vec![&self.sql]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &ValueT) -> bool {
-      let other_typed : &UInt64 = match other.inner().downcast_ref::<Self>() {
-        Some(x) => x,
-        None => return false
-      };
-      self == other_typed
-    }
-    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
-      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
-        self.partial_cmp(other_typed)
-      })
-    }
+    valuet_boiler!();
   }
 
   impl UInt64 {
@@ -604,21 +569,7 @@ pub mod values {
     fn to_sql(&self) -> Vec<&ToSql> {
       vec![&self.val as &ToSql]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &ValueT) -> bool {
-      let other_typed : &String = match other.inner().downcast_ref::<Self>() {
-        Some(x) => x,
-        None => return false
-      };
-      self == other_typed
-    }
-    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
-      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
-        self.partial_cmp(other_typed)
-      })
-    }
+    valuet_boiler!();
   }
 
   impl String {
@@ -644,21 +595,7 @@ pub mod values {
     fn to_sql(&self) -> Vec<&ToSql> {
       vec![&self.val as &ToSql]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &ValueT) -> bool {
-      let other_typed : &Bytes = match other.inner().downcast_ref::<Self>() {
-        Some(x) => x,
-        None => return false
-      };
-      self == other_typed
-    }
-    fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
-      other.inner().downcast_ref::<Self>().and_then(|other_typed|{
-        self.partial_cmp(other_typed)
-      })
-    }
+    valuet_boiler!();
   }
 
   impl Bytes {
