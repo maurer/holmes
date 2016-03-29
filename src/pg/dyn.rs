@@ -73,6 +73,36 @@ pub mod types {
   use super::Type;
   use super::Value;
 
+  #[macro_export]
+  macro_rules! typet_inner {
+      () => {
+          fn inner(&self) -> &Any {
+              self as &Any
+          }
+      }
+  }
+
+  #[macro_export]
+  macro_rules! typet_inner_eq {
+      () => {
+          fn inner_eq(&self, other : &TypeT) -> bool {
+              let other_self = match other.inner().downcast_ref() {
+                  Some(x) => x,
+                  None => return false
+              };
+              self == other_self
+          }
+      }
+  }
+
+  #[macro_export]
+  macro_rules! typet_boiler {
+      () => {
+          typet_inner!();
+          typet_inner_eq!();
+      }
+  }
+
   /// The TypeT trait defines the interface a new Holmes type must implement
   /// to be registered.
   pub trait TypeT : Sync + Send + HashTO + Any {
@@ -104,7 +134,7 @@ pub mod types {
     ///
     /// Similar to `inner`, `inner_eq` exports a `PartialEq` instance from
     /// the underlying type.
-    fn inner_eq(&self, &TypeT) -> bool;
+    fn inner_eq(&self, other : &TypeT) -> bool;
   }
 
   impl Hash for TypeT {
@@ -128,7 +158,7 @@ pub mod types {
 
   /// A tuple of other `Type`s
   /// This type is anonymous.
-  #[derive(Debug,Clone,Hash)]
+  #[derive(Debug,Clone,Hash,PartialEq)]
   pub struct Tuple {
     elements : Vec<Type>
   }
@@ -141,6 +171,7 @@ pub mod types {
   }
 
   impl TypeT for Tuple {
+      typet_boiler!();
     fn name(&self) -> Option<&'static str> {
       None
     }
@@ -149,16 +180,6 @@ pub mod types {
     }
     fn repr(&self) -> Vec<::std::string::String> {
       self.elements.iter().flat_map(|elem| {elem.repr()}).collect()
-    }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &TypeT) -> bool {
-      match other.inner().downcast_ref::<Self>() {
-        Some(tup) => self.elements == tup.elements,
-        // If the target is not a tuple, our types are not equal.
-        None => false
-      }
     }
   }
 
@@ -176,7 +197,15 @@ pub mod types {
     }
   }
 
+  // PartialEq won't derive right
+  impl PartialEq for List {
+      fn eq(&self, other: &Self) -> bool {
+          *self.elem == *other.elem
+      }
+  }
+
   impl TypeT for List {
+      typet_boiler!();
     fn name(&self) -> Option<&'static str> {
       None
     }
@@ -185,16 +214,6 @@ pub mod types {
     }
     fn repr(&self) -> Vec<::std::string::String> {
       panic!("List support disabled, will be re-enabled via arrays maybe")
-    }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &TypeT) -> bool {
-      match other.inner().downcast_ref::<Self>() {
-        Some(ref tup) => self.elem == tup.elem.clone(),
-        // If the target is not a tuple, our types are not equal.
-        None => false
-      }
     }
   }
 
@@ -205,9 +224,10 @@ pub mod types {
   }
 
   /// Boolean type
-  #[derive(Debug,Clone,Hash)]
+  #[derive(Debug,Clone,Hash,PartialEq)]
   pub struct Bool;
   impl TypeT for Bool {
+      typet_boiler!();
     fn name(&self) -> Option<&'static str> {
       Some("bool")
     }
@@ -217,22 +237,14 @@ pub mod types {
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["bool".to_string()]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &TypeT) -> bool {
-      match other.inner().downcast_ref::<Self>() {
-        Some(_) => true,
-        _ => false
-      }
-    }
   }
 
   /// Unsigned 64-bit int type
-  #[derive(Debug,Clone,Hash)]
+  #[derive(Debug,Clone,Hash,PartialEq)]
   pub struct UInt64;
 
   impl TypeT for UInt64 {
+      typet_boiler!();
     fn name(&self) -> Option<&'static str> {
       Some("uint64")
     }
@@ -243,23 +255,15 @@ pub mod types {
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["int8".to_string()]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &TypeT) -> bool {
-      match other.inner().downcast_ref::<Self>() {
-        Some(_) => true,
-        _ => false
-      }
-    }
   }
 
   /// `String` type
   /// Use this for text. If you want to store a buffer, use `Bytes` instead.
-  #[derive(Debug,Clone,Hash)]
+  #[derive(Debug,Clone,Hash,PartialEq)]
   pub struct String;
 
   impl TypeT for String {
+      typet_boiler!();
     fn name(&self) -> Option<&'static str> {
       Some("string")
     }
@@ -269,23 +273,15 @@ pub mod types {
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["varchar".to_string()]
     }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &TypeT) -> bool {
-      match other.inner().downcast_ref::<Self>() {
-        Some(_) => true,
-        _ => false
-      }
-    }
   }
 
   /// `Bytes` is for storing raw data
   /// If you want to store text, use the `String` type.
-  #[derive(Debug,Clone,Hash)]
+  #[derive(Debug,Clone,Hash,PartialEq)]
   pub struct Bytes;
 
   impl TypeT for Bytes {
+      typet_boiler!();
     fn name(&self) -> Option<&'static str> {
       Some("bytes")
     }
@@ -294,15 +290,6 @@ pub mod types {
     }
     fn repr(&self) -> Vec<::std::string::String> {
       vec!["bytea".to_string()]
-    }
-    fn inner(&self) -> &Any {
-      self as &Any
-    }
-    fn inner_eq(&self, other : &TypeT) -> bool {
-      match other.inner().downcast_ref::<Self>() {
-        Some(_) => true,
-        _ => false
-      }
     }
   }
 

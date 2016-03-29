@@ -555,7 +555,6 @@ pub mod engine;
 pub mod edsl;
 
 use pg::dyn::{Value, Type};
-use engine::types::*;
 use fact_db::FactDB;
 use mem_db::MemDB;
 
