@@ -76,8 +76,8 @@ pub mod types {
   #[macro_export]
   macro_rules! typet_inner {
       () => {
-          fn inner(&self) -> &Any {
-              self as &Any
+          fn inner(&self) -> &::std::any::Any {
+              self as &::std::any::Any
           }
       }
   }
@@ -313,8 +313,8 @@ pub mod values {
   #[macro_export]
   macro_rules! valuet_boiler {
       () => {
-        fn inner(&self) -> &Any {
-          self as &Any
+        fn inner(&self) -> &::std::any::Any {
+          self as &::std::any::Any
         }
         fn inner_eq(&self, other : &ValueT) -> bool {
           let other_typed = match other.inner().downcast_ref::<Self>() {
@@ -323,7 +323,7 @@ pub mod values {
           };
           self == other_typed
         }
-        fn inner_ord(&self, other : &ValueT) -> Option<Ordering> {
+        fn inner_ord(&self, other : &ValueT) -> Option<::std::cmp::Ordering> {
           other.inner().downcast_ref::<Self>().and_then(|other_typed|{
             self.partial_cmp(other_typed)
           })
