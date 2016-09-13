@@ -7,10 +7,10 @@
 A system for integrating multiple analyses using a logic language.
 
 ## Requirements
-* **Rust** - Holmes is developed against [Rust 1.6.0](https://static.rust-lang.org/dist/rust-1.6.0-x86_64-unknown-linux-gnu.tar.gz).
+* **Rust** - Holmes is developed against [Rust 1.11.0](https://static.rust-lang.org/dist/rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz).
 
 * **PostgreSQL** - Holmes uses **PostgreSQL** to back its datastore.
-  I develop against 9.4, and test against 9.3 on [Travis](https://travis-ci.org/maurer/holmes).
+  I develop against 9.5, and test against 9.4 on [Travis](https://travis-ci.org/maurer/holmes).
   However, there should not be a strong version dependency, and other versions will likely work.
   Other backing stores may become available in the future.
 
