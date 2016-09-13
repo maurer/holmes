@@ -1,7 +1,7 @@
 sudo: false
 language: rust
 addons:
-  postgresql: 9.3
+  postgresql: 9.4
   apt:
     packages:
       - libcurl4-openssl-dev
@@ -15,10 +15,9 @@ rust:
   - stable
 
 before_script:
-  # Make a holmes:holmes user for the tests
+  # Activate a clean postgres database with a holmes user
   - |
-      createuser -U postgres -ld holmes
-      psql -c "ALTER USER holmes UNENCRYPTED PASSWORD 'holmes'" -U postgres
+      export HOLMES_PG_SOCK_DIR=`tools/pg.bash holmes`
   # Install travis-cargo
   - |
       pip install 'travis-cargo<0.2' --user &&

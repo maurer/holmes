@@ -1,5 +1,6 @@
 #[macro_use] extern crate holmes;
 extern crate postgres;
+extern crate url;
 
 mod common;
 mod predicate_basic;
