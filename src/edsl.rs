@@ -316,6 +316,19 @@ pub mod internal {
     };
   }
 
+  #[macro_export]
+  macro_rules! db_expr {
+    ($vars:ident, ($v:expr)) => {{
+       ::holmes::engine::types::DBExpr::Val($v)
+    }};
+    ($vars:ident, [$n:ident]) => {{
+       match $vars.get(stringify!($n)) {
+         Some(varnum) => ::holmes::engine::types::DBExpr::Var(*varnum),
+         None => panic!("Referenced undefined variable in substring clause")
+       }
+    }};
+  }
+
   /// Generates a `MatchExpr` from a representation
   ///
   /// Args:
@@ -332,6 +345,18 @@ pub mod internal {
   ///   * `x` -> variable bind
   #[macro_export]
   macro_rules! clause_match {
+    ($vars:ident, $n:ident, {$start:tt, $end:tt, $v:ident}) => {{
+      use std::collections::hash_map::Entry::*;
+      use ::holmes::engine::types::MatchExpr::*;
+      match $vars.entry(stringify!($v).to_string()) {
+        Occupied(_) => (),
+        Vacant(entry) => {
+          $n = $n + 1;
+          entry.insert($n - 1);
+        }
+      }
+      SubStr(db_expr!($vars, $start), db_expr!($vars, $end), *$vars.get(stringify!($v)).unwrap())
+    }};
     ($vars:ident, $n:ident, [_]) => { ::holmes::engine::types::MatchExpr::Unbound };
     ($vars:ident, $n:ident, ($v:expr)) => {
         ::holmes::engine::types::MatchExpr::Const(::holmes::pg::dyn::values::ToValue::to_value($v)) };

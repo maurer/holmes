@@ -81,6 +81,7 @@ fn substitute(clause : &Clause, ans : &Vec<Value>) -> Fact {
     args : clause.args.iter().map(|slot| {
       match slot {
         &Unbound       => panic!("Unbound is not allowed in substituted facts"),
+        &SubStr(_,_,_) => panic!("Substring is not allowed in substituted facts"),
         &Var(ref n)    => ans[*n as usize].clone(),
         &Const(ref v) => v.clone()
       }
@@ -172,6 +173,8 @@ impl Engine {
     match *lhs {
       // If we are unbound, we no-op
       Normal(Unbound) => vec![state.clone()],
+      // Substring bindings don't make sense here
+      Normal(SubStr(_,_,_)) => panic!("Substring binding in where clause not allowed"),
       // To bind to a variable,
       Normal(Var(v))  => {
         // If the variable is defined, check equality

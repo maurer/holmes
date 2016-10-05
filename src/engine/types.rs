@@ -73,7 +73,12 @@ pub enum MatchExpr {
   /// only match if the definition matches the contents of the slot
   Var(Var),
   /// Only match if the contents of the slot match the provided value
-  Const(Value)
+  Const(Value),
+  /// Perform a substring operation on the database side before performing the
+  /// rest of matching on this field
+  /// This really should be a MatchExpr, but I'm restricting it to Var for
+  /// implementation simplicity for the moment.
+  SubStr(DBExpr, DBExpr, Var)
 }
 
 // This is a temporary impl. PartialEq should be derivable, but a compiler bug
@@ -85,6 +90,7 @@ impl PartialEq for MatchExpr {
       (&Unbound, &Unbound) => true,
       (&Var(x), &Var(y)) => x == y,
       (&Const(ref v), &Const(ref vv)) => v == vv,
+//TODO fix for substr
       _ => false
     }
   }
@@ -145,6 +151,12 @@ pub enum Expr {
   /// Applies the function in the registry named the first argument to the
   /// list of arguments provided as the second
   App(String, Vec<Expr>)
+}
+
+#[derive (Clone,Debug,Hash,PartialEq,Eq)]
+pub enum DBExpr {
+  Var(Var),
+  Val(u64)
 }
 
 // As per prvious, this is only needed due to a compiler bug. In the long

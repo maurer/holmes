@@ -9,3 +9,4 @@ mod rule_basic;
 mod func_basic;
 mod rule_where;
 mod type_extend;
+mod rule_substr;

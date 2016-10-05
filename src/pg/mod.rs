@@ -32,7 +32,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use postgres::{rows, Connection, SslMode};
 use postgres::types::{FromSql, ToSql};
 
-use engine::types::{Fact, Predicate, MatchExpr, Clause};
+use engine::types::{Fact, Predicate, MatchExpr, Clause, DBExpr};
 
 mod error;
 pub mod dyn;
@@ -41,6 +41,14 @@ pub use self::error::Error;
 use self::dyn::types;
 use self::dyn::{Type, Value};
 use fact_db::{FactDB, Result};
+
+fn db_expr(e : &DBExpr, names: &Vec<String>) -> String {
+  match *e {
+    DBExpr::Val(v) => format!("{}", v),
+    DBExpr::Var(v) => format!("CAST({} AS int)", names[v])
+  }
+}
+
 
 /// An iterator over a `postgres::rows::Row`.
 /// It does not implement the normal iter interface because it does not have
@@ -287,6 +295,22 @@ impl FactDB for PgDB {
                   return Err(Box::new(Error::Arg(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx]))))
                 }
               }
+//TODO: unify logic with above
+              MatchExpr::SubStr(_, _, var) => {
+                let v = var as usize;
+                let repr = pred.types[idx].repr();
+                if repr.len() != 1 {
+                  return Err(Box::new(Error::Arg(format!("Substring matching performed on compound field"))))
+                } else if (repr[0] != "bytea") && (repr[0] != "varchar") {
+                  return Err(Box::new(Error::Arg(format!("Substring matching performed on non-string or bytes"))))
+                } else if v == var_type.len() {
+                  var_type.push(pred.types[idx].clone())
+                } else if v > var_type.len() {
+                  return Err(Box::new(Error::Arg(format!("Hole between {} and {} in variable numbering.", var_type.len() - 1, v))))
+                } else if var_type[v] != pred.types[idx].clone() {
+                  return Err(Box::new(Error::Arg(format!("Variable {} attempt to unify incompatible types {:?} and {:?}", v, var_type[v], pred.types[idx]))))
+                }
+              }
           }
         }
       }
@@ -314,6 +338,19 @@ impl FactDB for PgDB {
       for (idx, arg) in clause.args.iter().enumerate() {
         match arg {
           &MatchExpr::Unbound => (),
+          //TODO use recursion to make substr use normal var logic
+          &MatchExpr::SubStr(ref start, ref end, var) => {
+            let start_str = db_expr(start, &var_names);
+            let end_str = db_expr(end, &var_names);
+            if var >= var_names.len() {
+              var_names.push(
+                format!("substring({}.arg{} from {} + 1 for {} - {} + 1)", alias_name, idx, start_str, end_str, start_str));
+              var_types.push(&self.pred_by_name[&clause.pred_name].types[idx]);
+            } else {
+              let piece = format!("substring({}.arg{} from {} + 1 for {} - {} + 1) = {}", alias_name, idx, start_str, end_str, start_str, 
+                                  var_names[var]);
+              clause_elements.push(piece);
+            }},
           &MatchExpr::Var(var) => if var >= var_names.len() {
               // This situation means it's the first occurrence of the variable
               // We record this definition as the canonical definition for use

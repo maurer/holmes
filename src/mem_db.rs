@@ -85,6 +85,9 @@ impl FactDB for MemDB {
                         } else {
                           raw_option(&asgn[var] == val, asgn)
                         },
+                      MatchExpr::SubStr(_, _, _) => {
+                        panic!("Substring not implemented in memdb")
+                      },
                       MatchExpr::Const(ref k) =>
                         raw_option(k == val, asgn)
                     }
