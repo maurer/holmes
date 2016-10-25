@@ -40,7 +40,7 @@ pub mod dyn;
 pub use self::error::Error;
 use self::dyn::types;
 use self::dyn::{Type, Value};
-use fact_db::{FactDB, Result};
+use fact_db::{FactDB, Result, FactId, CacheId};
 
 fn db_expr(e : &DBExpr, names: &Vec<String>) -> String {
   match *e {
@@ -96,6 +96,7 @@ impl PgDB {
 
     // Create schemas
     try!(conn.execute("create schema if not exists facts", &[]));
+    try!(conn.execute("create schema if not exists cache", &[]));
 
     // Create Tables
     try!(conn.execute("create table if not exists predicates \
@@ -104,7 +105,8 @@ impl PgDB {
                         type varchar not null)",
                       &[]));
     try!(conn.execute("create table if not exists rules \
-                      (id serial, rule varchar not null)", &[]));
+                      (id serial primary key , rule varchar not null)", &[]));
+    try!(conn.execute("create sequence cache_id", &[]));
 
     // Create incremental PgDB object
     let mut db = PgDB {
@@ -161,7 +163,7 @@ impl PgDB {
     let args : Vec<String> = pred.types.iter().enumerate().map(|(k,_)|{
       format!("${}", k + 1)
     }).collect();
-    let stmt = format!("insert into facts.{} values ({})",
+    let stmt = format!("insert into facts.{} values (DEFAULT, {}) ON CONFLICT DO NOTHING",
                        pred.name,
                        args.join(", "));
     self.insert_by_name.insert(pred.name.clone(), stmt);
@@ -184,13 +186,34 @@ impl PgDB {
                           .map(|(ord, repr)| {
                             format!("arg{} {}", ord, repr)
                           }).collect::<Vec<_>>().join(", ");
+     let col_str = types.iter().flat_map(|type_| {type_.repr()}).enumerate()
+                        .map(|(ord, _)| {
+                          format!("arg{}", ord)
+                        }).collect::<Vec<_>>().join(", ");
     try!(self.conn.execute(
-           &format!("create table facts.{} ({})", name, table_str),
+           &format!("create table facts.{} (id serial primary key, {}, unique({}))", name, table_str, col_str),
            &[]));
     Ok(())
   }
 }
 impl FactDB for PgDB {
+  fn new_rule_cache(&mut self, preds: Vec<String>) -> Result<CacheId> {
+      let cache_stmt = try!(self.conn.prepare("select nextval('cache_id')"));
+      let cache_res = try!(cache_stmt.query(&[]));
+      let cache_id = cache_res.get(0).get(0);
+      try!(self.conn.execute(&format!("create table cache.rule{} ({})", cache_id,
+        preds.into_iter().enumerate().map(|(n, pred)| {
+            format!("id{} serial references facts.{}(id)", n, pred)
+        }).collect::<Vec<_>>().join(", ")), &[]));
+      Ok(cache_id)
+  }
+  fn cache_hit(&mut self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+      let borrow : Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
+      try!(self.conn.execute(&format!("insert into cache.rule{} values ({})", cache,
+      facts.iter().enumerate().map(|(x, _)| format!("${}", x + 1)).collect::<Vec<_>>().join(", ")),
+      borrow.as_slice()));
+      Ok(())
+  }
   /// Adds a new fact to the database, returning false if the fact was already
   /// present in the database, and true if it was inserted.
   fn insert_fact(&mut self, fact : &Fact) -> Result<bool> {
@@ -261,8 +284,15 @@ impl FactDB for PgDB {
   /// Attempt to match the right hand side of a datalog rule against the
   /// database, returning a list of solution assignments to the bound
   /// variables.
-  fn search_facts(&self, query : &Vec<Clause>)
-    -> Result<Vec<Vec<Value>>> {
+  fn search_facts(&self, query : &Vec<Clause>, cache: Option<CacheId>)
+    -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
+    let cache_clause = match cache {
+        Some(cache_id) => format!("not exists (select 1 from cache.rule{} WHERE {})", cache_id,
+        query.iter().enumerate().map(|(n, _)| {
+            format!("id{} = t{}.id", n, n)
+        }).collect::<Vec<_>>().join(" AND ")),
+        None => format!("1 = 1")
+    };
     // Check there is at least one clause
     if query.len() == 0 {
       return Err(Box::new(Error::Arg("Empty search query".to_string())));
@@ -323,6 +353,7 @@ impl FactDB for PgDB {
                                     // which join they belong on.
     let mut var_names = Vec::new(); // Translation of variable numbers to
                                     // sql exprs
+    let mut fact_ids  = Vec::new(); // Translation of fact ids to sql exprs
     let mut var_types = Vec::new(); // Translation of variable numbers to
                                     // Types
     let mut where_clause = Vec::new(); // Constant comparisons
@@ -334,6 +365,7 @@ impl FactDB for PgDB {
       let table_name = format!("facts.{}", clause.pred_name);
       // We will refer to it by a numbered alias, to make joining easier
       let alias_name = format!("t{}", idxc);
+      fact_ids.push(format!("{}.id", alias_name));
       let mut clause_elements = Vec::new();
       for (idx, arg) in clause.args.iter().enumerate() {
         match arg {
@@ -385,7 +417,11 @@ impl FactDB for PgDB {
     // which will not work.
     var_names.push("0".to_string());
 
-    let vars = format!("{}", var_names.join(", "));
+    let mut merge_vars = fact_ids.clone();
+
+    merge_vars.extend(var_names.into_iter());
+
+    let vars = format!("{}", merge_vars.join(", "));
     tables.reverse();
     restricts.reverse();
     let main_table = tables.pop().unwrap();
@@ -398,6 +434,7 @@ impl FactDB for PgDB {
           format!("JOIN {} ON {}", table, join.join(" AND "))
         }
       }).collect::<Vec<_>>().join(" ");
+    where_clause.push(cache_clause);
     let where_clause = {
       if where_clause.len() == 0 {
         String::new()
@@ -409,14 +446,17 @@ impl FactDB for PgDB {
       format!("SELECT {} FROM {} {} {}",
               vars, main_table, join_query,
               where_clause);
-    let stmt = try!(self.conn.prepare(&raw_stmt));
-    let rows = try!(stmt.query(&vals));
+    let rows = try!(self.conn.query(&raw_stmt, &vals));
 
-    let mut anss : Vec<Vec<Value>> = rows.iter().map(|row| {
+    let mut anss : Vec<(Vec<FactId>, Vec<Value>)> = rows.iter().map(|row| {
       let mut row_iter = RowIter::new(&row);
-      var_types.iter().map(|type_| {
+      let ids = fact_ids.iter().map(|_| {
+          row_iter.next().unwrap()
+      }).collect();
+      let vars = var_types.iter().map(|type_| {
         type_.extract(&mut row_iter)
-      }).collect()
+      }).collect();
+      (ids, vars)
     }).collect();
 
     // TODO: Understand why this is necessary, if it should be necessary.

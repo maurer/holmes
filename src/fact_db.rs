@@ -2,6 +2,8 @@
 //! be used as a backend by the Holmes engine.
 use std::error::Error;
 use pg::dyn::{Value, Type};
+pub type CacheId = i64;
+pub type FactId = i32;
 use engine::types::{Fact, Clause, Predicate};
 /// This is a universal result type, allowing any `Error`
 pub type Result<T> = ::std::result::Result<T, Box<Error>>;
@@ -31,9 +33,17 @@ pub trait FactDB {
   /// Persists a predicate by name
   fn new_predicate(&mut self, pred : &Predicate) -> Result<()>;
 
+  /// Creates a cache table for a new rule, returning a handle
+  fn new_rule_cache(&mut self, pred: Vec<String>) -> Result<CacheId>;
+  
+  /// Update
+  fn cache_hit(&mut self, cache: CacheId, Vec<FactId>) -> Result<()>;
+
   /// Attempt to match the right hand side of a datalog rule against the
   /// database, returning a list of solution assignments to the bound
   /// variables.
-  fn search_facts(&self, query : &Vec<Clause>)
-    -> Result<Vec<Vec<Value>>>;
+  /// Optionally provide a cache handle to have the db filter already
+  /// processed results.
+  fn search_facts(&self, query : &Vec<Clause>, cache: Option<CacheId>)
+    -> Result<Vec<(Vec<FactId>, Vec<Value>)>>;
 }

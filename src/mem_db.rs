@@ -7,7 +7,7 @@
 //! It is not built efficiently, and I do not intend to make it efficient - I'd
 //! essentially be reimplementing many parts of a traditional database
 //! (indexing, joins, etc).
-use fact_db::{FactDB, Result};
+use fact_db::{FactDB, Result, FactId, CacheId};
 use pg::dyn::{Value, Type};
 use pg::dyn::types::default_types;
 use engine::types::{Fact, Clause, Predicate, MatchExpr};
@@ -19,7 +19,10 @@ use std::collections::{HashMap, HashSet};
 /// anything serious, even if you want a standalone app. It is very slow and
 /// persists nothing.
 pub struct MemDB {
-  facts : HashSet<Fact>,
+  facts : HashMap<FactId, Fact>,
+  facts_set: HashSet<Fact>,
+  next_id: FactId,
+  rule_cache: Vec<HashSet<Vec<FactId>>>,
   types : HashMap<String, Type>,
   preds : HashMap<String, Predicate>
 }
@@ -28,7 +31,10 @@ impl MemDB {
   /// Creates a fresh empty `MemDB`.
   pub fn new() -> MemDB {
     MemDB {
-      facts : HashSet::new(),
+      facts : HashMap::new(),
+      next_id: 0,
+      facts_set : HashSet::new(),
+      rule_cache: Vec::new(), 
       types : default_types().iter().map(|type_| {
         (type_.name().unwrap().to_owned(), type_.clone())
       }).collect(),
@@ -46,11 +52,22 @@ fn raw_option<T>(some : bool, val : T) -> Option<T> {
 }
 
 impl FactDB for MemDB {
+  fn new_rule_cache(&mut self, _preds: Vec<String>) -> Result<CacheId> {
+      self.rule_cache.push(HashSet::new());
+      Ok((self.rule_cache.len() - 1) as CacheId)
+  }
+  fn cache_hit(&mut self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+      self.rule_cache[cache as usize].insert(facts);
+      Ok(())
+  }
   fn insert_fact(&mut self, fact : &Fact) -> Result<bool> {
-    if self.facts.contains(fact) {
+    if self.facts_set.contains(fact) {
       return Ok(false)
     };
-    self.facts.insert(fact.clone());
+    let id = self.next_id;
+    self.next_id += 1;
+    self.facts.insert(id, fact.clone());
+    self.facts_set.insert(fact.clone());
     Ok(true)
   }
   fn add_type(&mut self, type_ : Type) -> Result<()> {
@@ -67,23 +84,27 @@ impl FactDB for MemDB {
     self.preds.insert(pred.name.to_string(), pred.clone());
     Ok(())
   }
-  fn search_facts(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
-    Ok(query.iter().fold(vec![vec![]], |asgns, clause| {
+  fn search_facts(&self, query : &Vec<Clause>, cache: Option<CacheId>) -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
+    Ok(query.iter().fold(vec![(vec![], vec![])], |asgns, clause| {
       asgns.iter().flat_map(|asgn| {
-        self.facts.iter().flat_map(move |fact| {
+        self.facts.iter().flat_map(move |(id, fact)| {
           (if fact.pred_name == clause.pred_name {
             fact.args.iter().zip(clause.args.iter())
-                .fold(Some(asgn.clone()), |o_asgn, (val, arg)| {
+                .fold(Some({
+                    let mut nasgn = asgn.clone();
+                    nasgn.0.push(*id);
+                    nasgn
+                }), |o_asgn, (val, arg)| {
                   o_asgn.and_then(|asgn| {
                     match *arg {
                       MatchExpr::Unbound => Some(asgn),
                       MatchExpr::Var(var) =>
-                        if var >= asgn.len() {
+                        if var >= asgn.1.len() {
                           let mut next = asgn.clone();
-                          next.push(val.clone());
+                          next.1.push(val.clone());
                           Some(next)
                         } else {
-                          raw_option(&asgn[var] == val, asgn)
+                          raw_option(&asgn.1[var] == val, asgn)
                         },
                       MatchExpr::SubStr(_, _, _) => {
                         panic!("Substring not implemented in memdb")
@@ -97,7 +118,11 @@ impl FactDB for MemDB {
             None
           }).into_iter()
         })
-      }).collect()
+      }).filter(|&(ref facts, _)| {
+          match cache {
+              Some(c) => !self.rule_cache[c as usize].contains(facts),
+              None => true
+          }}).collect()
     }))
   }
 }

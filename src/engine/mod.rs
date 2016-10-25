@@ -11,14 +11,14 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
-use fact_db::FactDB;
+use fact_db::{FactDB, CacheId, FactId};
 
 /// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine {
   fact_db    : Box<FactDB>,
   funcs      : HashMap<String, Func>,
   rules      : HashMap<String, Vec<Rule>>,
-  exec_cache : HashMap<Rule, HashSet<Vec<Value>>>
+  rule_cache : HashMap<Rule, CacheId>
 }
 
 /// `engine::Error` describes ways that an attempt to input or run a Holmes
@@ -96,7 +96,7 @@ impl Engine {
       fact_db    : db,
       funcs      : HashMap::new(),
       rules      : HashMap::new(),
-      exec_cache : HashMap::new(),
+      rule_cache : HashMap::new(),
     }
   }
   /// Seach the type registry for a named type
@@ -248,59 +248,44 @@ impl Engine {
     }
   }
 
-  // Checks whether we have already run this particular rule on this particular
-  // assignment of variables. If we have, it returns false, and we can skip
-  // the rerun. If we have not, it updates the cache so that we have, and
-  // returns true.
-  fn rule_cache_miss(&mut self, rule : &Rule, args : &Vec<Value>)
-    -> bool {
-    match self.exec_cache.entry(rule.clone()) {
-      Vacant(entry) => {
-        let mut cache = HashSet::new();
-        cache.insert(args.clone());
-        entry.insert(cache);
-        true
+  fn rule_cache(&mut self, rule: &Rule) -> CacheId {
+      match self.rule_cache.entry(rule.clone()) {
+          Occupied(e) => *e.get(),
+          Vacant(e) => {
+              let cid = self.fact_db.new_rule_cache(rule.body.iter().map(|clause| clause.pred_name.clone()).collect()).unwrap();
+              e.insert(cid);
+              cid
+          }
       }
-      Occupied(mut entry) => {
-        if !entry.get().contains(args) {
-          entry.get_mut().insert(args.clone());
-          true
-        } else {
-          false
-        }
-      }
-    }
   }
 
   // Run a rule once on all body clause matches we have not yet run it on
   // This function cascades via `new_rule`
   // TODO change recursive cascade to iterative cascade
   fn run_rule(&mut self, rule : &Rule) {
-    let anss = self.fact_db.search_facts(&rule.body).unwrap();
-    let mut states : Vec<Vec<Value>> =
-        anss.iter()
-            .filter(|ans| {self.rule_cache_miss(&rule, &ans)})
-            .map(|ans| {ans.clone()})
-            .collect();
+    let cache = self.rule_cache(&rule);
+    let mut states: Vec<(Vec<FactId>, Vec<Value>)> = self.fact_db.search_facts(&rule.body, Some(cache)).unwrap();
 
     for where_clause in rule.wheres.iter() {
-      let mut next_states : Vec<Vec<Value>> = Vec::new();
+      let mut next_states : Vec<(Vec<FactId>, Vec<Value>)> = Vec::new();
       for state in states {
-        let resp = self.eval(&where_clause.rhs, &state);
+        let resp = self.eval(&where_clause.rhs, &state.1);
         next_states.extend(
-          self.bind(&where_clause.lhs, resp, &state));
+          self.bind(&where_clause.lhs, resp, &state.1).into_iter().map(|x|{(state.0.clone(), x)}));
       }
       states = next_states;
     }
     for state in states {
-      self.new_fact(&substitute(&rule.head, &state)).unwrap();
+      //TODO once we go multithreaded again, this could race, so I need to restructure this
+      self.fact_db.cache_hit(cache, state.0).unwrap();
+      self.new_fact(&substitute(&rule.head, &state.1)).unwrap();
     }
   }
 
   /// Given a query (similar to the rhs of a rule in Datalog), provide the set
   /// of satisfying answers in the database.
   pub fn derive(&self, query : &Vec<Clause>) -> Result<Vec<Vec<Value>>, Error> {
-    Ok(try!(self.fact_db.search_facts(query)))
+    Ok(try!(self.fact_db.search_facts(query, None)).into_iter().map(|x| x.1).collect())
   }
 
   /// Register a new rule with the database
