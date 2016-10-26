@@ -26,6 +26,9 @@ impl TypeT for BoolType {
       _ => false
     }
   }
+  fn large_unique(&self) -> bool {
+      false
+  }
 }
 
 #[derive(Debug,PartialEq,PartialOrd,Hash)]

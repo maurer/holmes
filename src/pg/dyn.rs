@@ -100,6 +100,9 @@ pub mod types {
       () => {
           typet_inner!();
           typet_inner_eq!();
+          fn large_unique(&self) -> bool {
+              false
+          }
       }
   }
 
@@ -135,6 +138,11 @@ pub mod types {
     /// Similar to `inner`, `inner_eq` exports a `PartialEq` instance from
     /// the underlying type.
     fn inner_eq(&self, other : &TypeT) -> bool;
+    /// Should this type be considered when checking for uniqueness of a fact?
+    /// This should only be set to true for large fields which have a more
+    /// compact representation of the field elsewhere in the tuple, e.g. the
+    /// contents of a file and its hash.
+    fn large_unique(&self) -> bool;
   }
 
   impl Hash for TypeT {
@@ -220,7 +228,7 @@ pub mod types {
   /// Provides a list of provided named types for use by the database
   /// as a default set of types.
   pub fn default_types() -> Vec<Type> {
-    vec![Arc::new(UInt64), Arc::new(String), Arc::new(Bytes), Arc::new(Bool)]
+    vec![Arc::new(UInt64), Arc::new(String), Arc::new(Bytes), Arc::new(LargeBytes), Arc::new(Bool)]
   }
 
   /// Boolean type
@@ -292,6 +300,30 @@ pub mod types {
       vec!["bytea".to_string()]
     }
   }
+
+  /// `LargeBytes` is for storing raw data which should not be considered
+  /// in uniqueness checks
+  /// If you want to store text, use the `String` type.
+  #[derive(Debug,Clone,Hash,PartialEq)]
+  pub struct LargeBytes;
+
+  impl TypeT for LargeBytes {
+    typet_inner!();
+    typet_inner_eq!();
+    fn large_unique(&self) -> bool {
+      true
+    }
+    fn name(&self) -> Option<&'static str> {
+      Some("largebytes")
+    }
+    fn extract(&self, rows : &mut RowIter) -> Value {
+      values::Bytes::new(rows.next().unwrap())
+    }
+    fn repr(&self) -> Vec<::std::string::String> {
+      vec!["bytea".to_string()]
+    }
+  }
+
 
 }
 
@@ -455,6 +487,7 @@ pub mod values {
     val : bool
   }
 
+
   impl Bool {
     /// Creates a new boolean Holmes value
     pub fn new(b : bool) -> Arc<Self> {
@@ -497,6 +530,13 @@ pub mod values {
       Bytes::new(self)
     }
   }
+  pub struct LargeBWrap { pub inner: Vec<u8> }
+  impl ToValue for LargeBWrap {
+    fn to_value(self) -> Value {
+        LargeBytes::new(self.inner)
+    }
+  }
+ 
   impl <T : ToValue> ToValue for Vec<T> {
     fn to_value(self) -> Value {
       List::new(self.into_iter().map(|x|{x.to_value()}).collect())
@@ -604,4 +644,31 @@ pub mod values {
       Arc::new(Bytes { val : val })
     }
   }
+
+  /// Holds large raw data
+  #[derive(Debug,PartialEq,PartialOrd,Hash)]
+  pub struct LargeBytes {
+    val : Vec<u8>,
+  }
+
+  impl ValueT for LargeBytes {
+    fn type_(&self) -> Type {
+      Arc::new(types::LargeBytes)
+    }
+    fn get(&self) -> &Any {
+      &self.val as &Any
+    }
+    fn to_sql(&self) -> Vec<&ToSql> {
+      vec![&self.val as &ToSql]
+    }
+    valuet_boiler!();
+  }
+
+  impl LargeBytes {
+    /// Creates a new Holmes value holding raw data.
+    pub fn new(val : Vec<u8>) -> Arc<Self> {
+      Arc::new(LargeBytes { val : val })
+    }
+  }
+
 }

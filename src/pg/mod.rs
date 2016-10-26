@@ -186,7 +186,9 @@ impl PgDB {
                           .map(|(ord, repr)| {
                             format!("arg{} {}", ord, repr)
                           }).collect::<Vec<_>>().join(", ");
-     let col_str = types.iter().flat_map(|type_| {type_.repr()}).enumerate()
+     let col_str = types.iter().flat_map(|type_| {
+         type_.repr().iter().map(|_|type_.large_unique()).collect::<Vec<_>>()
+         }).enumerate().filter(|&(_,x)|!x)
                         .map(|(ord, _)| {
                           format!("arg{}", ord)
                         }).collect::<Vec<_>>().join(", ");
