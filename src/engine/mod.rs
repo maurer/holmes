@@ -6,7 +6,6 @@
 pub mod types;
 
 use std::collections::hash_map::HashMap;
-use std::collections::HashSet;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use pg::dyn::{Value, Type};
 use pg::dyn::values;

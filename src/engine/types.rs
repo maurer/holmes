@@ -153,9 +153,16 @@ pub enum Expr {
   App(String, Vec<Expr>)
 }
 
+/// `DBExpr` represents the type of expressions computable database-side.
+/// Currently only used in the `SubStr` match expression.
+//TODO: SubStr should be promoted to a DBExpr, and both Var and SubStr should
+//be collapsed into one DBFun or DBExpr style binding.
 #[derive (Clone,Debug,Hash,PartialEq,Eq)]
 pub enum DBExpr {
+  /// Evaluate a variable database side (must be defined elsewhere by the query)
   Var(Var),
+  /// Evaluates to the provided integer, primarily for purposes of indexing
+  /// large buffers
   Val(u64)
 }
 

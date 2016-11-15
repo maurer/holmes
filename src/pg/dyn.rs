@@ -530,7 +530,12 @@ pub mod values {
       Bytes::new(self)
     }
   }
-  pub struct LargeBWrap { pub inner: Vec<u8> }
+  /// Wrapper newtype pattern for buffers which are too large to be reasonably
+  /// indexed or matched on.
+  pub struct LargeBWrap {
+      /// Wrapped value
+      pub inner: Vec<u8>
+  }
   impl ToValue for LargeBWrap {
     fn to_value(self) -> Value {
         LargeBytes::new(self.inner)

@@ -2,7 +2,9 @@
 //! be used as a backend by the Holmes engine.
 use std::error::Error;
 use pg::dyn::{Value, Type};
+/// Abstract reference to a cache
 pub type CacheId = i64;
+/// Abstract reference to a particular fact in the database
 pub type FactId = i32;
 use engine::types::{Fact, Clause, Predicate};
 /// This is a universal result type, allowing any `Error`
@@ -43,7 +45,7 @@ pub trait FactDB {
   /// database, returning a list of solution assignments to the bound
   /// variables.
   /// Optionally provide a cache handle to have the db filter already
-  /// processed results.
+  /// processed results based on a provided cache.
   fn search_facts(&self, query : &Vec<Clause>, cache: Option<CacheId>)
     -> Result<Vec<(Vec<FactId>, Vec<Value>)>>;
 }
