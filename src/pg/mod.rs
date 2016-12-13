@@ -435,7 +435,7 @@ impl FactDB for PgDB {
               where_clause);
     let rows = try!(self.conn.query(&raw_stmt, &vals));
 
-    let mut anss : Vec<(Vec<FactId>, Vec<Value>)> = rows.iter().map(|row| {
+    let anss : Vec<(Vec<FactId>, Vec<Value>)> = rows.iter().map(|row| {
       let mut row_iter = RowIter::new(&row);
       let ids = fact_ids.iter().map(|_| {
           row_iter.next().unwrap()
@@ -446,8 +446,6 @@ impl FactDB for PgDB {
       (ids, vars)
     }).collect();
 
-    // TODO: Understand why this is necessary, if it should be necessary.
-    anss.dedup();
     Ok(anss)
   }
 }
