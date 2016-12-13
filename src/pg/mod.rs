@@ -358,7 +358,6 @@ impl FactDB for PgDB {
     let mut fact_ids  = Vec::new(); // Translation of fact ids to sql exprs
     let mut var_types = Vec::new(); // Translation of variable numbers to
                                     // Types
-    let mut where_clause = Vec::new(); // Constant comparisons
     let mut vals : Vec<&ToSql> = Vec::new(); // Values to be quoted into the
                                              // prepared statement
 
@@ -406,12 +405,12 @@ impl FactDB for PgDB {
             // statement, and put the index into the buffer into the where
             // clause chunk.
             vals.extend(val.to_sql());
-            where_clause.push(
+            restricts.push(
               format!("{}.arg{} = ${}", alias_name, idx, vals.len()));
           }
         }
       }
-      restricts.push(clause_elements);
+      restricts.extend(clause_elements);
       tables.push(format!("{} as {}", table_name, alias_name));
     }
     // Make sure we're never empty on bound variables. If we are, we will get
@@ -427,23 +426,9 @@ impl FactDB for PgDB {
     tables.reverse();
     restricts.reverse();
     let main_table = tables.pop().unwrap();
-    where_clause.append(&mut restricts.pop().unwrap());
-    let join_query =
-      tables.iter().zip(restricts.iter()).map(|(table, join)| {
-        if join.len() == 0 {
-          format!("JOIN {} ", table)
-        } else {
-          format!("JOIN {} ON {}", table, join.join(" AND "))
-        }
-      }).collect::<Vec<_>>().join(" ");
-    where_clause.push(cache_clause);
-    let where_clause = {
-      if where_clause.len() == 0 {
-        String::new()
-      } else {
-        format!("WHERE {}", where_clause.join(" AND "))
-      }
-    };
+    let join_query = tables.iter().map(|table| format!("JOIN {} ON true", table)).collect::<Vec<_>>().join(" ");
+    restricts.push(cache_clause);
+    let where_clause = format!("WHERE {}", restricts.join(" AND "));
     let raw_stmt =
       format!("SELECT {} FROM {} {} {}",
               vars, main_table, join_query,
