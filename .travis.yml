@@ -1,13 +1,14 @@
 sudo: false
 language: rust
 addons:
-  postgresql: 9.4
+  postgresql: 9.5
   apt:
     packages:
       - libcurl4-openssl-dev
       - libelf-dev
       - libdw-dev
       - binutils-dev
+      - postgresql-9.5
 
 rust:
   - nightly
@@ -15,6 +16,9 @@ rust:
   - stable
 
 before_script:
+  # Import the location of pg_ctl
+  - |
+      export PATH=$PATH:/usr/lib/postgresql/9.5/bin
   # Activate a clean postgres database with a holmes user
   - |
       export HOLMES_PG_SOCK_DIR=`tools/pg.bash holmes`
