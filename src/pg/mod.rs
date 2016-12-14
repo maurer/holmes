@@ -271,10 +271,15 @@ impl FactDB for PgDB {
       return Err(Box::new(Error::Arg(
               "Invalid name: Use lowercase and underscores only".to_string())))
     }
-    // If this predicate was already registered, fail
-    if self.pred_by_name.contains_key(&pred.name) {
-      return Err(Box::new(Error::Arg(
-              format!("Predicate {} already registered.", &pred.name))))
+    // If this predicate was already registered, check for a match
+    match self.pred_by_name.get(&pred.name) {
+      Some(existing) => if existing != pred {
+          return Err(Box::new(Error::Arg(
+              format!("Predicate {} already registered at a different type.\nExisting: {:?}\nNew: {:?}", &pred.name, existing, pred))))
+      } else {
+          return Ok(())
+      },
+      None => ()
     }
 
     try!(self.insert_predicate(&pred));

@@ -13,6 +13,29 @@ use pg::dyn::types::default_types;
 use engine::types::{Fact, Clause, Predicate, MatchExpr};
 use std::collections::{HashMap, HashSet};
 
+use std::error;
+use std::fmt;
+use std::result;
+
+#[derive(Debug)]
+enum Error {
+    Type(String)
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
+        match *self {
+            Error::Type(ref msg) => write!(fmt, "MemDB Type Error: {}", msg)
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        return "MemDB Error"
+    }
+}
+
 /// MemDB is an in-memory mock up of the fact database interface.
 ///
 /// While it can be useful for quick tests, it should not be depended on for
@@ -81,8 +104,16 @@ impl FactDB for MemDB {
     self.preds.get(pred_name)
   }
   fn new_predicate(&mut self, pred : &Predicate) -> Result<()> {
-    self.preds.insert(pred.name.to_string(), pred.clone());
-    Ok(())
+      match self.preds.get(&pred.name) {
+          Some(exist) => if exist == pred {
+              return Ok(())
+          } else {
+              return Err(Box::new(Error::Type(format!("Predicate already registered with different type.\nExisting: {:?}\nNew: {:?}", exist, pred))))
+          },
+          None => ()
+      }
+      self.preds.insert(pred.name.to_string(), pred.clone());
+      Ok(())
   }
   fn search_facts(&self, query : &Vec<Clause>, cache: Option<CacheId>) -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
     Ok(query.iter().fold(vec![(vec![], vec![])], |asgns, clause| {

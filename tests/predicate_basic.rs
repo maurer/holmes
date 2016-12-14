@@ -14,3 +14,11 @@ pub fn double_register_incompat() {
     should_fail(predicate!(test_pred(string, string, string)))
   })})
 }
+
+#[test]
+pub fn double_register_compat() {
+    single(&|holmes: &mut Holmes| { holmes_exec!(holmes, {
+        predicate!(test_pred(string, bytes, uint64));
+        predicate!(test_pred(string, bytes, uint64))
+    })})
+}
