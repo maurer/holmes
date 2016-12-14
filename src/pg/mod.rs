@@ -106,7 +106,7 @@ impl PgDB {
                       &[]));
     try!(conn.execute("create table if not exists rules \
                       (id serial primary key , rule varchar not null)", &[]));
-    try!(conn.execute("create sequence cache_id", &[]));
+    try!(conn.execute("create sequence if not exists cache_id", &[]));
 
     // Create incremental PgDB object
     let mut db = PgDB {
