@@ -118,42 +118,48 @@ impl PgDB {
                           }).collect()
     };
 
-    // Reload predicate cache
-    {
-      let pred_stmt = try!(db.conn.prepare(
-        "select pred_name, type from predicates ORDER BY pred_name, ordinal"));
-      let pred_types = try!(pred_stmt.query(&[]));
-      for type_entry in pred_types.iter() {
-        let name : String = type_entry.get(0);
-        let h_type_str : String = type_entry.get(1);
-        let h_type = match db.get_type(&h_type_str) {
-          Some(ty) => ty,
-          None => return Err(Box::new(
-                               Error::Type(format!("Type not in registry: {}",
-                                                   h_type_str))))
-        };
-        match db.pred_by_name.entry(name.clone()) {
-          Vacant(entry) => {
-            let mut types = Vec::new();
-            types.push(h_type.clone());
-            entry.insert(Predicate {
-              name  : name.clone(),
-              types : types
-            });
-          }
-          Occupied(mut entry) => {
-            entry.get_mut().types.push(h_type.clone());
-          }
-        }
-      }
-    }
-
-    //Populate fact insert cache
-    for pred in db.pred_by_name.clone().values() {
-      &db.gen_insert_stmt(pred);
-    }
+    try!(db.rebuild_predicate_cache());
 
     Ok(db)
+  }
+
+  // Rebuilds the predicate cache
+  // I'm assuming for the moment that there isn't going to be a lot of dynamic type adding/removal,
+  // and so rebuilding the predicate/insert statement cache on add/remove isn't a big deal
+  fn rebuild_predicate_cache(&mut self) -> Result<()> {
+      self.pred_by_name = HashMap::new();
+      self.insert_by_name = HashMap::new();
+      { // Scoped borrow of connection
+          let pred_stmt = try!(self.conn.prepare(
+            "select pred_name, type from predicates ORDER BY pred_name, ordinal"));
+          let pred_types = try!(pred_stmt.query(&[]));
+          for type_entry in pred_types.iter() {
+            let name : String = type_entry.get(0);
+            let h_type_str : String = type_entry.get(1);
+            let h_type = match self.get_type(&h_type_str) {
+              Some(ty) => ty,
+              None => types::Trap::new()
+            };
+            match self.pred_by_name.entry(name.clone()) {
+              Vacant(entry) => {
+                let mut types = Vec::new();
+                types.push(h_type.clone());
+                entry.insert(Predicate {
+                  name  : name.clone(),
+                  types : types
+                });
+              }
+              Occupied(mut entry) => {
+                entry.get_mut().types.push(h_type.clone());
+              }
+            }
+          }
+      }
+      //Populate fact insert cache
+      for pred in self.pred_by_name.clone().values() {
+          self.gen_insert_stmt(pred)
+      }
+      Ok(())
   }
 
   // Generates a prebuilt insert statement for a given predicate, and stores
@@ -237,7 +243,7 @@ impl FactDB for PgDB {
     let name = type_.name().unwrap();
     if !self.named_types.contains_key(name) {
       self.named_types.insert(name.to_owned(), type_.clone());
-      Ok(())
+      self.rebuild_predicate_cache()
     } else {
       Err(Box::new(Error::Type(format!("{} already registered", name))))
     }

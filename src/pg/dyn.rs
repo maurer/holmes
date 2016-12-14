@@ -164,6 +164,30 @@ pub mod types {
     }
   }
 
+  /// The Trap type is used to represent types not yet present in the program,
+  /// but present in the database. Most forms of interaction with a trap type
+  /// will take down the program.
+  #[derive(Debug,Clone,Hash,PartialEq)]
+  pub struct Trap;
+  impl TypeT for Trap {
+      typet_boiler!();
+      fn name(&self) -> Option<&'static str> {
+          Some("trap")
+      }
+      fn extract(&self, _rows : &mut RowIter) -> Value {
+          panic!("Tried to extract from a trap")
+      }
+      fn repr(&self) -> Vec<::std::string::String> {
+          panic!("Tried to observe the representation of a trap")
+      }
+  }
+  impl Trap {
+      /// Instantiates the Trap type
+      pub fn new() -> Arc<Self> {
+          Arc::new(Trap)
+      }
+  }
+
   /// A tuple of other `Type`s
   /// This type is anonymous.
   #[derive(Debug,Clone,Hash,PartialEq)]

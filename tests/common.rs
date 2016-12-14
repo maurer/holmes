@@ -22,14 +22,19 @@ fn get_db_addr(db_num : isize) -> String {
   }
 }
 
-pub fn single<A>(test : &Fn(&mut Holmes) -> Result<A>) {
+pub fn multi<A>(tests : &[&Fn(&mut Holmes) -> Result<A>]) {
   let db_num = DB_NUM.fetch_add(1, SeqCst);
   let db_addr = get_db_addr(db_num);
-  println!("{}", db_addr);
   let db = DB::Postgres(db_addr);
-  let mut holmes = Holmes::new(db.clone()).unwrap();
-  test(&mut holmes).unwrap();
-  holmes.destroy().unwrap();
+  for test in tests {
+     let mut holmes = Holmes::new(db.clone()).unwrap();
+     test(&mut holmes).unwrap();
+  }
+  Holmes::new(db.clone()).unwrap().destroy().unwrap();
+}
+
+pub fn single<A>(test : &Fn(&mut Holmes) -> Result<A>) {
+    multi(&[test])
 }
 
 pub fn should_fail<A, F>(f : F) -> Box<Fn(&mut Holmes) -> Result<()>>

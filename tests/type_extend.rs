@@ -86,3 +86,30 @@ pub fn add_bool() {
     Ok(())
   })
 }
+
+#[test]
+fn reboot() {
+    multi(&[&|holmes: &mut Holmes| {
+        holmes.add_type(Arc::new(BoolType))
+    }, &|holmes: &mut Holmes| {
+        Ok(())
+    }])
+}
+
+#[test]
+fn reboot_reuse() {
+    multi(&[&|holmes: &mut Holmes| {
+        try!(holmes.add_type(Arc::new(BoolType)));
+        try!(predicate!(holmes, type_pred(uint64, bool2)));
+        fact!(holmes, type_pred(32, BoolValue::new(false)))
+    }, &|holmes: &mut Holmes| {
+        try!(holmes.add_type(Arc::new(BoolType)));
+        try!(predicate!(holmes, type_pred(uint64, bool2)));
+        try!(fact!(holmes, type_pred(42, BoolValue::new(true))));
+        assert_eq!(try!(query!(holmes, type_pred((32), x))),
+                   vec![vec![BoolValue::new(false).to_value()]]);
+        assert_eq!(try!(query!(holmes, type_pred((42), x))),
+                   vec![vec![BoolValue::new(true).to_value()]]);
+        Ok(())
+    }])
+}
