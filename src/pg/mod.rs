@@ -444,6 +444,7 @@ impl FactDB for PgDB {
       format!("SELECT {} FROM {} {} {}",
               vars, main_table, join_query,
               where_clause);
+    trace!("search_facts: {}", raw_stmt);
     let rows = try!(self.conn.query(&raw_stmt, &vals));
 
     let anss : Vec<(Vec<FactId>, Vec<Value>)> = rows.iter().map(|row| {

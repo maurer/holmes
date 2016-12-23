@@ -547,6 +547,8 @@
 extern crate postgres;
 extern crate postgres_array;
 extern crate rustc_serialize;
+#[macro_use]
+extern crate log;
 
 pub mod pg;
 pub mod fact_db;

@@ -12,6 +12,7 @@ postgres = { version = "0.11", features = [ "unix_socket" ] }
 postgres_array = "0.6"
 rustc-serialize = "0.3"
 getopts = "0.2"
+log = "0.3"
 
 [dev-dependencies]
 url = "1.2"
