@@ -1,5 +1,6 @@
 sudo: false
 language: rust
+cache: cargo
 addons:
   postgresql: 9.5
   apt:
@@ -28,7 +29,7 @@ before_script:
       export PATH=$HOME/.local/bin:$PATH
   # Install rustfmt
   - |
-      cargo install rustfmt
+      (cargo install rustfmt || true) &&
       export PATH=$HOME/.cargo/bin:$PATH
 
 # Replace cargo with travis-cargo
