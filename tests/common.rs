@@ -9,40 +9,48 @@ pub use holmes::pg::dyn::values::ToValue;
 pub use holmes::pg::dyn::{Value, Type};
 pub use holmes::pg::dyn::values;
 
-static DB_NUM : AtomicIsize = ATOMIC_ISIZE_INIT;
+static DB_NUM: AtomicIsize = ATOMIC_ISIZE_INIT;
 
-fn url_encode(input : &[u8]) -> String {
-  percent_encode(input, PATH_SEGMENT_ENCODE_SET).to_string()
+fn url_encode(input: &[u8]) -> String {
+    percent_encode(input, PATH_SEGMENT_ENCODE_SET).to_string()
 }
 
-fn get_db_addr(db_num : isize) -> String {
-  match env::var("HOLMES_PG_SOCK_DIR") {
-    Ok(dir) => format!("postgresql://holmes@{}/holmes_test{}", url_encode(&dir.into_bytes()), db_num),
-    _ => panic!("Testing requires HOLMES_PG_SOCK_DIR to be set to indicate the directory where it can find the postgres database socket.")
-  }
+fn get_db_addr(db_num: isize) -> String {
+    match env::var("HOLMES_PG_SOCK_DIR") {
+        Ok(dir) => {
+            format!("postgresql://holmes@{}/holmes_test{}",
+                    url_encode(&dir.into_bytes()), db_num)
+        }
+        _ => {
+            panic!("Testing requires HOLMES_PG_SOCK_DIR to be set to \
+                     indicate the directory where it can find the postgres \
+                     database socket.")
+        }
+    }
 }
 
-pub fn multi<A>(tests : &[&Fn(&mut Holmes) -> Result<A>]) {
-  let db_num = DB_NUM.fetch_add(1, SeqCst);
-  let db_addr = get_db_addr(db_num);
-  let db = DB::Postgres(db_addr);
-  for test in tests {
-     let mut holmes = Holmes::new(db.clone()).unwrap();
-     test(&mut holmes).unwrap();
-  }
-  Holmes::new(db.clone()).unwrap().destroy().unwrap();
+pub fn multi<A>(tests: &[&Fn(&mut Holmes) -> Result<A>]) {
+    let db_num = DB_NUM.fetch_add(1, SeqCst);
+    let db_addr = get_db_addr(db_num);
+    let db = DB::Postgres(db_addr);
+    for test in tests {
+        let mut holmes = Holmes::new(db.clone()).unwrap();
+        test(&mut holmes).unwrap();
+    }
+    Holmes::new(db.clone()).unwrap().destroy().unwrap();
 }
 
-pub fn single<A>(test : &Fn(&mut Holmes) -> Result<A>) {
+pub fn single<A>(test: &Fn(&mut Holmes) -> Result<A>) {
     multi(&[test])
 }
 
-pub fn should_fail<A, F>(f : F) -> Box<Fn(&mut Holmes) -> Result<()>>
-  where F : 'static + Fn(&mut Holmes) -> Result<A> {
-  Box::new(move|holmes : &mut Holmes| {
-    match f(holmes) {
-      Ok(_) => Err(Error::NoDB), //TODO put something more reasonable here?
-      Err(_) => Ok(())
-    }
-  })
+pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Holmes) -> Result<()>>
+    where F: 'static + Fn(&mut Holmes) -> Result<A>
+{
+    Box::new(move |holmes: &mut Holmes| {
+        match f(holmes) {
+            Ok(_) => Err(Error::NoDB), //TODO put something more reasonable here?
+            Err(_) => Ok(()),
+        }
+    })
 }

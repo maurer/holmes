@@ -1,4 +1,5 @@
-#[macro_use] extern crate holmes;
+#[macro_use]
+extern crate holmes;
 extern crate postgres;
 extern crate url;
 

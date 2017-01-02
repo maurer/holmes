@@ -10,10 +10,15 @@ use common::*;
 // Bug fixed by moving all ON clauses to the last one.
 #[test]
 fn misordered_join() {
-  single(&|holmes : &mut Holmes| { holmes_exec!(holmes, {
+    single(&|holmes: &mut Holmes| {
+        holmes_exec!(holmes, {
     predicate!(out(string, uint64, uint64));
     predicate!(assoc(string, uint64, uint64));
     predicate!(look(string, uint64, uint64, uint64));
-    rule!(out(name, addr, next) <= assoc(name, [_], tgt) & look(name, addr, [_], next) & out(name, addr, tgt))
-  })})
+    rule!(out(name, addr, next) <=
+             assoc(name, [_], tgt) &
+             look(name, addr, [_], next) &
+             out(name, addr, tgt))
+    })
+    })
 }
