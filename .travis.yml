@@ -26,6 +26,10 @@ before_script:
   - |
       pip install 'travis-cargo<0.2' --user &&
       export PATH=$HOME/.local/bin:$PATH
+  # Install rustfmt
+  - |
+      cargo install rustfmt
+      export PATH=$HOME/.cargo/bin:$PATH
 
 # Replace cargo with travis-cargo
 script:
@@ -33,6 +37,7 @@ script:
   - travis-cargo test
   - travis-cargo bench
   - travis-cargo --only stable doc
+  - cargo fmt -- --write-mode diff
 
 # If we built successfully,
 after_success:

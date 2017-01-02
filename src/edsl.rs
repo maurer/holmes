@@ -12,9 +12,16 @@
 /// type -> look up type by name in the registry
 #[macro_export]
 macro_rules! htype {
-  ($holmes:ident, [$t:tt]) => { ::holmes::pg::dyn::types::List::new(htype!($holmes, $t)) };
-  ($holmes:ident, ($($t:tt),*)) => { ::holmes::pg::dyn::types::Tuple::new(vec![$(htype!($holmes, $t)),*]) };
-  ($holmes:ident, $i:ident) => { $holmes.get_type(stringify!($i)).expect(&format!("Type not present in database: {}", stringify!($i))) };
+    ($holmes:ident, [$t:tt]) => {
+        ::holmes::pg::dyn::types::List::new(htype!($holmes, $t))
+    };
+    ($holmes:ident, ($($t:tt),*)) => {
+        ::holmes::pg::dyn::types::Tuple::new(vec![$(htype!($holmes, $t)),*])
+    };
+    ($holmes:ident, $i:ident) => {
+        $holmes.get_type(stringify!($i))
+        .expect(&format!("Type not present in database: {}", stringify!($i)))
+    };
 }
 
 /// Shorthand notation for performing many actions with the same holmes context
@@ -197,9 +204,11 @@ macro_rules! rule {
       rule!(holmes, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {})
     }
   };
-  ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
+  ($($head_name:ident($($m:tt),*)),* <=
+   $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
     |holmes : &mut ::holmes::Holmes| {
-      rule!(holmes, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
+      rule!(holmes, $($head_name($($m),*)),* <=
+                    $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
     }
   };
 
@@ -236,21 +245,22 @@ macro_rules! func {
 }
 
 pub mod internal {
-  //! EDSL Support Code
-  //! This module contains support code for the other macros which is not
-  //! intended to be user facing, but which must be exported for the macros
-  //! to work properly.
-  //!
-  //! Until more complete example code is provided at the top of the module,
-  //! the documentation in here may be useful for understanding the EDSL
-  //! structure.
+    //! EDSL Support Code
+    //! This module contains support code for the other macros which is not
+    //! intended to be user facing, but which must be exported for the macros
+    //! to work properly.
+    //!
+    //! Until more complete example code is provided at the top of the module,
+    //! the documentation in here may be useful for understanding the EDSL
+    //! structure.
 
-  /// Given a value and a type it is believed to be, unpack it to the greatest
-  /// extent possible (e.g. unpack through tupling and lists)
-  #[macro_export]
-  macro_rules! typed_unpack {
+    /// Given a value and a type it is believed to be, unpack it to the greatest
+    /// extent possible (e.g. unpack through tupling and lists)
+    #[macro_export]
+    macro_rules! typed_unpack {
     ($val:expr, [$typ:tt]) => {
-      $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>().expect("Dynamic list unpack failed")
+      $val.get().downcast_ref::<Vec<::holmes::pg::dyn::Value>>()
+          .expect("Dynamic list unpack failed")
           .into_iter().map(|v| {
         typed_unpack!(v, $typ)
       }).collect::<Vec<_>>()
@@ -260,64 +270,79 @@ pub mod internal {
                          .expect("Dynamic tuple unpack failed").into_iter();
       ($(typed_unpack!(pack.next().expect("Dynamic tuple too short"), $typ)),*)
     }};
-    ($val:expr, $name:ident) => {$val.get().downcast_ref().expect(concat!("Dynamic base type unpack failed for ", stringify!($name)))};
-  }
-  /// Constructs a bind match outer object.
-  ///
-  /// Args:
-  ///
-  /// * `$vars:ident` is a mutable `HashMap` from variable name to
-  ///   variable number, to be updated as more variables are created, or
-  ///   referenced to re-use existing variable numberings.
-  /// * `$n:ident` is a mutable Var, intended to be used as an allocator for
-  ///   the next unused variable. It should have a value equal to the next
-  ///   unallocated variable
-  /// * The last parameter is the bind expression, it can be structured as:
-  ///   * `[bind_expression]` -> do a list destructure/iteration, similar to
-  ///     the list monad
-  ///   * {bind_expression0, bind_expression1} -> do a tuple destructure
-  ///   * a `clause_match!` compatible expression (see `clause_match` docs)
-  #[macro_export]
-  macro_rules! bind_match {
-    ($vars:ident, $n:ident, [ $bm:tt ]) => { ::holmes::engine::types::BindExpr::Iterate(Box::new(bind_match!($vars, $n, $bm))) };
-    ($vars:ident, $n:ident, {$($bm:tt),*}) => {
-      ::holmes::engine::types::BindExpr::Destructure(vec![$(bind_match!($vars, $n, $bm)),*])
+    ($val:expr, $name:ident) => {
+        $val.get().downcast_ref()
+        .expect(concat!("Dynamic base type unpack failed for ",
+                        stringify!($name)))
     };
-    ($vars:ident, $n:ident, $cm:tt) => { ::holmes::engine::types::BindExpr::Normal(clause_match!($vars, $n, $cm)) };
   }
+    /// Constructs a bind match outer object.
+    ///
+    /// Args:
+    ///
+    /// * `$vars:ident` is a mutable `HashMap` from variable name to
+    ///   variable number, to be updated as more variables are created, or
+    ///   referenced to re-use existing variable numberings.
+    /// * `$n:ident` is a mutable Var, intended to be used as an allocator for
+    ///   the next unused variable. It should have a value equal to the next
+    ///   unallocated variable
+    /// * The last parameter is the bind expression, it can be structured as:
+    ///   * `[bind_expression]` -> do a list destructure/iteration, similar to
+    ///     the list monad
+    ///   * {bind_expression0, bind_expression1} -> do a tuple destructure
+    ///   * a `clause_match!` compatible expression (see `clause_match` docs)
+    #[macro_export]
+    macro_rules! bind_match {
+        ($vars:ident, $n:ident, [ $bm:tt ]) => {
+            ::holmes::engine::types::BindExpr::Iterate(
+                Box::new(bind_match!($vars, $n, $bm)))
+        };
+        ($vars:ident, $n:ident, {$($bm:tt),*}) => {
+            ::holmes::engine::types::BindExpr::Destructure(
+                vec![$(bind_match!($vars, $n, $bm)),*])
+        };
+        ($vars:ident, $n:ident, $cm:tt) => {
+            ::holmes::engine::types::BindExpr::Normal(
+                clause_match!($vars, $n, $cm))
+        };
+    }
 
-  /// Generates an expression structure
-  ///
-  /// Args:
-  ///
-  /// * `$vars:ident` is a mutable `HashMap` from variable name to
-  ///   variable number, to be updated as more variables are created, or
-  ///   referenced to re-use existing variable numberings.
-  /// * `$n:ident` is a mutable Var, intended to be used as an allocator for
-  ///   the next unused variable. It should have a value equal to the next
-  ///   unallocated variable
-  /// * the expression to convert
-  ///   * `[var]`
-  ///   * `(val)`
-  ///   * `{f(expr, expr, expr)}`
-  #[macro_export]
-  macro_rules! hexpr {
+    /// Generates an expression structure
+    ///
+    /// Args:
+    ///
+    /// * `$vars:ident` is a mutable `HashMap` from variable name to
+    ///   variable number, to be updated as more variables are created, or
+    ///   referenced to re-use existing variable numberings.
+    /// * `$n:ident` is a mutable Var, intended to be used as an allocator for
+    ///   the next unused variable. It should have a value equal to the next
+    ///   unallocated variable
+    /// * the expression to convert
+    ///   * `[var]`
+    ///   * `(val)`
+    ///   * `{f(expr, expr, expr)}`
+    #[macro_export]
+    macro_rules! hexpr {
     ($vars:ident, $n:ident, [$hexpr_name:ident]) => {
       match clause_match!($vars, $n, $hexpr_name) {
-        ::holmes::engine::types::MatchExpr::Var(var_no) => ::holmes::engine::types::Expr::Var(var_no),
+        ::holmes::engine::types::MatchExpr::Var(var_no) =>
+            ::holmes::engine::types::Expr::Var(var_no),
         _ => panic!("clause_match! returned non-var for var input")
       }
     };
     ($vars:ident, $n:ident, ($hexpr:expr)) => {
-      ::holmes::engine::types::Expr::Val(::holmes::pg::dyn::values::ToValue::to_value($hexpr))
+      ::holmes::engine::types::Expr::Val(
+          ::holmes::pg::dyn::values::ToValue::to_value($hexpr))
     };
     ($vars:ident, $n:ident, {$hexpr_func:ident($($hexpr_arg:tt),*)}) => {
-      ::holmes::engine::types::Expr::App(stringify!($hexpr_func).to_string(), vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
+      ::holmes::engine::types::Expr::App(
+          stringify!($hexpr_func).to_string(),
+          vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
     };
   }
 
-  #[macro_export]
-  macro_rules! db_expr {
+    #[macro_export]
+    macro_rules! db_expr {
     ($vars:ident, ($v:expr)) => {{
        ::holmes::engine::types::DBExpr::Val($v)
     }};
@@ -329,22 +354,22 @@ pub mod internal {
     }};
   }
 
-  /// Generates a `MatchExpr` from a representation
-  ///
-  /// Args:
-  ///
-  /// * `$vars:ident` is a mutable `HashMap` from variable name to
-  ///   variable number, to be updated as more variables are created, or
-  ///   referenced to re-use existing variable numberings.
-  /// * `$n:ident` is a mutable Var, intended to be used as an allocator for
-  ///   the next unused variable. It should have a value equal to the next
-  ///   unallocated variable
-  /// * Clause representation:
-  ///   * `[_]` -> unbound
-  ///   * `(val)` -> constant match
-  ///   * `x` -> variable bind
-  #[macro_export]
-  macro_rules! clause_match {
+    /// Generates a `MatchExpr` from a representation
+    ///
+    /// Args:
+    ///
+    /// * `$vars:ident` is a mutable `HashMap` from variable name to
+    ///   variable number, to be updated as more variables are created, or
+    ///   referenced to re-use existing variable numberings.
+    /// * `$n:ident` is a mutable Var, intended to be used as an allocator for
+    ///   the next unused variable. It should have a value equal to the next
+    ///   unallocated variable
+    /// * Clause representation:
+    ///   * `[_]` -> unbound
+    ///   * `(val)` -> constant match
+    ///   * `x` -> variable bind
+    #[macro_export]
+    macro_rules! clause_match {
     ($vars:ident, $n:ident, {$start:tt, $end:tt, $v:ident}) => {{
       use std::collections::hash_map::Entry::*;
       use ::holmes::engine::types::MatchExpr::*;
@@ -355,11 +380,16 @@ pub mod internal {
           entry.insert($n - 1);
         }
       }
-      SubStr(db_expr!($vars, $start), db_expr!($vars, $end), *$vars.get(stringify!($v)).unwrap())
+      SubStr(db_expr!($vars, $start), db_expr!($vars, $end),
+             *$vars.get(stringify!($v)).unwrap())
     }};
-    ($vars:ident, $n:ident, [_]) => { ::holmes::engine::types::MatchExpr::Unbound };
+    ($vars:ident, $n:ident, [_]) => {
+        ::holmes::engine::types::MatchExpr::Unbound
+    };
     ($vars:ident, $n:ident, ($v:expr)) => {
-        ::holmes::engine::types::MatchExpr::Const(::holmes::pg::dyn::values::ToValue::to_value($v)) };
+        ::holmes::engine::types::MatchExpr::Const(
+            ::holmes::pg::dyn::values::ToValue::to_value($v))
+    };
     ($vars:ident, $n:ident, $m:ident) => {{
       use std::collections::hash_map::Entry::*;
       use ::holmes::engine::types::MatchExpr::*;
