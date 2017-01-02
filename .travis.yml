@@ -40,13 +40,7 @@ script:
   - travis-cargo --only stable doc
   - cargo fmt -- --write-mode diff
 
-# If we built successfully,
 after_success:
-  # Upload coverage data
-  - travis-cargo coveralls --no-sudo --verify
-  # Hack to work around travis-cargo bug invoking kcov wrong
-  - ./kcov/build/src/kcov --verify --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/kcov target/debug/holmes-*
-  # Upload docs if we're on master and using rustc-stable
   - travis-cargo --only stable doc-upload
 
 env:
