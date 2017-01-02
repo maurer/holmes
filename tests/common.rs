@@ -19,7 +19,8 @@ fn get_db_addr(db_num: isize) -> String {
     match env::var("HOLMES_PG_SOCK_DIR") {
         Ok(dir) => {
             format!("postgresql://holmes@{}/holmes_test{}",
-                    url_encode(&dir.into_bytes()), db_num)
+                    url_encode(&dir.into_bytes()),
+                    db_num)
         }
         _ => {
             panic!("Testing requires HOLMES_PG_SOCK_DIR to be set to \
