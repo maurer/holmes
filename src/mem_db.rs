@@ -95,10 +95,10 @@ impl FactDB for MemDB {
                 if exist == pred {
                     return Ok(());
                 } else {
-                    bail!(ErrorKind::Type(format!(
-                                "Predicate already registered with different type.\nExisting: {:?}\nNew: {:?}",
-                                exist,
-                                pred)));
+                    bail!(ErrorKind::Type(format!("Predicate already registered with different \
+                                                   type.\nExisting: {:?}\nNew: {:?}",
+                                                  exist,
+                                                  pred)));
                 }
             }
             None => (),

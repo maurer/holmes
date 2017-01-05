@@ -96,8 +96,7 @@ impl<FE, FDB> Engine<FE, FDB>
 
         // Verify we have at least one argument
         if pred.types.len() == 0 {
-            bail!(ErrorKind::Invalid(
-                    "Predicates must have at least one argument.".to_string()));
+            bail!(ErrorKind::Invalid("Predicates must have at least one argument.".to_string()));
         }
 
         // Check for existing predicates/type issues
@@ -130,8 +129,8 @@ impl<FE, FDB> Engine<FE, FDB>
                     .all(|(val, ty)| val.type_() == ty.clone())) {
                     bail!(ErrorKind::Type(format!("Fact ({:?}) does not \
                                                    match predicate ({:?})",
-                                                   fact,
-                                                   pred.types)));
+                                                  fact,
+                                                  pred.types)));
                 }
             }
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),

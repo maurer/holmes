@@ -124,7 +124,7 @@ impl PgDB {
         // Create database if it doesn't already exist and we can
         // TODO do this only on connection failure?
         let mut params = try!(uri.into_connect_params()
-                                 .map_err(|_| ErrorKind::UriParse));
+            .map_err(|_| ErrorKind::UriParse));
         match params.database.clone() {
             Some(db) => {
                 params.database = Some("postgres".to_owned());
@@ -324,8 +324,7 @@ impl FactDB for PgDB {
     fn insert_fact(&mut self, fact: &Fact) -> Result<bool> {
         let stmt: String = try!(self.insert_by_name
                 .get(&fact.pred_name)
-                .ok_or_else(||
-                        ErrorKind::Internal("Insert Statement Missing".to_string())))
+                .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string())))
             .clone();
         Ok(try!(self.conn.execute(&stmt,
                                   &fact.args
@@ -374,18 +373,18 @@ impl FactDB for PgDB {
         // The predicate name is used as a table name, check it for legality
         if !valid_name(&pred.name) {
             bail!(ErrorKind::Arg("Invalid name: Use lowercase and \
-                                 underscores only".to_string()));
+                                 underscores only"
+                .to_string()));
         }
         // If this predicate was already registered, check for a match
         match self.pred_by_name.get(&pred.name) {
             Some(existing) => {
                 if existing != pred {
-                    bail!(ErrorKind::Arg(format!(
-                                "Predicate {} already registered at a \
-                                 different type.\nExisting: {:?}\nNew: {:?}",
-                                 &pred.name,
-                                 existing,
-                                 pred)));
+                    bail!(ErrorKind::Arg(format!("Predicate {} already registered at a \
+                                                  different type.\nExisting: {:?}\nNew: {:?}",
+                                                 &pred.name,
+                                                 existing,
+                                                 pred)));
                 } else {
                     return Ok(());
                 }
@@ -433,9 +432,8 @@ impl FactDB for PgDB {
                 let pred = match self.pred_by_name.get(&clause.pred_name) {
                     Some(pred) => pred,
                     None => {
-                        bail!(ErrorKind::Arg(format!(
-                                    "{} is not a registered predicate.",
-                                    clause.pred_name)))
+                        bail!(ErrorKind::Arg(format!("{} is not a registered predicate.",
+                                                     clause.pred_name)))
                     }
                 };
                 for (idx, slot) in clause.args.iter().enumerate() {
@@ -447,18 +445,16 @@ impl FactDB for PgDB {
                             if v == var_type.len() {
                                 var_type.push(pred.types[idx].clone())
                             } else if v > var_type.len() {
-                                bail!(ErrorKind::Arg(format!(
-                                            "Hole between {} and {} in \
-                                             variable numbering.",
-                                             var_type.len() - 1,
-                                             v)));
+                                bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
+                                                              variable numbering.",
+                                                             var_type.len() - 1,
+                                                             v)));
                             } else if var_type[v] != pred.types[idx].clone() {
-                                bail!(ErrorKind::Arg(format!(
-                                            "Variable {} attempt to unify \
-                                             incompatible types {:?} and {:?}",
-                                             v,
-                                             var_type[v],
-                                             pred.types[idx])));
+                                bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
+                                                              incompatible types {:?} and {:?}",
+                                                             v,
+                                                             var_type[v],
+                                                             pred.types[idx])));
                             }
                         }
                         // TODO: unify logic with above
@@ -466,28 +462,24 @@ impl FactDB for PgDB {
                             let v = var as usize;
                             let repr = pred.types[idx].repr();
                             if repr.len() != 1 {
-                                bail!(ErrorKind::Arg(
-                                        format!("Substring matching performed \
-                                                 on compound field")));
+                                bail!(ErrorKind::Arg(format!("Substring matching performed on \
+                                                              compound field")));
                             } else if (repr[0] != "bytea") && (repr[0] != "varchar") {
-                                bail!(ErrorKind::Arg(format!(
-                                            "Substring matching performed on \
-                                             non-string or bytes")));
+                                bail!(ErrorKind::Arg(format!("Substring matching performed on \
+                                                              non-string or bytes")));
                             } else if v == var_type.len() {
                                 var_type.push(pred.types[idx].clone())
                             } else if v > var_type.len() {
-                                bail!(ErrorKind::Arg(format!(
-                                            "Hole between {} and {} in \
-                                             variable numbering.",
-                                            var_type.len() - 1,
-                                            v)));
+                                bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
+                                                              variable numbering.",
+                                                             var_type.len() - 1,
+                                                             v)));
                             } else if var_type[v] != pred.types[idx].clone() {
-                                bail!(ErrorKind::Arg(format!(
-                                            "Variable {} attempt to unify \
-                                             incompatible types {:?} and {:?}",
-                                             v,
-                                             var_type[v],
-                                             pred.types[idx])));
+                                bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
+                                                              incompatible types {:?} and {:?}",
+                                                             v,
+                                                             var_type[v],
+                                                             pred.types[idx])));
                             }
                         }
                     }
