@@ -13,32 +13,16 @@ use pg::dyn::types::default_types;
 use engine::types::{Fact, Clause, Predicate, MatchExpr};
 use std::collections::{HashMap, HashSet};
 
-use std::error;
-use std::fmt;
-use std::result;
-
-#[derive(Debug)]
-/// Type for errors arising from MemDB interaction
-pub enum Error {
-    /// MemDB Type Error
-    Type(String),
-}
-
-type Result<T> = result::Result<T, Error>;
-
-impl fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
-        match *self {
-            Error::Type(ref msg) => write!(fmt, "MemDB Type Error: {}", msg),
+#[allow(missing_docs)]
+mod errors {
+    error_chain! {
+        errors {
+            Type(msg: String)
         }
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        return "MemDB Error";
-    }
-}
+pub use self::errors::*;
 
 /// MemDB is an in-memory mock up of the fact database interface.
 ///
@@ -111,14 +95,10 @@ impl FactDB for MemDB {
                 if exist == pred {
                     return Ok(());
                 } else {
-                    return Err(Error::Type(format!("Predicate \
-                                                     already registered \
-                                                     with different \
-                                                     type.\nExisting: \
-                                                     {:?}\nNew: \
-                                                     {:?}",
-                                                   exist,
-                                                   pred)));
+                    bail!(ErrorKind::Type(format!(
+                                "Predicate already registered with different type.\nExisting: {:?}\nNew: {:?}",
+                                exist,
+                                pred)));
                 }
             }
             None => (),
