@@ -141,7 +141,7 @@ impl<FE, FDB> Engine<FE, FDB>
                     .get(&fact.pred_name)
                     .unwrap_or(&vec![])
                     .clone() {
-                    self.run_rule(&rule);
+                    self.run_rule(&rule)?;
                 }
             }
             Ok(())
@@ -238,18 +238,18 @@ impl<FE, FDB> Engine<FE, FDB>
         }
     }
 
-    fn rule_cache(&mut self, rule: &Rule) -> CacheId {
+    fn rule_cache(&mut self, rule: &Rule) -> Result<CacheId> {
         match self.rule_cache.entry(rule.clone()) {
-            Occupied(e) => *e.get(),
+            Occupied(e) => Ok(*e.get()),
             Vacant(e) => {
                 let cid = self.fact_db
                     .new_rule_cache(rule.body
                         .iter()
                         .map(|clause| clause.pred_name.clone())
                         .collect())
-                    .unwrap();
+                    .chain_err(|| ErrorKind::FactDB)?;
                 e.insert(cid);
-                cid
+                Ok(cid)
             }
         }
     }
@@ -257,10 +257,10 @@ impl<FE, FDB> Engine<FE, FDB>
     // Run a rule once on all body clause matches we have not yet run it on
     // This function cascades via `new_rule`
     // TODO change recursive cascade to iterative cascade
-    fn run_rule(&mut self, rule: &Rule) {
-        let cache = self.rule_cache(&rule);
+    fn run_rule(&mut self, rule: &Rule) -> Result<()> {
+        let cache = self.rule_cache(&rule)?;
         let mut states: Vec<(Vec<FactId>, Vec<Value>)> =
-            self.fact_db.search_facts(&rule.body, Some(cache)).unwrap();
+            self.fact_db.search_facts(&rule.body, Some(cache)).chain_err(|| ErrorKind::FactDB)?;
 
         for where_clause in rule.wheres.iter() {
             let mut next_states: Vec<(Vec<FactId>, Vec<Value>)> = Vec::new();
@@ -274,9 +274,10 @@ impl<FE, FDB> Engine<FE, FDB>
         }
         for state in states {
             // TODO once we go multithreaded again, this could race, so I need to restructure this
-            self.fact_db.cache_hit(cache, state.0).unwrap();
-            self.new_fact(&substitute(&rule.head, &state.1)).unwrap();
+            self.fact_db.cache_hit(cache, state.0).chain_err(|| ErrorKind::FactDB)?;
+            self.new_fact(&substitute(&rule.head, &state.1)).chain_err(|| ErrorKind::FactDB)?;
         }
+        Ok(())
     }
 
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
@@ -298,8 +299,7 @@ impl<FE, FDB> Engine<FE, FDB>
                 Occupied(mut entry) => entry.get_mut().push(rule.clone()),
             }
         }
-        self.run_rule(rule);
-        Ok(())
+        self.run_rule(rule)
     }
 
     /// Register a new function with the database, to be called from within a

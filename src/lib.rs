@@ -402,7 +402,7 @@
 //!     let NSum = {add([N1], [N2])}
 //!   })
 //! }));
-//! let mut res = query!(holmes, path(("New York"), dest, [_], dist)).unwrap();
+//! let mut res = query!(holmes, path(("New York"), dest, [_], dist))?;
 //! # res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
 //! #   ::std::cmp::Ordering::Greater));
 //!
@@ -500,7 +500,7 @@
 //! })
 //! # }));
 //! let mut res = query!(holmes, on_the_road(("New York"), ("Palo Alto"),
-//!                                          stop)).unwrap();
+//!                                          stop))?;
 //! # res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
 //! #   ::std::cmp::Ordering::Greater));
 //!

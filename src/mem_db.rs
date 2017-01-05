@@ -18,6 +18,7 @@ mod errors {
     error_chain! {
         errors {
             Type(msg: String)
+            Arg(msg: String)
         }
     }
 }
@@ -48,7 +49,7 @@ impl MemDB {
             rule_cache: Vec::new(),
             types: default_types()
                 .iter()
-                .map(|type_| (type_.name().unwrap().to_owned(), type_.clone()))
+                .filter_map(|type_| type_.name().map(|name| (name.to_owned(), type_.clone())))
                 .collect(),
             preds: HashMap::new(),
         }
@@ -80,7 +81,8 @@ impl FactDB for MemDB {
         Ok(true)
     }
     fn add_type(&mut self, type_: Type) -> Result<()> {
-        self.types.insert(type_.name().unwrap().to_string(), type_);
+        let name = type_.name().ok_or(ErrorKind::Arg("Provided type had no name".to_string()))?;
+        self.types.insert(name.to_string(), type_);
         Ok(())
     }
     fn get_type(&self, type_str: &str) -> Option<Type> {

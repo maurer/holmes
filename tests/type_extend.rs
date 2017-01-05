@@ -11,8 +11,8 @@ impl TypeT for BoolType {
     fn name(&self) -> Option<&'static str> {
         Some("bool2")
     }
-    fn extract(&self, rows: &mut RowIter) -> Value {
-        Arc::new(BoolValue::new(rows.next().unwrap()))
+    fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+        rows.next().map(|b| Arc::new(BoolValue::new(b)) as Value)
     }
     fn repr(&self) -> Vec<String> {
         vec!["bool".to_string()]

@@ -117,7 +117,7 @@ pub mod types {
         fn name(&self) -> Option<&'static str>;
         /// Takes in an iterator over the row, then attempts to read a value of the
         /// type specified.
-        fn extract(&self, &mut RowIter) -> Value;
+        fn extract(&self, &mut RowIter) -> Option<Value>;
         /// Generates the database representation of the fields required. For
         /// example,
         /// for a bitvector this would be
@@ -174,7 +174,7 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             Some("trap")
         }
-        fn extract(&self, _rows: &mut RowIter) -> Value {
+        fn extract(&self, _rows: &mut RowIter) -> Option<Value> {
             panic!("Tried to extract from a trap")
         }
         fn repr(&self) -> Vec<::std::string::String> {
@@ -207,11 +207,15 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             None
         }
-        fn extract(&self, rows: &mut RowIter) -> Value {
-            values::Tuple::new(self.elements
-                .iter()
-                .map(|elem| elem.extract(rows))
-                .collect())
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            let mut out = Vec::new();
+            for elem in self.elements.iter() {
+                match elem.extract(rows) {
+                    Some(v) => out.push(v),
+                    None => return None,
+                }
+            }
+            Some(values::Tuple::new(out))
         }
         fn repr(&self) -> Vec<::std::string::String> {
             self.elements.iter().flat_map(|elem| elem.repr()).collect()
@@ -244,7 +248,7 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             None
         }
-        fn extract(&self, _rows: &mut RowIter) -> Value {
+        fn extract(&self, _rows: &mut RowIter) -> Option<Value> {
             panic!("List support disabled, will be re-enabled via arrays maybe")
         }
         fn repr(&self) -> Vec<::std::string::String> {
@@ -270,8 +274,8 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             Some("bool")
         }
-        fn extract(&self, rows: &mut RowIter) -> Value {
-            values::Bool::new(rows.next().unwrap())
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            rows.next().map(|b| values::Bool::new(b) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["bool".to_string()]
@@ -287,9 +291,8 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             Some("uint64")
         }
-        fn extract(&self, rows: &mut RowIter) -> Value {
-            let x: i64 = rows.next().unwrap();
-            values::UInt64::new(x as u64)
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            rows.next().map(|x: i64| values::UInt64::new(x as u64) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["int8".to_string()]
@@ -306,8 +309,8 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             Some("string")
         }
-        fn extract(&self, rows: &mut RowIter) -> Value {
-            values::String::new(rows.next().unwrap())
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            rows.next().map(|s| values::String::new(s) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["varchar".to_string()]
@@ -324,8 +327,8 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             Some("bytes")
         }
-        fn extract(&self, rows: &mut RowIter) -> Value {
-            values::Bytes::new(rows.next().unwrap())
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            rows.next().map(|b| values::Bytes::new(b) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["bytea".to_string()]
@@ -347,8 +350,8 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             Some("largebytes")
         }
-        fn extract(&self, rows: &mut RowIter) -> Value {
-            values::Bytes::new(rows.next().unwrap())
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            rows.next().map(|v| values::Bytes::new(v) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["bytea".to_string()]

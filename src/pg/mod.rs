@@ -159,7 +159,7 @@ impl PgDB {
             insert_by_name: HashMap::new(),
             named_types: types::default_types()
                 .iter()
-                .map(|type_| (type_.name().unwrap().to_owned(), type_.clone()))
+                .filter_map(|type_| type_.name().map(|name| (name.to_owned(), type_.clone())))
                 .collect(),
         };
 
@@ -256,7 +256,10 @@ impl PgDB {
             try!(self.conn
                 .execute("insert into predicates (pred_name, type, ordinal) \
                           values ($1, $2, $3)",
-                         &[name, &type_.name().unwrap(), &(ordinal as i32)]));
+                         &[name,
+                           &type_.name()
+                               .ok_or(ErrorKind::Arg("Predicate type had no name".to_string()))?,
+                           &(ordinal as i32)]));
         }
         let table_str = types.iter()
             .flat_map(|type_| type_.repr())
@@ -338,7 +341,8 @@ impl FactDB for PgDB {
     /// of the database object in order to allow reconnecting to an existing
     /// database.
     fn add_type(&mut self, type_: Type) -> Result<()> {
-        let name = type_.name().unwrap();
+        let name = type_.name()
+            .ok_or(ErrorKind::Arg("Tried to add a type with no name".to_string()))?;
         if !self.named_types.contains_key(name) {
             self.named_types.insert(name.to_owned(), type_.clone());
             self.rebuild_predicate_cache()
@@ -575,7 +579,8 @@ impl FactDB for PgDB {
         let vars = format!("{}", merge_vars.join(", "));
         tables.reverse();
         restricts.reverse();
-        let main_table = tables.pop().unwrap();
+        let main_table = tables.pop()
+            .ok_or(ErrorKind::Internal(format!("Match clause accesses no tables")))?;
         let join_query = tables.iter()
             .map(|table| format!("JOIN {} ON true", table))
             .collect::<Vec<_>>()
@@ -590,20 +595,28 @@ impl FactDB for PgDB {
         trace!("search_facts: {}", raw_stmt);
         let rows = try!(self.conn.query(&raw_stmt, &vals));
 
-        let anss: Vec<(Vec<FactId>, Vec<Value>)> = rows.iter()
+        rows.iter()
             .map(|row| {
                 let mut row_iter = RowIter::new(&row);
-                let ids = fact_ids.iter()
-                    .map(|_| row_iter.next().unwrap())
-                    .collect();
-                let vars = var_types.iter()
-                    .map(|type_| type_.extract(&mut row_iter))
-                    .collect();
-                (ids, vars)
+                let mut ids = Vec::new();
+                for _ in fact_ids.iter() {
+                    match row_iter.next() {
+                        Some(e) => ids.push(e),
+                        None => {
+                            bail!(ErrorKind::Internal(format!("Failure loading fact ids from row")))
+                        }
+                    }
+                }
+                let mut vars = Vec::new();
+                for var_type in var_types.iter() {
+                    match var_type.extract(&mut row_iter) {
+                        Some(e) => vars.push(e),
+                        None => bail!(ErrorKind::Internal(format!("Failure loading var from row"))),
+                    }
+                }
+                Ok((ids, vars))
             })
-            .collect();
-
-        Ok(anss)
+            .collect()
     }
 }
 
