@@ -333,8 +333,7 @@
 //!
 //! N.B. the postgres backend doesn't currently support list persistence, so
 //! if you wanted to use a list in a predicate, you'd actually need to make a
-//! custom `Path` type and value that knew how to store itself, perhaps via
-//! `postgres-array`
+//! custom `Path` type and value that knew how to store itself.
 //!
 //! ### Binds
 //!
@@ -524,10 +523,8 @@
 //!   Note that these will not be able to be used with an iteration bind,
 //!   so if you must do that, you will need to convert between them with a
 //!   function first.
-//!   You may find postgres-array useful for writing your type.
 #![warn(missing_docs)]
 extern crate postgres;
-extern crate postgres_array;
 extern crate rustc_serialize;
 #[macro_use]
 extern crate log;

@@ -8,8 +8,7 @@ description = "Holmes Inference System"
 repository = "https://github.com/maurer/holmes"
 
 [dependencies]
-postgres = { version = "0.11", features = [ "unix_socket" ] }
-postgres_array = "0.6"
+postgres = "0.13"
 rustc-serialize = "0.3"
 getopts = "0.2"
 log = "0.3"

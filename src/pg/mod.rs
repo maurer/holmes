@@ -29,7 +29,8 @@
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-use postgres::{rows, Connection, SslMode, IntoConnectParams};
+use postgres::{rows, Connection, TlsMode};
+use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
 use engine::types::{Fact, Predicate, MatchExpr, Clause, DBExpr};
@@ -128,7 +129,7 @@ impl PgDB {
         match params.database.clone() {
             Some(db) => {
                 params.database = Some("postgres".to_owned());
-                let conn = try!(Connection::connect(params, SslMode::None));
+                let conn = try!(Connection::connect(params, TlsMode::None));
                 let create_query = format!("CREATE DATABASE {}", &db);
                 // TODO only suppress db exists error
                 let _ = conn.execute(&create_query, &[]);
@@ -136,7 +137,7 @@ impl PgDB {
             None => (),
         }
         // Establish the connection
-        let conn = try!(Connection::connect(uri, SslMode::None));
+        let conn = try!(Connection::connect(uri, TlsMode::None));
 
         // Create schemas
         try!(conn.execute("create schema if not exists facts", &[]));
@@ -177,7 +178,7 @@ impl PgDB {
                     ErrorKind::Arg(format!(
                             "No database specified to destroy in {}.", uri))));
         params.database = Some("postgres".to_owned());
-        let conn = try!(Connection::connect(params, SslMode::None));
+        let conn = try!(Connection::connect(params, TlsMode::None));
         let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM \
                                    pg_stat_activity WHERE pg_stat_activity.datname = '{}' AND \
                                    pid <> pg_backend_pid()",
