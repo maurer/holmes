@@ -13,66 +13,37 @@ use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
 use fact_db::{FactDB, CacheId, FactId};
 
 /// The `Engine` type contains the context necessary to run a Holmes program
-pub struct Engine<FE: ::std::error::Error, FDB: FactDB<Error = FE>> {
+pub struct Engine<FE: ::std::error::Error + Send + 'static, FDB: FactDB<Error = FE>> {
     fact_db: FDB,
     funcs: HashMap<String, Func>,
     rules: HashMap<String, Vec<Rule>>,
     rule_cache: HashMap<Rule, CacheId>,
 }
 
-/// `engine::Error` describes ways that an attempt to input or run a Holmes
-/// program could go wrong
-#[derive(Debug)]
-pub enum Error<FE: ::std::error::Error> {
-    /// An `Invalid` error means that bad input was given to the engine
-    /// (e.g. the fault is with the caller)
-    Invalid(String),
-    /// An `Internal` error should not happen, and indicates a bug within the
-    /// engine
-    Internal(String),
-    /// A `Type` error indicates a typing error in the Holmes program being
-    /// operated on
-    Type(String),
-    /// A `Db` error indicates an error that the underlying fact database
-    /// component has sent up to the engine
-    Db(FE),
-}
-
-impl<FE: ::std::error::Error> ::std::convert::From<FE> for Error<FE> {
-    fn from(dbe: FE) -> Self {
-        Error::Db(dbe)
-    }
-}
-
-impl<FE: ::std::error::Error> ::std::fmt::Display for Error<FE> {
-    fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::result::Result<(), ::std::fmt::Error> {
-        match *self {
-            Error::Invalid(ref s) => fmt.write_fmt(format_args!("Invalid request: {}", s)),
-            Error::Internal(ref s) => fmt.write_fmt(format_args!("Internal problem (bug): {}", s)),
-            Error::Type(ref s) => fmt.write_fmt(format_args!("Type error: {}", s)),
-            Error::Db(ref s) => fmt.write_fmt(format_args!("FactDB problem: {}", s)),
+#[allow(missing_docs)]
+mod errors {
+    error_chain! {
+        errors {
+            Invalid(msg: String) {
+                description("Invalid Request")
+                display("Invalid Request: {}", msg)
+            }
+            Internal(msg: String) {
+                description("Internal Error (bug)")
+                display("Internal Error (bug): {}", msg)
+            }
+            Type(msg: String) {
+                description("Type Error")
+                display("Type Error: {}", msg)
+            }
+            FactDB {
+                description("FactDB propagated error")
+            }
         }
     }
 }
 
-impl<FE: ::std::error::Error> ::std::error::Error for Error<FE> {
-    fn description(&self) -> &str {
-        match *self {
-            Error::Invalid(_) => "Invalid request",
-            Error::Internal(_) => "Internal error (bug)",
-            Error::Type(_) => "Type mismatch",
-            Error::Db(_) => "Error in interaction with FactDB",
-        }
-    }
-    fn cause(&self) -> Option<&::std::error::Error> {
-        match *self {
-            Error::Db(ref dbe) => Some(dbe),
-            Error::Invalid(_) |
-            Error::Internal(_) |
-            Error::Type(_) => None,
-        }
-    }
-}
+pub use self::errors::*;
 
 fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
     use self::types::MatchExpr::*;
@@ -93,7 +64,7 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
 }
 
 impl<FE, FDB> Engine<FE, FDB>
-    where FE: ::std::error::Error,
+    where FE: ::std::error::Error + Send + 'static,
           FDB: FactDB<Error = FE>
 {
     /// Create a fresh engine by handing it a fact database to use
@@ -112,8 +83,8 @@ impl<FE, FDB> Engine<FE, FDB>
     }
     /// Register a new type
     /// This type must be a named type (e.g. type.name() should return `Some`)
-    pub fn add_type(&mut self, type_: Type) -> Result<(), Error<FE>> {
-        Ok(try!(self.fact_db.add_type(type_)))
+    pub fn add_type(&mut self, type_: Type) -> Result<()> {
+        Ok(try!(self.fact_db.add_type(type_).chain_err(|| ErrorKind::FactDB)))
     }
     /// Register a new predicate
     /// This defines the type signature of a predicate and persists it
@@ -121,13 +92,12 @@ impl<FE, FDB> Engine<FE, FDB>
     /// * Predicates must have at least one argument
     /// * Predicates must have a unique name
     /// * While using the `pg` backend, their name must be lowercase ascii or '_'
-    pub fn new_predicate(&mut self, pred: &Predicate) -> Result<(), Error<FE>> {
+    pub fn new_predicate(&mut self, pred: &Predicate) -> Result<()> {
 
         // Verify we have at least one argument
         if pred.types.len() == 0 {
-            return Err(Error::Invalid("Predicates must have at least one \
-                                       argument."
-                .to_string()));
+            bail!(ErrorKind::Invalid(
+                    "Predicates must have at least one argument.".to_string()));
         }
 
         // Check for existing predicates/type issues
@@ -136,13 +106,13 @@ impl<FE, FDB> Engine<FE, FDB>
                 if pred.types == p.types {
                     ()
                 } else {
-                    return Err(Error::Type(format!("{:?} != {:?}", pred.types, p.types)));
+                    bail!(ErrorKind::Type(format!("{:?} != {:?}", pred.types, p.types)));
                 }
             }
             None => (),
         }
 
-        Ok(try!(self.fact_db.new_predicate(pred)))
+        Ok(try!(self.fact_db.new_predicate(pred).chain_err(|| ErrorKind::FactDB)))
     }
 
     /// Adds a new fact to the database
@@ -150,7 +120,7 @@ impl<FE, FDB> Engine<FE, FDB>
     ///
     /// * The relevant predicate must already be registered
     /// * The fact must be correctly typed
-    pub fn new_fact(&mut self, fact: &Fact) -> Result<(), Error<FE>> {
+    pub fn new_fact(&mut self, fact: &Fact) -> Result<()> {
         match self.fact_db.get_predicate(&fact.pred_name) {
             Some(ref pred) => {
                 if (fact.args.len() != pred.types.len()) ||
@@ -158,16 +128,16 @@ impl<FE, FDB> Engine<FE, FDB>
                     .iter()
                     .zip(pred.types.iter())
                     .all(|(val, ty)| val.type_() == ty.clone())) {
-                    return Err(Error::Type(format!("Fact ({:?}) does not \
-                                                    match predicate ({:?})",
+                    bail!(ErrorKind::Type(format!("Fact ({:?}) does not \
+                                                   match predicate ({:?})",
                                                    fact,
                                                    pred.types)));
                 }
             }
-            None => return Err(Error::Invalid("Predicate not registered".to_string())),
+            None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),
         }
         {
-            if try!(self.fact_db.insert_fact(&fact)) {
+            if try!(self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)) {
                 for rule in self.rules
                     .get(&fact.pred_name)
                     .unwrap_or(&vec![])
@@ -181,7 +151,7 @@ impl<FE, FDB> Engine<FE, FDB>
 
     /// Returns success in the appropriate type. This helper function is to
     /// support the EDSL, and it is not anticipated to be useful normally.
-    pub fn nop(&mut self) -> Result<(), Error<FE>> {
+    pub fn nop(&mut self) -> Result<()> {
         Ok(())
     }
 
@@ -312,15 +282,15 @@ impl<FE, FDB> Engine<FE, FDB>
 
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
     /// of satisfying answers in the database.
-    pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>, Error<FE>> {
-        Ok(try!(self.fact_db.search_facts(query, None))
+    pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
+        Ok(try!(self.fact_db.search_facts(query, None).chain_err(|| ErrorKind::FactDB))
             .into_iter()
             .map(|x| x.1)
             .collect())
     }
 
     /// Register a new rule with the database
-    pub fn new_rule(&mut self, rule: &Rule) -> Result<(), Error<FE>> {
+    pub fn new_rule(&mut self, rule: &Rule) -> Result<()> {
         for pred in &rule.body {
             match self.rules.entry(pred.pred_name.clone()) {
                 Vacant(entry) => {
@@ -338,7 +308,7 @@ impl<FE, FDB> Engine<FE, FDB>
     ///
     /// Do not attempt to register a function name multiple times.
     // TODO: stop function reregistration, document restriction
-    pub fn reg_func(&mut self, name: String, func: Func) -> Result<(), Error<FE>> {
+    pub fn reg_func(&mut self, name: String, func: Func) -> Result<()> {
         self.funcs.insert(name, func);
         Ok(())
     }

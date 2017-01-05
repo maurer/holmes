@@ -22,9 +22,8 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
-//! # fn f () -> Result<(), Error> {
+//! # use holmes::{Engine, MemDB, Result};
+//! # fn f () -> Result<()> {
 //! # let mut holmes = Engine::new(MemDB::new());
 //! # let b = &mut holmes;
 //! # holmes_exec!(b, {
@@ -48,9 +47,8 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
-//! # fn f () -> Result<(), Error> {
+//! # use holmes::{Engine, MemDB, Result};
+//! # fn f () -> Result<()> {
 //! # let mut holmes = Engine::new(MemDB::new());
 //! # let b = &mut holmes;
 //! # holmes_exec!(b, {
@@ -74,9 +72,8 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
-//! # fn f () -> Result<(), Error> {
+//! # use holmes::{Engine, MemDB, Result};
+//! # fn f () -> Result<()> {
 //! # let mut holmes = Engine::new(MemDB::new());
 //! # let b = &mut holmes;
 //! # holmes_exec!(b, {
@@ -104,10 +101,9 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
+//! # use holmes::{Engine, MemDB, Result};
 //! # use holmes::pg::dyn::values::ToValue;
-//! # fn f () -> Result<(), Error> {
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! holmes_exec!(holmes, {
@@ -137,10 +133,9 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
+//! # use holmes::{Engine, MemDB, Result};
 //! # use holmes::pg::dyn::values::ToValue;
-//! # fn f () -> Result<(), Error> {
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! holmes_exec!(holmes, {
@@ -177,10 +172,9 @@
 //! ```
 //! #[macro_use]
 //! extern crate holmes;
-//! type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! use holmes::{Engine, MemDB};
+//! use holmes::{Engine, MemDB, Result};
 //! use holmes::pg::dyn::values::ToValue;
-//! fn f () -> Result<(), Error> {
+//! fn f () -> Result<()> {
 //!   let mut holmes_own = Engine::new(MemDB::new());
 //!   // For the moment, the `holmes_exec` macro needs a &mut ident. I'll
 //!   // try to make this more flexible in the future.
@@ -230,9 +224,8 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
-//! # fn f () -> Result<(), Error> {
+//! # use holmes::{Engine, MemDB, Result};
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! # try!(holmes_exec!(holmes, {
@@ -263,9 +256,8 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
-//! # fn f () -> Result<(), Error> {
+//! # use holmes::{Engine, MemDB, Result};
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! # holmes_exec!(holmes, {
@@ -296,9 +288,8 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
-//! # fn f () -> Result<(), Error> {
+//! # use holmes::{Engine, MemDB, Result};
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! holmes_exec!(holmes, {
@@ -373,10 +364,9 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
+//! # use holmes::{Engine, MemDB, Result};
 //! # use holmes::pg::dyn::values::ToValue;
-//! # fn f () -> Result<(), Error> {
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! try!(holmes_exec!(holmes, {
@@ -467,10 +457,9 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
-//! # type Error = ::holmes::engine::Error<::holmes::mem_db::Error>;
-//! # use holmes::{Engine, MemDB};
+//! # use holmes::{Engine, MemDB, Result};
 //! # use holmes::pg::dyn::values::ToValue;
-//! # fn f () -> Result<(), Error> {
+//! # fn f () -> Result<()> {
 //! # let mut holmes_own = Engine::new(MemDB::new());
 //! # let holmes = &mut holmes_own;
 //! # try!(holmes_exec!(holmes, {
@@ -551,6 +540,6 @@ pub mod mem_db;
 pub mod engine;
 pub mod edsl;
 
-pub use engine::Engine;
+pub use engine::{Engine, Result, Error, ErrorKind};
 pub use pg::PgDB;
 pub use mem_db::MemDB;
