@@ -2,7 +2,7 @@ use common::*;
 
 #[test]
 pub fn reg_func() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         func!(holmes,
       let test_func : uint64 -> uint64 =
         |_v : &u64| {

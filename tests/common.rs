@@ -4,10 +4,15 @@ use std::env;
 use url::percent_encoding::{percent_encode, PATH_SEGMENT_ENCODE_SET};
 pub use std::sync::Arc;
 
-pub use holmes::*;
 pub use holmes::pg::dyn::values::ToValue;
 pub use holmes::pg::dyn::{Value, Type};
 pub use holmes::pg::dyn::values;
+
+use holmes::PgDB;
+
+pub type Result<T> =
+    ::std::result::Result<T, ::holmes::engine::Error<::holmes::pg::error::Error>>;
+pub type Engine = ::holmes::Engine<::holmes::pg::error::Error, PgDB>;
 
 static DB_NUM: AtomicIsize = ATOMIC_ISIZE_INIT;
 
@@ -30,27 +35,27 @@ fn get_db_addr(db_num: isize) -> String {
     }
 }
 
-pub fn multi<A>(tests: &[&Fn(&mut Holmes) -> Result<A>]) {
+pub fn multi<A>(tests: &[&Fn(&mut Engine) -> Result<A>]) {
     let db_num = DB_NUM.fetch_add(1, SeqCst);
     let db_addr = get_db_addr(db_num);
-    let db = DB::Postgres(db_addr);
     for test in tests {
-        let mut holmes = Holmes::new(db.clone()).unwrap();
+        let db = PgDB::new(&db_addr).unwrap();
+        let mut holmes = Engine::new(db);
         test(&mut holmes).unwrap();
     }
-    Holmes::new(db.clone()).unwrap().destroy().unwrap();
+    PgDB::destroy(&db_addr).unwrap();
 }
 
-pub fn single<A>(test: &Fn(&mut Holmes) -> Result<A>) {
+pub fn single<A>(test: &Fn(&mut Engine) -> Result<A>) {
     multi(&[test])
 }
 
-pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Holmes) -> Result<()>>
-    where F: 'static + Fn(&mut Holmes) -> Result<A>
+pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Engine) -> Result<()>>
+    where F: 'static + Fn(&mut Engine) -> Result<A>
 {
-    Box::new(move |holmes: &mut Holmes| {
+    Box::new(move |holmes: &mut Engine| {
         match f(holmes) {
-            Ok(_) => Err(Error::NoDB), //TODO put something more reasonable here?
+            Ok(_) => panic!("should_fail"), //TODO put something more reasonable here?
             Err(_) => Ok(()),
         }
     })

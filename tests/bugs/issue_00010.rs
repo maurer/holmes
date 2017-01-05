@@ -10,7 +10,7 @@ use common::*;
 // Bug fixed by moving all ON clauses to the last one.
 #[test]
 fn misordered_join() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         holmes_exec!(holmes, {
     predicate!(out(string, uint64, uint64));
     predicate!(assoc(string, uint64, uint64));

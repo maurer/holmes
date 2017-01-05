@@ -2,7 +2,7 @@ use common::*;
 
 #[test]
 pub fn one_step() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
       fact!(test_pred("foo", vec![3u8;3], 7));
@@ -16,7 +16,7 @@ pub fn one_step() {
 
 #[test]
 pub fn closure() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         try!(holmes_exec!(holmes, {
       predicate!(reaches(string, string));
       fact!(reaches("foo", "bar"));

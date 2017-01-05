@@ -13,8 +13,8 @@ use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
 use fact_db::{FactDB, CacheId, FactId};
 
 /// The `Engine` type contains the context necessary to run a Holmes program
-pub struct Engine {
-    fact_db: Box<FactDB>,
+pub struct Engine<FE: ::std::error::Error, FDB: FactDB<Error = FE>> {
+    fact_db: FDB,
     funcs: HashMap<String, Func>,
     rules: HashMap<String, Vec<Rule>>,
     rule_cache: HashMap<Rule, CacheId>,
@@ -23,7 +23,7 @@ pub struct Engine {
 /// `engine::Error` describes ways that an attempt to input or run a Holmes
 /// program could go wrong
 #[derive(Debug)]
-pub enum Error {
+pub enum Error<FE: ::std::error::Error> {
     /// An `Invalid` error means that bad input was given to the engine
     /// (e.g. the fault is with the caller)
     Invalid(String),
@@ -35,16 +35,16 @@ pub enum Error {
     Type(String),
     /// A `Db` error indicates an error that the underlying fact database
     /// component has sent up to the engine
-    Db(Box<::std::error::Error>),
+    Db(FE),
 }
 
-impl ::std::convert::From<Box<::std::error::Error>> for Error {
-    fn from(dbe: Box<::std::error::Error>) -> Self {
+impl<FE: ::std::error::Error> ::std::convert::From<FE> for Error<FE> {
+    fn from(dbe: FE) -> Self {
         Error::Db(dbe)
     }
 }
 
-impl ::std::fmt::Display for Error {
+impl<FE: ::std::error::Error> ::std::fmt::Display for Error<FE> {
     fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::result::Result<(), ::std::fmt::Error> {
         match *self {
             Error::Invalid(ref s) => fmt.write_fmt(format_args!("Invalid request: {}", s)),
@@ -55,7 +55,7 @@ impl ::std::fmt::Display for Error {
     }
 }
 
-impl ::std::error::Error for Error {
+impl<FE: ::std::error::Error> ::std::error::Error for Error<FE> {
     fn description(&self) -> &str {
         match *self {
             Error::Invalid(_) => "Invalid request",
@@ -66,7 +66,7 @@ impl ::std::error::Error for Error {
     }
     fn cause(&self) -> Option<&::std::error::Error> {
         match *self {
-            Error::Db(ref dbe) => Some(&**dbe),
+            Error::Db(ref dbe) => Some(dbe),
             Error::Invalid(_) |
             Error::Internal(_) |
             Error::Type(_) => None,
@@ -92,9 +92,12 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
     }
 }
 
-impl Engine {
+impl<FE, FDB> Engine<FE, FDB>
+    where FE: ::std::error::Error,
+          FDB: FactDB<Error = FE>
+{
     /// Create a fresh engine by handing it a fact database to use
-    pub fn new(db: Box<FactDB>) -> Engine {
+    pub fn new(db: FDB) -> Self {
         Engine {
             fact_db: db,
             funcs: HashMap::new(),
@@ -109,7 +112,7 @@ impl Engine {
     }
     /// Register a new type
     /// This type must be a named type (e.g. type.name() should return `Some`)
-    pub fn add_type(&mut self, type_: Type) -> Result<(), Error> {
+    pub fn add_type(&mut self, type_: Type) -> Result<(), Error<FE>> {
         Ok(try!(self.fact_db.add_type(type_)))
     }
     /// Register a new predicate
@@ -118,7 +121,7 @@ impl Engine {
     /// * Predicates must have at least one argument
     /// * Predicates must have a unique name
     /// * While using the `pg` backend, their name must be lowercase ascii or '_'
-    pub fn new_predicate(&mut self, pred: &Predicate) -> Result<(), Error> {
+    pub fn new_predicate(&mut self, pred: &Predicate) -> Result<(), Error<FE>> {
 
         // Verify we have at least one argument
         if pred.types.len() == 0 {
@@ -147,7 +150,7 @@ impl Engine {
     ///
     /// * The relevant predicate must already be registered
     /// * The fact must be correctly typed
-    pub fn new_fact(&mut self, fact: &Fact) -> Result<(), Error> {
+    pub fn new_fact(&mut self, fact: &Fact) -> Result<(), Error<FE>> {
         match self.fact_db.get_predicate(&fact.pred_name) {
             Some(ref pred) => {
                 if (fact.args.len() != pred.types.len()) ||
@@ -174,6 +177,12 @@ impl Engine {
             }
             Ok(())
         }
+    }
+
+    /// Returns success in the appropriate type. This helper function is to
+    /// support the EDSL, and it is not anticipated to be useful normally.
+    pub fn nop(&mut self) -> Result<(), Error<FE>> {
+        Ok(())
     }
 
     // In an assignment statement, once the rhs has been computed, binds the
@@ -303,7 +312,7 @@ impl Engine {
 
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
     /// of satisfying answers in the database.
-    pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>, Error> {
+    pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>, Error<FE>> {
         Ok(try!(self.fact_db.search_facts(query, None))
             .into_iter()
             .map(|x| x.1)
@@ -311,7 +320,7 @@ impl Engine {
     }
 
     /// Register a new rule with the database
-    pub fn new_rule(&mut self, rule: &Rule) -> Result<(), Error> {
+    pub fn new_rule(&mut self, rule: &Rule) -> Result<(), Error<FE>> {
         for pred in &rule.body {
             match self.rules.entry(pred.pred_name.clone()) {
                 Vacant(entry) => {
@@ -329,7 +338,8 @@ impl Engine {
     ///
     /// Do not attempt to register a function name multiple times.
     // TODO: stop function reregistration, document restriction
-    pub fn reg_func(&mut self, name: String, func: Func) {
+    pub fn reg_func(&mut self, name: String, func: Func) -> Result<(), Error<FE>> {
         self.funcs.insert(name, func);
+        Ok(())
     }
 }

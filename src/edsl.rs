@@ -46,13 +46,10 @@ macro_rules! htype {
 /// and one which generates a function taking a `holmes` parameter instead.
 #[macro_export]
 macro_rules! holmes_exec {
-  ($holmes:ident, { $( $action:expr );* }) => {
-      {
+  ($holmes:ident, { $( $action:expr );* }) => {{
         $( try!($action($holmes)); );*
-        let res : ::holmes::Result<()> = Ok(());
-        res
-      }
-  };
+        $holmes.nop()
+  }};
 }
 
 /// Registers a predicate with the `Holmes` context.
@@ -70,14 +67,13 @@ macro_rules! holmes_exec {
 macro_rules! predicate {
   ($holmes:ident, $pred_name:ident($($t:tt),*)) => {{
     let types = vec![$(htype!($holmes, $t),)*];
-    $holmes.add_predicate(&::holmes::engine::types::Predicate {
+    $holmes.new_predicate(&::holmes::engine::types::Predicate {
       name  : stringify!($pred_name).to_string(),
       types : types
     })
   }};
-  ($pred_name:ident($($t:tt),*)) => { |holmes : &mut ::holmes::Holmes| {
-    let res : ::holmes::Result<()> = predicate!(holmes, $pred_name($($t),*));
-    res
+  ($pred_name:ident($($t:tt),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
+    predicate!(holmes, $pred_name($($t),*))
   }};
 }
 
@@ -95,14 +91,13 @@ macro_rules! predicate {
 #[macro_export]
 macro_rules! fact {
   ($holmes:ident, $pred_name:ident($($a:expr),*)) => {
-    $holmes.add_fact(&::holmes::engine::types::Fact {
+    $holmes.new_fact(&::holmes::engine::types::Fact {
       pred_name : stringify!($pred_name).to_string(),
       args : vec![$(::holmes::pg::dyn::values::ToValue::to_value($a)),*]
     })
   };
-  ($pred_name:ident($($a:expr),*)) => { |holmes : &mut ::holmes::Holmes| {
-    let res : ::holmes::Result<()> = fact!(holmes, $pred_name($($a),*));
-    res
+  ($pred_name:ident($($a:expr),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
+    fact!(holmes, $pred_name($($a),*))
   }};
 }
 
@@ -122,7 +117,7 @@ macro_rules! query {
     use std::collections::HashMap;
     let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
     let mut n : ::holmes::engine::types::Var = 0;
-    $holmes.query(&vec![$(::holmes::engine::types::Clause {
+    $holmes.derive(&vec![$(::holmes::engine::types::Clause {
       pred_name : stringify!($pred_name).to_string(),
       args : vec![$(clause_match!(vars, n, $m)),*]
     }),*])
@@ -163,7 +158,7 @@ macro_rules! rule {
     use std::collections::HashMap;
     let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
     let mut n : ::holmes::engine::types::Var = 0;
-    $holmes.add_rule(&::holmes::engine::types::Rule {
+    $holmes.new_rule(&::holmes::engine::types::Rule {
       body : vec![$(::holmes::engine::types::Clause {
         pred_name : stringify!($body_name).to_string(),
         args : vec![$(clause_match!(vars, n, $mb)),*]
@@ -183,7 +178,7 @@ macro_rules! rule {
     use std::collections::HashMap;
     let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
     let mut n : ::holmes::engine::types::Var = 0;
-    $holmes.add_rule(&::holmes::engine::types::Rule {
+    $holmes.new_rule(&::holmes::engine::types::Rule {
       body : vec![$(::holmes::engine::types::Clause {
         pred_name : stringify!($body_name).to_string(),
         args : vec![$(clause_match!(vars, n, $mb)),*]
@@ -200,13 +195,13 @@ macro_rules! rule {
     })
   }};
   ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*) => {
-    |holmes : &mut ::holmes::Holmes| {
+    |holmes: &mut ::holmes::Engine<_,_>| {
       rule!(holmes, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {})
     }
   };
   ($($head_name:ident($($m:tt),*)),* <=
    $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
-    |holmes : &mut ::holmes::Holmes| {
+    |holmes: &mut ::holmes::Engine<_,_>| {
       rule!(holmes, $($head_name($($m),*)),* <=
                     $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
     }
@@ -232,13 +227,15 @@ macro_rules! func {
     let src = htype!($holmes, $src);
     let dst = htype!($holmes, $dst);
     $holmes.reg_func(stringify!($name).to_string(),
-                     src, dst,
-                     Box::new(|v : ::holmes::pg::dyn::Value| {
+                     ::holmes::engine::types::Func {
+                       input_type: src,
+                       output_type: dst,
+                       run: Box::new(|v : ::holmes::pg::dyn::Value| {
                        ::holmes::pg::dyn::values::ToValue::to_value($body(typed_unpack!(v, $src)))
-                     }))
+                     })})
   }};
   (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
-    |holmes : &mut ::holmes::Holmes| {
+    |holmes: &mut ::holmes::Engine<_,_>| {
       func!(holmes, let $name : $src -> $dst = $body)
     }
   };

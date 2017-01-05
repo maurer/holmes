@@ -9,6 +9,8 @@ use postgres as pg;
 /// layer.
 #[derive(Debug)]
 pub enum Error {
+    /// Carrier for Postgres param parse errors
+    UriParse(Box<::std::error::Error>),
     /// Carrier for Postgres connection errors
     Connect(pg::error::ConnectError),
     /// Carrier for Postgres DB errors.
@@ -49,6 +51,7 @@ impl ::std::fmt::Display for Error {
                 fmt.write_str(&format!("PgDB Internal Error (Bug): {}", s.clone()))
             }
             Error::Arg(ref s) => fmt.write_str(&format!("Bad argument: {}", s)),
+            Error::UriParse(ref e) => fmt.write_str(&format!("URI does not parse: {}", e)),
         }
     }
 }
@@ -61,6 +64,7 @@ impl ::std::error::Error for Error {
             Error::Type(_) => "Type Error",
             Error::Internal(_) => "PgDB Internal Error",
             Error::Arg(_) => "Bad argument",
+            Error::UriParse(_) => "URI does not parse",
         }
     }
     fn cause(&self) -> Option<&::std::error::Error> {
@@ -70,6 +74,7 @@ impl ::std::error::Error for Error {
             Error::Type(_) |
             Error::Internal(_) |
             Error::Arg(_) => None,
+            Error::UriParse(ref e) => Some(&**e),
         }
     }
 }

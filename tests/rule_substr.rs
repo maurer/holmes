@@ -2,7 +2,7 @@ use common::*;
 
 #[test]
 pub fn simple_substr() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(uint64, bytes));
       predicate!(sub(uint64, bytes));
@@ -20,7 +20,7 @@ pub fn simple_substr() {
 
 #[test]
 pub fn param_substr() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(uint64, bytes));
       predicate!(sub(uint64, bytes));

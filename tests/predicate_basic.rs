@@ -2,7 +2,7 @@ use common::*;
 
 #[test]
 pub fn new_predicate_basic() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         holmes_exec!(holmes, {
             predicate!(test_pred(string, bytes, uint64))
         })
@@ -11,7 +11,7 @@ pub fn new_predicate_basic() {
 
 #[test]
 pub fn double_register_incompat() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         holmes_exec!(holmes, {
             predicate!(test_pred(string, bytes, uint64));
             should_fail(predicate!(test_pred(string, string, string)))
@@ -21,7 +21,7 @@ pub fn double_register_incompat() {
 
 #[test]
 pub fn double_register_compat() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         holmes_exec!(holmes, {
             predicate!(test_pred(string, bytes, uint64));
             predicate!(test_pred(string, bytes, uint64))

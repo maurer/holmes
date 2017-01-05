@@ -74,7 +74,7 @@ impl BoolValue {
 
 #[test]
 pub fn add_bool() {
-    single(&|holmes: &mut Holmes| {
+    single(&|holmes: &mut Engine| {
         try!(holmes.add_type(Arc::new(BoolType)));
         try!(predicate!(holmes, type_pred(uint64, bool2)));
         try!(fact!(holmes, type_pred(32, BoolValue::new(false))));
@@ -89,18 +89,18 @@ pub fn add_bool() {
 
 #[test]
 fn reboot() {
-    multi(&[&|holmes: &mut Holmes| holmes.add_type(Arc::new(BoolType)),
-            &|holmes: &mut Holmes| Ok(())])
+    multi(&[&|holmes: &mut Engine| holmes.add_type(Arc::new(BoolType)),
+            &|_holmes: &mut Engine| Ok(())])
 }
 
 #[test]
 fn reboot_reuse() {
-    multi(&[&|holmes: &mut Holmes| {
+    multi(&[&|holmes: &mut Engine| {
                 try!(holmes.add_type(Arc::new(BoolType)));
                 try!(predicate!(holmes, type_pred(uint64, bool2)));
                 fact!(holmes, type_pred(32, BoolValue::new(false)))
             },
-            &|holmes: &mut Holmes| {
+            &|holmes: &mut Engine| {
         try!(holmes.add_type(Arc::new(BoolType)));
         try!(predicate!(holmes, type_pred(uint64, bool2)));
         try!(fact!(holmes, type_pred(42, BoolValue::new(true))));

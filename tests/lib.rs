@@ -4,6 +4,7 @@ extern crate postgres;
 extern crate url;
 
 mod common;
+mod trivial;
 mod predicate_basic;
 mod fact_basic;
 mod rule_basic;

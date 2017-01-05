@@ -7,7 +7,7 @@
 //! It is not built efficiently, and I do not intend to make it efficient - I'd
 //! essentially be reimplementing many parts of a traditional database
 //! (indexing, joins, etc).
-use fact_db::{FactDB, Result, FactId, CacheId};
+use fact_db::{FactDB, FactId, CacheId};
 use pg::dyn::{Value, Type};
 use pg::dyn::types::default_types;
 use engine::types::{Fact, Clause, Predicate, MatchExpr};
@@ -18,9 +18,13 @@ use std::fmt;
 use std::result;
 
 #[derive(Debug)]
-enum Error {
+/// Type for errors arising from MemDB interaction
+pub enum Error {
+    /// MemDB Type Error
     Type(String),
 }
+
+type Result<T> = result::Result<T, Error>;
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> result::Result<(), fmt::Error> {
@@ -72,6 +76,7 @@ fn raw_option<T>(some: bool, val: T) -> Option<T> {
 }
 
 impl FactDB for MemDB {
+    type Error = Error;
     fn new_rule_cache(&mut self, _preds: Vec<String>) -> Result<CacheId> {
         self.rule_cache.push(HashSet::new());
         Ok((self.rule_cache.len() - 1) as CacheId)
@@ -106,14 +111,14 @@ impl FactDB for MemDB {
                 if exist == pred {
                     return Ok(());
                 } else {
-                    return Err(Box::new(Error::Type(format!("Predicate \
-                                                             already registered \
-                                                             with different \
-                                                             type.\nExisting: \
-                                                             {:?}\nNew: \
-                                                             {:?}",
-                                                            exist,
-                                                            pred))));
+                    return Err(Error::Type(format!("Predicate \
+                                                     already registered \
+                                                     with different \
+                                                     type.\nExisting: \
+                                                     {:?}\nNew: \
+                                                     {:?}",
+                                                   exist,
+                                                   pred)));
                 }
             }
             None => (),
