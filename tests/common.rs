@@ -11,8 +11,8 @@ pub use holmes::pg::dyn::values;
 use holmes::PgDB;
 
 pub type Result<T> =
-    ::std::result::Result<T, ::holmes::engine::Error<::holmes::pg::error::Error>>;
-pub type Engine = ::holmes::Engine<::holmes::pg::error::Error, PgDB>;
+    ::std::result::Result<T, ::holmes::engine::Error<::holmes::pg::Error>>;
+pub type Engine = ::holmes::Engine<::holmes::pg::Error, PgDB>;
 
 static DB_NUM: AtomicIsize = ATOMIC_ISIZE_INIT;
 

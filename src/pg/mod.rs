@@ -34,10 +34,38 @@ use postgres::types::{FromSql, ToSql};
 
 use engine::types::{Fact, Predicate, MatchExpr, Clause, DBExpr};
 
-pub mod error;
 pub mod dyn;
 
-pub use self::error::Error;
+#[allow(missing_docs)]
+mod errors {
+    use postgres as pg;
+    error_chain! {
+            errors {
+                UriParse {
+                    description("Postgres URI Parse Error")
+                }
+                Type(msg: String) {
+                    description("Type Error")
+                    display("Type Error: {}", msg)
+                }
+                Internal(msg: String) {
+                    description("PgDB Internal Error")
+                    display("PgDB Internal Error: {}", msg)
+                }
+                Arg(msg: String) {
+                    description("Bad argument")
+                    display("Bad argument: {}", msg)
+                }
+            }
+            foreign_links {
+                Connect(pg::error::ConnectError);
+                Db(pg::error::Error);
+            }
+    }
+}
+
+pub use self::errors::*;
+
 use self::dyn::types;
 use self::dyn::{Type, Value};
 use fact_db::{FactDB, FactId, CacheId};
@@ -48,8 +76,6 @@ fn db_expr(e: &DBExpr, names: &Vec<String>) -> String {
         DBExpr::Var(v) => format!("CAST({} AS int)", names[v]),
     }
 }
-
-type Result<T> = ::std::result::Result<T, Error>;
 
 /// An iterator over a `postgres::rows::Row`.
 /// It does not implement the normal iter interface because it does not have
@@ -98,7 +124,7 @@ impl PgDB {
         // Create database if it doesn't already exist and we can
         // TODO do this only on connection failure?
         let mut params = try!(uri.into_connect_params()
-            .map_err(|e| Error::UriParse(e)));
+                                 .map_err(|_| ErrorKind::UriParse));
         match params.database.clone() {
             Some(db) => {
                 params.database = Some("postgres".to_owned());
@@ -145,9 +171,11 @@ impl PgDB {
     /// Kick everyone off the database and destroy the data at the provided URI
     pub fn destroy(uri: &str) -> Result<()> {
         let mut params = try!(uri.into_connect_params()
-            .map_err(|e| Error::UriParse(e)));
+            .map_err(|_| ErrorKind::UriParse));
         let old_db = try!(params.database
-            .ok_or(Error::Arg(format!("No database specified to destroy in {}.", uri))));
+            .ok_or_else(||
+                    ErrorKind::Arg(format!(
+                            "No database specified to destroy in {}.", uri))));
         params.database = Some("postgres".to_owned());
         let conn = try!(Connection::connect(params, SslMode::None));
         let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM \
@@ -296,7 +324,8 @@ impl FactDB for PgDB {
     fn insert_fact(&mut self, fact: &Fact) -> Result<bool> {
         let stmt: String = try!(self.insert_by_name
                 .get(&fact.pred_name)
-                .ok_or(Error::Internal("Insert Statement Missing".to_string())))
+                .ok_or_else(||
+                        ErrorKind::Internal("Insert Statement Missing".to_string())))
             .clone();
         Ok(try!(self.conn.execute(&stmt,
                                   &fact.args
@@ -315,7 +344,7 @@ impl FactDB for PgDB {
             self.named_types.insert(name.to_owned(), type_.clone());
             self.rebuild_predicate_cache()
         } else {
-            Err(Error::Type(format!("{} already registered", name)))
+            bail!(ErrorKind::Type(format!("{} already registered", name)))
         }
     }
 
@@ -344,21 +373,19 @@ impl FactDB for PgDB {
     fn new_predicate(&mut self, pred: &Predicate) -> Result<()> {
         // The predicate name is used as a table name, check it for legality
         if !valid_name(&pred.name) {
-            return Err(Error::Arg("Invalid name: Use lowercase \
-                                            and underscores only"
-                .to_string()));
+            bail!(ErrorKind::Arg("Invalid name: Use lowercase and \
+                                 underscores only".to_string()));
         }
         // If this predicate was already registered, check for a match
         match self.pred_by_name.get(&pred.name) {
             Some(existing) => {
                 if existing != pred {
-                    return Err(Error::Arg(format!("Predicate {} already \
-                                                   registered at a different \
-                                                   type.\nExisting: \
-                                                   {:?}\nNew: {:?}",
-                                                  &pred.name,
-                                                  existing,
-                                                  pred)));
+                    bail!(ErrorKind::Arg(format!(
+                                "Predicate {} already registered at a \
+                                 different type.\nExisting: {:?}\nNew: {:?}",
+                                 &pred.name,
+                                 existing,
+                                 pred)));
                 } else {
                     return Ok(());
                 }
@@ -393,7 +420,7 @@ impl FactDB for PgDB {
         };
         // Check there is at least one clause
         if query.len() == 0 {
-            return Err(Error::Arg("Empty search query".to_string()));
+            bail!(ErrorKind::Arg("Empty search query".to_string()));
         };
 
         // Check that clauses:
@@ -406,9 +433,9 @@ impl FactDB for PgDB {
                 let pred = match self.pred_by_name.get(&clause.pred_name) {
                     Some(pred) => pred,
                     None => {
-                        return Err(Error::Arg(format!("{} is not a registered \
-                                                       predicate.",
-                                                      clause.pred_name)))
+                        bail!(ErrorKind::Arg(format!(
+                                    "{} is not a registered predicate.",
+                                    clause.pred_name)))
                     }
                 };
                 for (idx, slot) in clause.args.iter().enumerate() {
@@ -420,18 +447,18 @@ impl FactDB for PgDB {
                             if v == var_type.len() {
                                 var_type.push(pred.types[idx].clone())
                             } else if v > var_type.len() {
-                                return Err(Error::Arg(format!("Hole between {} and \
-                                                               {} in variable \
-                                                               numbering.",
-                                                              var_type.len() - 1,
-                                                              v)));
+                                bail!(ErrorKind::Arg(format!(
+                                            "Hole between {} and {} in \
+                                             variable numbering.",
+                                             var_type.len() - 1,
+                                             v)));
                             } else if var_type[v] != pred.types[idx].clone() {
-                                return Err(Error::Arg(format!("Variable {} attempt \
-                                                               to unify incompatible \
-                                                               types {:?} and {:?}",
-                                                              v,
-                                                              var_type[v],
-                                                              pred.types[idx])));
+                                bail!(ErrorKind::Arg(format!(
+                                            "Variable {} attempt to unify \
+                                             incompatible types {:?} and {:?}",
+                                             v,
+                                             var_type[v],
+                                             pred.types[idx])));
                             }
                         }
                         // TODO: unify logic with above
@@ -439,35 +466,28 @@ impl FactDB for PgDB {
                             let v = var as usize;
                             let repr = pred.types[idx].repr();
                             if repr.len() != 1 {
-                                return Err(Error::Arg(format!("Substring \
-                                                               matching \
-                                                               performed \
-                                                               on \
-                                                               compound \
-                                                               field")));
+                                bail!(ErrorKind::Arg(
+                                        format!("Substring matching performed \
+                                                 on compound field")));
                             } else if (repr[0] != "bytea") && (repr[0] != "varchar") {
-                                return Err(Error::Arg(format!("Substring \
-                                                               matching \
-                                                               performed \
-                                                               on \
-                                                               non-string \
-                                                               or \
-                                                               bytes")));
+                                bail!(ErrorKind::Arg(format!(
+                                            "Substring matching performed on \
+                                             non-string or bytes")));
                             } else if v == var_type.len() {
                                 var_type.push(pred.types[idx].clone())
                             } else if v > var_type.len() {
-                                return Err(Error::Arg(format!("Hole between {} and \
-                                                               {} in variable \
-                                                               numbering.",
-                                                              var_type.len() - 1,
-                                                              v)));
+                                bail!(ErrorKind::Arg(format!(
+                                            "Hole between {} and {} in \
+                                             variable numbering.",
+                                            var_type.len() - 1,
+                                            v)));
                             } else if var_type[v] != pred.types[idx].clone() {
-                                return Err(Error::Arg(format!("Variable {} attempt \
-                                                               to unify incompatible \
-                                                               types {:?} and {:?}",
-                                                              v,
-                                                              var_type[v],
-                                                              pred.types[idx])));
+                                bail!(ErrorKind::Arg(format!(
+                                            "Variable {} attempt to unify \
+                                             incompatible types {:?} and {:?}",
+                                             v,
+                                             var_type[v],
+                                             pred.types[idx])));
                             }
                         }
                     }
