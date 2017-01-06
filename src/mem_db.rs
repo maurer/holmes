@@ -13,6 +13,8 @@ use pg::dyn::types::default_types;
 use engine::types::{Fact, Clause, Predicate, MatchExpr};
 use std::collections::{HashMap, HashSet};
 
+use std::cell::{RefCell, Cell};
+
 #[allow(missing_docs)]
 mod errors {
     error_chain! {
@@ -31,27 +33,27 @@ pub use self::errors::*;
 /// anything serious, even if you want a standalone app. It is very slow and
 /// persists nothing.
 pub struct MemDB {
-    facts: HashMap<FactId, Fact>,
-    facts_set: HashSet<Fact>,
-    next_id: FactId,
-    rule_cache: Vec<HashSet<Vec<FactId>>>,
-    types: HashMap<String, Type>,
-    preds: HashMap<String, Predicate>,
+    facts: RefCell<HashMap<FactId, Fact>>,
+    facts_set: RefCell<HashSet<Fact>>,
+    next_id: Cell<FactId>,
+    rule_cache: RefCell<Vec<HashSet<Vec<FactId>>>>,
+    types: RefCell<HashMap<String, Type>>,
+    preds: RefCell<HashMap<String, Predicate>>,
 }
 
 impl MemDB {
     /// Creates a fresh empty `MemDB`.
     pub fn new() -> MemDB {
         MemDB {
-            facts: HashMap::new(),
-            next_id: 0,
-            facts_set: HashSet::new(),
-            rule_cache: Vec::new(),
-            types: default_types()
+            facts: RefCell::new(HashMap::new()),
+            next_id: Cell::new(0),
+            facts_set: RefCell::new(HashSet::new()),
+            rule_cache: RefCell::new(Vec::new()),
+            types: RefCell::new(default_types()
                 .iter()
                 .filter_map(|type_| type_.name().map(|name| (name.to_owned(), type_.clone())))
-                .collect(),
-            preds: HashMap::new(),
+                .collect()),
+            preds: RefCell::new(HashMap::new()),
         }
     }
 }
@@ -62,37 +64,37 @@ fn raw_option<T>(some: bool, val: T) -> Option<T> {
 
 impl FactDB for MemDB {
     type Error = Error;
-    fn new_rule_cache(&mut self, _preds: Vec<String>) -> Result<CacheId> {
-        self.rule_cache.push(HashSet::new());
-        Ok((self.rule_cache.len() - 1) as CacheId)
+    fn new_rule_cache(&self, _preds: Vec<String>) -> Result<CacheId> {
+        self.rule_cache.borrow_mut().push(HashSet::new());
+        Ok((self.rule_cache.borrow().len() - 1) as CacheId)
     }
-    fn cache_hit(&mut self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
-        self.rule_cache[cache as usize].insert(facts);
+    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+        self.rule_cache.borrow_mut()[cache as usize].insert(facts);
         Ok(())
     }
-    fn insert_fact(&mut self, fact: &Fact) -> Result<bool> {
-        if self.facts_set.contains(fact) {
+    fn insert_fact(&self, fact: &Fact) -> Result<bool> {
+        if self.facts_set.borrow().contains(fact) {
             return Ok(false);
         };
-        let id = self.next_id;
-        self.next_id += 1;
-        self.facts.insert(id, fact.clone());
-        self.facts_set.insert(fact.clone());
+        let id = self.next_id.get();
+        self.next_id.set(id + 1);
+        self.facts.borrow_mut().insert(id, fact.clone());
+        self.facts_set.borrow_mut().insert(fact.clone());
         Ok(true)
     }
-    fn add_type(&mut self, type_: Type) -> Result<()> {
+    fn add_type(&self, type_: Type) -> Result<()> {
         let name = type_.name().ok_or(ErrorKind::Arg("Provided type had no name".to_string()))?;
-        self.types.insert(name.to_string(), type_);
+        self.types.borrow_mut().insert(name.to_string(), type_);
         Ok(())
     }
     fn get_type(&self, type_str: &str) -> Option<Type> {
-        self.types.get(type_str).map(|x| x.clone())
+        self.types.borrow().get(type_str).cloned()
     }
-    fn get_predicate(&self, pred_name: &str) -> Option<&Predicate> {
-        self.preds.get(pred_name)
+    fn get_predicate(&self, pred_name: &str) -> Option<Predicate> {
+        self.preds.borrow().get(pred_name).cloned()
     }
-    fn new_predicate(&mut self, pred: &Predicate) -> Result<()> {
-        match self.preds.get(&pred.name) {
+    fn new_predicate(&self, pred: &Predicate) -> Result<()> {
+        match self.preds.borrow().get(&pred.name) {
             Some(exist) => {
                 if exist == pred {
                     return Ok(());
@@ -105,7 +107,7 @@ impl FactDB for MemDB {
             }
             None => (),
         }
-        self.preds.insert(pred.name.to_string(), pred.clone());
+        self.preds.borrow_mut().insert(pred.name.to_string(), pred.clone());
         Ok(())
     }
     fn search_facts(&self,
@@ -113,9 +115,10 @@ impl FactDB for MemDB {
                     cache: Option<CacheId>)
                     -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
         Ok(query.iter().fold(vec![(vec![], vec![])], |asgns, clause| {
+            let facts = self.facts.borrow();
             asgns.iter()
                 .flat_map(|asgn| {
-                    self.facts.iter().flat_map(move |(id, fact)| {
+                    facts.iter().flat_map(move |(id, fact)| {
                         (if fact.pred_name == clause.pred_name {
                                 fact.args
                                     .iter()
@@ -155,7 +158,7 @@ impl FactDB for MemDB {
                 })
                 .filter(|&(ref facts, _)| {
                     match cache {
-                        Some(c) => !self.rule_cache[c as usize].contains(facts),
+                        Some(c) => !self.rule_cache.borrow()[c as usize].contains(facts),
                         None => true,
                     }
                 })

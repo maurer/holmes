@@ -34,6 +34,7 @@ use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
 use engine::types::{Fact, Predicate, MatchExpr, Clause, DBExpr};
+use std::cell::RefCell;
 
 pub mod dyn;
 
@@ -108,9 +109,9 @@ impl<'a> RowIter<'a> {
 /// Object representing a postgres-backed fact database instance
 pub struct PgDB {
     conn: Connection,
-    pred_by_name: HashMap<String, Predicate>,
-    insert_by_name: HashMap<String, String>,
-    named_types: HashMap<String, Type>,
+    pred_by_name: RefCell<HashMap<String, Predicate>>,
+    insert_by_name: RefCell<HashMap<String, String>>,
+    named_types: RefCell<HashMap<String, Type>>,
 }
 
 impl PgDB {
@@ -154,14 +155,14 @@ impl PgDB {
         try!(conn.execute("create sequence if not exists cache_id", &[]));
 
         // Create incremental PgDB object
-        let mut db = PgDB {
+        let db = PgDB {
             conn: conn,
-            pred_by_name: HashMap::new(),
-            insert_by_name: HashMap::new(),
-            named_types: types::default_types()
+            pred_by_name: RefCell::new(HashMap::new()),
+            insert_by_name: RefCell::new(HashMap::new()),
+            named_types: RefCell::new(types::default_types()
                 .iter()
                 .filter_map(|type_| type_.name().map(|name| (name.to_owned(), type_.clone())))
-                .collect(),
+                .collect()),
         };
 
         try!(db.rebuild_predicate_cache());
@@ -194,9 +195,9 @@ impl PgDB {
     // I'm assuming for the moment that there isn't going to be a lot of
     // dynamic type adding/removal, and so rebuilding the predicate/insert
     // statement cache on add/remove isn't a big deal
-    fn rebuild_predicate_cache(&mut self) -> Result<()> {
-        self.pred_by_name = HashMap::new();
-        self.insert_by_name = HashMap::new();
+    fn rebuild_predicate_cache(&self) -> Result<()> {
+        *self.pred_by_name.borrow_mut() = HashMap::new();
+        *self.insert_by_name.borrow_mut() = HashMap::new();
         {
             // Scoped borrow of connection
             let pred_stmt = try!(self.conn
@@ -210,7 +211,7 @@ impl PgDB {
                     Some(ty) => ty,
                     None => types::Trap::new(),
                 };
-                match self.pred_by_name.entry(name.clone()) {
+                match self.pred_by_name.borrow_mut().entry(name.clone()) {
                     Vacant(entry) => {
                         let mut types = Vec::new();
                         types.push(h_type.clone());
@@ -226,16 +227,14 @@ impl PgDB {
             }
         }
         // Populate fact insert cache
-        for pred in self.pred_by_name.clone().values() {
-            self.gen_insert_stmt(pred)
-        }
+        self.pred_by_name.borrow().values().inspect(|pred| self.gen_insert_stmt(pred)).count();
         Ok(())
     }
 
     // Generates a prebuilt insert statement for a given predicate, and stores
     // it in the cache so we don't have to rebuild it every time.
     // TODO: Is it possible for these to be stored prepared statements somehow?
-    fn gen_insert_stmt(&mut self, pred: &Predicate) {
+    fn gen_insert_stmt(&self, pred: &Predicate) {
         let args: Vec<String> = pred.types
             .iter()
             .enumerate()
@@ -245,7 +244,7 @@ impl PgDB {
                             CONFLICT DO NOTHING",
                            pred.name,
                            args.join(", "));
-        self.insert_by_name.insert(pred.name.clone(), stmt);
+        self.insert_by_name.borrow_mut().insert(pred.name.clone(), stmt);
     }
 
     // Persist a predicate into the database
@@ -292,7 +291,7 @@ impl PgDB {
 }
 impl FactDB for PgDB {
     type Error = Error;
-    fn new_rule_cache(&mut self, preds: Vec<String>) -> Result<CacheId> {
+    fn new_rule_cache(&self, preds: Vec<String>) -> Result<CacheId> {
         let cache_stmt = try!(self.conn.prepare("select nextval('cache_id')"));
         let cache_res = try!(cache_stmt.query(&[]));
         let cache_id = cache_res.get(0).get(0);
@@ -310,7 +309,7 @@ impl FactDB for PgDB {
                                &[]));
         Ok(cache_id)
     }
-    fn cache_hit(&mut self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
         let borrow: Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
         try!(self.conn
             .execute(&format!("insert into cache.rule{} values ({})",
@@ -325,8 +324,9 @@ impl FactDB for PgDB {
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
-    fn insert_fact(&mut self, fact: &Fact) -> Result<bool> {
+    fn insert_fact(&self, fact: &Fact) -> Result<bool> {
         let stmt: String = try!(self.insert_by_name
+                .borrow()
                 .get(&fact.pred_name)
                 .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string())))
             .clone();
@@ -341,11 +341,11 @@ impl FactDB for PgDB {
     /// This is unstable, and will likely need to be moved to the initialization
     /// of the database object in order to allow reconnecting to an existing
     /// database.
-    fn add_type(&mut self, type_: Type) -> Result<()> {
+    fn add_type(&self, type_: Type) -> Result<()> {
         let name = type_.name()
             .ok_or(ErrorKind::Arg("Tried to add a type with no name".to_string()))?;
-        if !self.named_types.contains_key(name) {
-            self.named_types.insert(name.to_owned(), type_.clone());
+        if !self.named_types.borrow().contains_key(name) {
+            self.named_types.borrow_mut().insert(name.to_owned(), type_.clone());
             self.rebuild_predicate_cache()
         } else {
             bail!(ErrorKind::Type(format!("{} already registered", name)))
@@ -357,12 +357,12 @@ impl FactDB for PgDB {
     /// queries, since it allows you to use names of types when declaring
     /// functions rather than type objects.
     fn get_type(&self, type_str: &str) -> Option<Type> {
-        self.named_types.get(type_str).map(|x| x.clone())
+        self.named_types.borrow().get(type_str).map(|x| x.clone())
     }
 
     /// Fetches a predicate by name
-    fn get_predicate(&self, pred_name: &str) -> Option<&Predicate> {
-        self.pred_by_name.get(pred_name)
+    fn get_predicate(&self, pred_name: &str) -> Option<Predicate> {
+        self.pred_by_name.borrow().get(pred_name).cloned()
     }
 
     /// Persists a predicate by name
@@ -374,7 +374,7 @@ impl FactDB for PgDB {
     /// names rather than using the names of predicates, but this helps a lot
     /// with debugging for now.
     // TODO lift restriction on predicate names
-    fn new_predicate(&mut self, pred: &Predicate) -> Result<()> {
+    fn new_predicate(&self, pred: &Predicate) -> Result<()> {
         // The predicate name is used as a table name, check it for legality
         if !valid_name(&pred.name) {
             bail!(ErrorKind::Arg("Invalid name: Use lowercase and \
@@ -382,7 +382,7 @@ impl FactDB for PgDB {
                 .to_string()));
         }
         // If this predicate was already registered, check for a match
-        match self.pred_by_name.get(&pred.name) {
+        match self.pred_by_name.borrow().get(&pred.name) {
             Some(existing) => {
                 if existing != pred {
                     bail!(ErrorKind::Arg(format!("Predicate {} already registered at a \
@@ -399,7 +399,7 @@ impl FactDB for PgDB {
 
         try!(self.insert_predicate(&pred));
         self.gen_insert_stmt(&pred);
-        self.pred_by_name.insert(pred.name.clone(), pred.clone());
+        self.pred_by_name.borrow_mut().insert(pred.name.clone(), pred.clone());
         Ok(())
     }
 
@@ -434,7 +434,7 @@ impl FactDB for PgDB {
         {
             let mut var_type: Vec<Type> = Vec::new();
             for clause in query.iter() {
-                let pred = match self.pred_by_name.get(&clause.pred_name) {
+                let pred = match self.pred_by_name.borrow().get(&clause.pred_name).cloned() {
                     Some(pred) => pred,
                     None => {
                         bail!(ErrorKind::Arg(format!("{} is not a registered predicate.",
@@ -527,7 +527,9 @@ impl FactDB for PgDB {
                                                    start_str,
                                                    end_str,
                                                    start_str));
-                            var_types.push(&self.pred_by_name[&clause.pred_name].types[idx]);
+                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name]
+                                    .types[idx]
+                                .clone());
                         } else {
                             let piece = format!("substring({}.arg{} from {} \
                                                  + 1 for {} - {} + 1) = {}",
@@ -546,7 +548,9 @@ impl FactDB for PgDB {
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
                             var_names.push(format!("{}.arg{}", alias_name, idx));
-                            var_types.push(&self.pred_by_name[&clause.pred_name].types[idx]);
+                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name]
+                                    .types[idx]
+                                .clone());
                         } else {
                             // The variable has occurred correctly, so we add it being equal
                             // to the canonical definition to the join clause for this table

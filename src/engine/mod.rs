@@ -83,7 +83,7 @@ impl<FE, FDB> Engine<FE, FDB>
     }
     /// Register a new type
     /// This type must be a named type (e.g. type.name() should return `Some`)
-    pub fn add_type(&mut self, type_: Type) -> Result<()> {
+    pub fn add_type(&self, type_: Type) -> Result<()> {
         Ok(try!(self.fact_db.add_type(type_).chain_err(|| ErrorKind::FactDB)))
     }
     /// Register a new predicate
@@ -92,7 +92,7 @@ impl<FE, FDB> Engine<FE, FDB>
     /// * Predicates must have at least one argument
     /// * Predicates must have a unique name
     /// * While using the `pg` backend, their name must be lowercase ascii or '_'
-    pub fn new_predicate(&mut self, pred: &Predicate) -> Result<()> {
+    pub fn new_predicate(&self, pred: &Predicate) -> Result<()> {
 
         // Verify we have at least one argument
         if pred.types.len() == 0 {
@@ -150,7 +150,7 @@ impl<FE, FDB> Engine<FE, FDB>
 
     /// Returns success in the appropriate type. This helper function is to
     /// support the EDSL, and it is not anticipated to be useful normally.
-    pub fn nop(&mut self) -> Result<()> {
+    pub fn nop(&self) -> Result<()> {
         Ok(())
     }
 

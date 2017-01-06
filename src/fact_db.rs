@@ -16,13 +16,13 @@ pub trait FactDB {
     type Error: ::std::error::Error;
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
-    fn insert_fact(&mut self, fact: &Fact) -> Result<bool, Self::Error>;
+    fn insert_fact(&self, fact: &Fact) -> Result<bool, Self::Error>;
 
     /// Registers a new type with the database.
     /// This is unstable, and will likely need to be moved to the initialization
     /// of the database object in order to allow reconnecting to an existing
     /// database.
-    fn add_type(&mut self, type_: Type) -> Result<(), Self::Error>;
+    fn add_type(&self, type_: Type) -> Result<(), Self::Error>;
 
     /// Looks for a named type in the database's registry.
     /// This function is primarily useful for the DSL shorthand for constructing
@@ -31,16 +31,16 @@ pub trait FactDB {
     fn get_type(&self, type_str: &str) -> Option<Type>;
 
     /// Fetches a predicate by name
-    fn get_predicate(&self, pred_name: &str) -> Option<&Predicate>;
+    fn get_predicate(&self, pred_name: &str) -> Option<Predicate>;
 
     /// Persists a predicate by name
-    fn new_predicate(&mut self, pred: &Predicate) -> Result<(), Self::Error>;
+    fn new_predicate(&self, pred: &Predicate) -> Result<(), Self::Error>;
 
     /// Creates a cache table for a new rule, returning a handle
-    fn new_rule_cache(&mut self, pred: Vec<String>) -> Result<CacheId, Self::Error>;
+    fn new_rule_cache(&self, pred: Vec<String>) -> Result<CacheId, Self::Error>;
 
     /// Update
-    fn cache_hit(&mut self, cache: CacheId, Vec<FactId>) -> Result<(), Self::Error>;
+    fn cache_hit(&self, cache: CacheId, Vec<FactId>) -> Result<(), Self::Error>;
 
     /// Attempt to match the right hand side of a datalog rule against the
     /// database, returning a list of solution assignments to the bound
