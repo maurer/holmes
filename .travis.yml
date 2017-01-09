@@ -42,6 +42,10 @@ script:
 
 after_success:
   - travis-cargo --only stable doc-upload
+  - travis-cargo coveralls --no-sudo # Doesn't actually work at the moment,
+                                     # but installs kcov
+  # Work around bad travis-cargo flags by invoking kcov correctly
+  - ./kcov/build/src/kcov --verify --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo,/out target/kcov target/debug/lib-*
 
 env:
   global:
