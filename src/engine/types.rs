@@ -14,19 +14,58 @@ use pg::dyn::{Value, Type};
 ///
 /// ```
 /// use holmes::pg::dyn::types;
-/// use holmes::engine::types::Predicate;
+/// use holmes::engine::types::{Predicate, Field};
 /// use std::sync::Arc;
 /// Predicate {
-///   name  : "foo".to_string(),
-///   types : vec![Arc::new(types::UInt64), Arc::new(types::String)]
+///     name: "foo".to_string(),
+///     description: None,
+///     fields: vec![Field {
+///         name: None,
+///         description: None,
+///         type_: Arc::new(types::UInt64)
+///     }, Field {
+///         name: None,
+///         description: None,
+///         type_: Arc::new(types::String)
+///     }]
 /// };
 /// ```
 #[derive(PartialEq,Clone,Debug,Hash,Eq)]
 pub struct Predicate {
     /// Predicate Name
     pub name: String,
-    /// Predicate slot types
-    pub types: Vec<Type>,
+    /// Description of what it means for this predicate to be true.
+    /// Purely documentation, not mechanical
+    pub description: Option<String>,
+    /// Predicate fields
+    pub fields: Vec<Field>,
+}
+
+/// Field for use in a predicate
+/// The name is for use in selective matching or unordered definition,
+/// and the description is to improve readability of code and comprehension of
+/// results.
+/// The `Type` is the only required component of a field, as it defines how to
+/// actually interact with the field.
+#[derive(Clone,Debug,Hash,Eq)]
+pub struct Field {
+    /// Name of field, for use in matching and instantiating predicates
+    pub name: Option<String>,
+    /// Description of the field, purely documentation, not mechanical
+    pub description: Option<String>,
+    /// Type of the predicate, explaining how to store and retrieve
+    /// information from the `FactDB`
+    pub type_: Type,
+}
+
+// Manually implement PartialEq to work around rustc #[derive(PartialEq)] bug
+// https://github.com/rust-lang/rust/issues/39128
+impl PartialEq for Field {
+    fn eq(&self, other: &Self) -> bool {
+        (self.name == other.name) &&
+            (self.description == other.description) &&
+            (self.type_.eq(&other.type_))
+    }
 }
 
 /// A `Fact` is a particular filling of a `Predicate`'s slots such that it is

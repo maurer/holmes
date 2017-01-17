@@ -66,10 +66,15 @@ macro_rules! holmes_exec {
 #[macro_export]
 macro_rules! predicate {
   ($holmes:ident, $pred_name:ident($($t:tt),*)) => {{
-    let types = vec![$(htype!($holmes, $t),)*];
+    let fields = vec![$(::holmes::engine::types::Field {
+        name: None,
+        description: None,
+        type_: htype!($holmes, $t)
+    },)*];
     $holmes.new_predicate(&::holmes::engine::types::Predicate {
-      name  : stringify!($pred_name).to_string(),
-      types : types
+      name: stringify!($pred_name).to_string(),
+      description: None,
+      fields: fields
     })
   }};
   ($pred_name:ident($($t:tt),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
