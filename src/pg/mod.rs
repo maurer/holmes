@@ -148,7 +148,7 @@ impl PgDB {
         try!(conn.execute("create table if not exists predicates (id serial primary key, \
                            name varchar not null, \
                            description varchar)",
-                           &[]));
+                          &[]));
         try!(conn.execute("create table if not exists fields (\
                            pred_id serial references predicates(id), \
                            ordinal int4 not null, \
@@ -207,9 +207,10 @@ impl PgDB {
         *self.insert_by_name.borrow_mut() = HashMap::new();
         {
             // Scoped borrow of connection
-            let pred_stmt = try!(self.conn.prepare(
-                    "select predicates.name, predicates.description, fields.name, fields.description, fields.type \
-                     from predicates JOIN fields ON predicates.id = fields.pred_id ORDER BY predicates.id, fields.ordinal"));
+            let pred_stmt = try!(self.conn
+                .prepare("select predicates.name, predicates.description, fields.name, \
+                          fields.description, fields.type from predicates JOIN fields ON \
+                          predicates.id = fields.pred_id ORDER BY predicates.id, fields.ordinal"));
             let pred_types = try!(pred_stmt.query(&[]));
             for type_entry in pred_types.iter() {
                 let mut row = RowIter::new(&type_entry);
@@ -226,7 +227,7 @@ impl PgDB {
                 let field = Field {
                     name: field_name,
                     description: field_descr,
-                    type_: h_type.clone()
+                    type_: h_type.clone(),
                 };
                 match self.pred_by_name.borrow_mut().entry(name.clone()) {
                     Vacant(entry) => {
@@ -269,7 +270,8 @@ impl PgDB {
     // _only_ puts record of the predicate into the database.
     fn insert_predicate(&self, pred: &Predicate) -> Result<()> {
         let &Predicate { ref name, ref description, ref fields } = pred;
-        let stmt = self.conn.prepare("insert into predicates (name, description) values ($1, $2) returning id")?;
+        let stmt = self.conn
+            .prepare("insert into predicates (name, description) values ($1, $2) returning id")?;
         let pred_id: i32 = stmt.query(&[name, description])?.get(0).get(0);
         for (ordinal, field) in fields.iter().enumerate() {
             try!(self.conn
@@ -278,7 +280,8 @@ impl PgDB {
                          &[&pred_id,
                            &field.name,
                            &field.description,
-                           &field.type_.name()
+                           &field.type_
+                               .name()
                                .ok_or(ErrorKind::Arg("Field type had no name".to_string()))?,
                            &(ordinal as i32)]));
         }
@@ -290,7 +293,8 @@ impl PgDB {
             .join(", ");
         let col_str = fields.iter()
             .flat_map(|field| {
-                field.type_.repr()
+                field.type_
+                    .repr()
                     .iter()
                     .map(|_| field.type_.large_unique())
                     .collect::<Vec<_>>()
@@ -548,9 +552,9 @@ impl FactDB for PgDB {
                                                    start_str,
                                                    end_str,
                                                    start_str));
-                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name]
-                                    .fields[idx].type_
-                                .clone());
+                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name].fields[idx]
+                                    .type_
+                                    .clone());
                         } else {
                             let piece = format!("substring({}.arg{} from {} \
                                                  + 1 for {} - {} + 1) = {}",
@@ -569,9 +573,9 @@ impl FactDB for PgDB {
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
                             var_names.push(format!("{}.arg{}", alias_name, idx));
-                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name]
-                                    .fields[idx].type_
-                                .clone());
+                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name].fields[idx]
+                                    .type_
+                                    .clone());
                         } else {
                             // The variable has occurred correctly, so we add it being equal
                             // to the canonical definition to the join clause for this table

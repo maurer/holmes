@@ -103,7 +103,7 @@ impl<FE, FDB> Engine<FE, FDB>
         match self.fact_db.get_predicate(&pred.name) {
             Some(p) => {
                 if pred.fields == p.fields {
-                    //TODO should this be return ()
+                    // TODO should this be return ()
                     ()
                 } else {
                     bail!(ErrorKind::Type(format!("{:?} != {:?}", pred.fields, p.fields)));

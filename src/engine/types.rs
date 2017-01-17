@@ -62,9 +62,8 @@ pub struct Field {
 // https://github.com/rust-lang/rust/issues/39128
 impl PartialEq for Field {
     fn eq(&self, other: &Self) -> bool {
-        (self.name == other.name) &&
-            (self.description == other.description) &&
-            (self.type_.eq(&other.type_))
+        (self.name == other.name) && (self.description == other.description) &&
+        (self.type_.eq(&other.type_))
     }
 }
 
