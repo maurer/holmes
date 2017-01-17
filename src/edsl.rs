@@ -52,6 +52,25 @@ macro_rules! holmes_exec {
   }};
 }
 
+#[macro_export]
+macro_rules! field {
+    ($holmes:ident, [$name:ident $t:tt $descr:expr]) => {{::holmes::engine::types::Field {
+        name: Some(stringify!($name).to_string()),
+        description: Some($descr.to_string()),
+        type_: htype!($holmes, $t)
+    }}};
+    ($holmes:ident, [$name:ident $t:tt]) => {{::holmes::engine::types::Field {
+        name: Some(stringify!($name).to_string()),
+        description: None,
+        type_: htype!($holmes, $t)
+    }}};
+    ($holmes:ident, $t:tt) => {{::holmes::engine::types::Field {
+        name: None,
+        description: None,
+        type_: htype!($holmes, $t)
+    }}};
+}
+
 /// Registers a predicate with the `Holmes` context.
 ///
 /// ```c
@@ -65,12 +84,24 @@ macro_rules! holmes_exec {
 /// a `holmes` parameter in its stead.
 #[macro_export]
 macro_rules! predicate {
-  ($holmes:ident, $pred_name:ident($($t:tt),*)) => {{
-    let types = vec![$(htype!($holmes, $t),)*];
+  ($holmes:ident, $pred_name:ident($($t:tt),*), $descr:expr) => {{
+    let fields = vec![$(field!($holmes, $t),)*];
     $holmes.new_predicate(&::holmes::engine::types::Predicate {
-      name  : stringify!($pred_name).to_string(),
-      types : types
+      name: stringify!($pred_name).to_string(),
+      description: Some($descr.to_string()),
+      fields: fields
     })
+  }};
+  ($holmes:ident, $pred_name:ident($($t:tt),*)) => {{
+    let fields = vec![$(field!($holmes, $t),)*];
+    $holmes.new_predicate(&::holmes::engine::types::Predicate {
+      name: stringify!($pred_name).to_string(),
+      description: None,
+      fields: fields
+    })
+  }};
+  ($pred_name:ident($($t:tt),*) : $descr:expr) => { |holmes: &mut ::holmes::Engine<_,_>| {
+    predicate!(holmes, $pred_name($($t),*), $descr)
   }};
   ($pred_name:ident($($t:tt),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
     predicate!(holmes, $pred_name($($t),*))
@@ -101,6 +132,38 @@ macro_rules! fact {
   }};
 }
 
+#[macro_export]
+macro_rules! clause {
+    ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident($($m:tt),*)) => {{
+        ::holmes::engine::types::Clause {
+            pred_name: stringify!($pred_name).to_string(),
+            args: vec![$(clause_match!($vars, $next, $m)),*]
+        }
+    }};
+    ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident{$($field:ident = $m:tt),*}) => {{
+        use std::collections::HashMap;
+        let pred_name = stringify!($pred_name).to_string();
+        let pred = $holmes.get_predicate(&pred_name)?.unwrap();
+        let mut matches = HashMap::new();
+        let _ = {
+          $(matches.insert(stringify!($field).to_string(), clause_match!($vars, $next, $m)));*
+        };
+        let args: Vec<::holmes::engine::types::MatchExpr> = pred.fields.iter().map(|field| {
+            match field.name {
+                Some(ref name) => match matches.remove(name) {
+                    Some(cm) => cm,
+                    None => ::holmes::engine::types::MatchExpr::Unbound
+                },
+                None => ::holmes::engine::types::MatchExpr::Unbound,
+            }
+        }).collect();
+        ::holmes::engine::types::Clause {
+            pred_name: pred_name,
+            args: args
+        }
+    }};
+}
+
 /// Runs a datalog query against the `Holmes` context
 ///
 /// Matches as per the right hand side of a datalog rule, then returns
@@ -113,14 +176,12 @@ macro_rules! fact {
 /// ```
 #[macro_export]
 macro_rules! query {
-  ($holmes:ident, $($pred_name:ident($($m:tt),*))&*) => {{
+  ($holmes:ident, $($pred_name:ident $inner:tt)&*) => {{
     use std::collections::HashMap;
     let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
     let mut n : ::holmes::engine::types::Var = 0;
-    $holmes.derive(&vec![$(::holmes::engine::types::Clause {
-      pred_name : stringify!($pred_name).to_string(),
-      args : vec![$(clause_match!(vars, n, $m)),*]
-    }),*])
+    let query = vec![$(clause!($holmes, vars, n, $pred_name $inner)),*];
+    $holmes.derive(&query)
   }}
 }
 
@@ -153,57 +214,32 @@ macro_rules! query {
 /// and `bind_match!` macro docs.
 #[macro_export]
 macro_rules! rule {
-  ($holmes:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
+  ($holmes:ident, $head_name:ident $head_inner:tt <= $($body_name:ident $body_inner:tt)&*,
    {$(let $bind:tt = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
     let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
     let mut n : ::holmes::engine::types::Var = 0;
+    let body = vec![$(clause!($holmes, vars, n, $body_name $body_inner)),*];
+    let head = clause!($holmes, vars, n, $head_name $head_inner);
     $holmes.new_rule(&::holmes::engine::types::Rule {
-      body : vec![$(::holmes::engine::types::Clause {
-        pred_name : stringify!($body_name).to_string(),
-        args : vec![$(clause_match!(vars, n, $mb)),*]
-      }),*],
-      head : ::holmes::engine::types::Clause {
-        pred_name : stringify!($head_name).to_string(),
-        args : vec![$(clause_match!(vars, n, $m)),*]
-      },
+      body: body,
+      head: head,
       wheres : vec! [$(::holmes::engine::types::WhereClause {
         lhs   : bind_match!(vars, n, $bind),
         rhs   : hexpr!(vars, n, $hexpr)
       }),*]
     })
   }};
-  ($holmes:ident, $head_name:ident($($m:tt),*) <= $($body_name:ident($($mb:tt),*))&*,
-   {$(let $($bind:tt),* = $hexpr:tt);*}) => {{
-    use std::collections::HashMap;
-    let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
-    let mut n : ::holmes::engine::types::Var = 0;
-    $holmes.new_rule(&::holmes::engine::types::Rule {
-      body : vec![$(::holmes::engine::types::Clause {
-        pred_name : stringify!($body_name).to_string(),
-        args : vec![$(clause_match!(vars, n, $mb)),*]
-      }),*],
-      head : ::holmes::engine::types::Clause {
-        pred_name : stringify!($head_name).to_string(),
-        args : vec![$(clause_match!(vars, n, $m)),*]
-      },
-      wheres : vec! [$(::holmes::engine::types::WhereClause {
-        lhs   : ::holmes::engine::types::BindExpr::Destructure(
-                  vec![$(bind_match!(vars, n, $bind)),*]),
-        rhs   : hexpr!(vars, n, $hexpr)
-      }),*]
-    })
-  }};
-  ($($head_name:ident($($m:tt),*)),* <= $($body_name:ident($($mb:tt),*))&*) => {
+  ($($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
     |holmes: &mut ::holmes::Engine<_,_>| {
-      rule!(holmes, $($head_name($($m),*)),* <= $($body_name($($mb),*))&*, {})
+      rule!(holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})
     }
   };
-  ($($head_name:ident($($m:tt),*)),* <=
-   $($body_name:ident($($mb:tt),*))&*, {$(let $($bind:tt),* = $hexpr:tt);*}) => {
+  ($($head_name:ident $head_inner:tt),* <=
+   $($body_name:ident $inner:tt)&*, {$(let $bind:tt = $hexpr:tt);*}) => {
     |holmes: &mut ::holmes::Engine<_,_>| {
-      rule!(holmes, $($head_name($($m),*)),* <=
-                    $($body_name($($mb),*))&*, {$(let $($bind),* = $hexpr);*})
+      rule!(holmes, $($head_name $head_inner),* <=
+                    $($body_name $inner)&*, {$(let $bind = $hexpr);*})
     }
   };
 

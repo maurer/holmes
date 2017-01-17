@@ -33,4 +33,4 @@ stdenv.mkDerivation rec {
                   openssl postgresql
                   vim ];
 }
-) {}
+) {rust = nixpkgs.rustNightly; }

@@ -95,23 +95,30 @@ impl<FE, FDB> Engine<FE, FDB>
     pub fn new_predicate(&self, pred: &Predicate) -> Result<()> {
 
         // Verify we have at least one argument
-        if pred.types.len() == 0 {
+        if pred.fields.len() == 0 {
             bail!(ErrorKind::Invalid("Predicates must have at least one argument.".to_string()));
         }
 
         // Check for existing predicates/type issues
         match self.fact_db.get_predicate(&pred.name) {
             Some(p) => {
-                if pred.types == p.types {
+                if pred.fields == p.fields {
+                    // TODO should this be return ()
                     ()
                 } else {
-                    bail!(ErrorKind::Type(format!("{:?} != {:?}", pred.types, p.types)));
+                    bail!(ErrorKind::Type(format!("{:?} != {:?}", pred.fields, p.fields)));
                 }
             }
             None => (),
         }
 
         Ok(try!(self.fact_db.new_predicate(pred).chain_err(|| ErrorKind::FactDB)))
+    }
+
+    /// Retrieves a named predicate from the database. This is primarily of use for
+    /// retrieving metadata about a predicate for display.
+    pub fn get_predicate(&self, name: &str) -> Result<Option<Predicate>> {
+        Ok(self.fact_db.get_predicate(name))
     }
 
     /// Adds a new fact to the database
@@ -122,15 +129,15 @@ impl<FE, FDB> Engine<FE, FDB>
     pub fn new_fact(&mut self, fact: &Fact) -> Result<()> {
         match self.fact_db.get_predicate(&fact.pred_name) {
             Some(ref pred) => {
-                if (fact.args.len() != pred.types.len()) ||
+                if (fact.args.len() != pred.fields.len()) ||
                    (!fact.args
                     .iter()
-                    .zip(pred.types.iter())
-                    .all(|(val, ty)| val.type_() == ty.clone())) {
+                    .zip(pred.fields.iter())
+                    .all(|(val, field)| val.type_() == field.type_.clone())) {
                     bail!(ErrorKind::Type(format!("Fact ({:?}) does not \
                                                    match predicate ({:?})",
                                                   fact,
-                                                  pred.types)));
+                                                  pred.fields)));
                 }
             }
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),

@@ -33,7 +33,7 @@ use postgres::{rows, Connection, TlsMode};
 use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
-use engine::types::{Fact, Predicate, MatchExpr, Clause, DBExpr};
+use engine::types::{Fact, Predicate, Field, MatchExpr, Clause, DBExpr};
 use std::cell::RefCell;
 
 pub mod dyn;
@@ -145,9 +145,16 @@ impl PgDB {
         try!(conn.execute("create schema if not exists cache", &[]));
 
         // Create Tables
-        try!(conn.execute("create table if not exists predicates (pred_name \
-                           varchar not null, ordinal int4 not null, type \
-                           varchar not null)",
+        try!(conn.execute("create table if not exists predicates (id serial primary key, \
+                           name varchar not null, \
+                           description varchar)",
+                          &[]));
+        try!(conn.execute("create table if not exists fields (\
+                           pred_id serial references predicates(id), \
+                           ordinal int4 not null, \
+                           type varchar not null, \
+                           name varchar, \
+                           description varchar)",
                           &[]));
         try!(conn.execute("create table if not exists rules (id serial primary key , rule varchar \
                       not null)",
@@ -201,27 +208,37 @@ impl PgDB {
         {
             // Scoped borrow of connection
             let pred_stmt = try!(self.conn
-                .prepare("select pred_name, type from predicates ORDER BY \
-                          pred_name, ordinal"));
+                .prepare("select predicates.name, predicates.description, fields.name, \
+                          fields.description, fields.type from predicates JOIN fields ON \
+                          predicates.id = fields.pred_id ORDER BY predicates.id, fields.ordinal"));
             let pred_types = try!(pred_stmt.query(&[]));
             for type_entry in pred_types.iter() {
-                let name: String = type_entry.get(0);
-                let h_type_str: String = type_entry.get(1);
+                let mut row = RowIter::new(&type_entry);
+                let name: String = row.next().unwrap();
+                // TODO: there's funny layering of nested options issues here
+                let pred_descr: Option<String> = row.next();
+                let field_name: Option<String> = row.next();
+                let field_descr: Option<String> = row.next();
+                let h_type_str: String = row.next().unwrap();
                 let h_type = match self.get_type(&h_type_str) {
                     Some(ty) => ty,
                     None => types::Trap::new(),
                 };
+                let field = Field {
+                    name: field_name,
+                    description: field_descr,
+                    type_: h_type.clone(),
+                };
                 match self.pred_by_name.borrow_mut().entry(name.clone()) {
                     Vacant(entry) => {
-                        let mut types = Vec::new();
-                        types.push(h_type.clone());
                         entry.insert(Predicate {
                             name: name.clone(),
-                            types: types,
+                            description: pred_descr,
+                            fields: vec![field],
                         });
                     }
                     Occupied(mut entry) => {
-                        entry.get_mut().types.push(h_type.clone());
+                        entry.get_mut().fields.push(field);
                     }
                 }
             }
@@ -234,8 +251,9 @@ impl PgDB {
     // Generates a prebuilt insert statement for a given predicate, and stores
     // it in the cache so we don't have to rebuild it every time.
     // TODO: Is it possible for these to be stored prepared statements somehow?
+    // TODO: There might be an issue here with types with multifield width?
     fn gen_insert_stmt(&self, pred: &Predicate) {
-        let args: Vec<String> = pred.types
+        let args: Vec<String> = pred.fields
             .iter()
             .enumerate()
             .map(|(k, _)| format!("${}", k + 1))
@@ -251,27 +269,34 @@ impl PgDB {
     // This function is internal because it does not add it to the object, it
     // _only_ puts record of the predicate into the database.
     fn insert_predicate(&self, pred: &Predicate) -> Result<()> {
-        let &Predicate { ref name, ref types } = pred;
-        for (ordinal, type_) in types.iter().enumerate() {
+        let &Predicate { ref name, ref description, ref fields } = pred;
+        let stmt = self.conn
+            .prepare("insert into predicates (name, description) values ($1, $2) returning id")?;
+        let pred_id: i32 = stmt.query(&[name, description])?.get(0).get(0);
+        for (ordinal, field) in fields.iter().enumerate() {
             try!(self.conn
-                .execute("insert into predicates (pred_name, type, ordinal) \
-                          values ($1, $2, $3)",
-                         &[name,
-                           &type_.name()
-                               .ok_or(ErrorKind::Arg("Predicate type had no name".to_string()))?,
+                .execute("insert into fields (pred_id, name, description, type, ordinal) \
+                          values ($1, $2, $3, $4, $5)",
+                         &[&pred_id,
+                           &field.name,
+                           &field.description,
+                           &field.type_
+                               .name()
+                               .ok_or(ErrorKind::Arg("Field type had no name".to_string()))?,
                            &(ordinal as i32)]));
         }
-        let table_str = types.iter()
-            .flat_map(|type_| type_.repr())
+        let table_str = fields.iter()
+            .flat_map(|field| field.type_.repr())
             .enumerate()
             .map(|(ord, repr)| format!("arg{} {}", ord, repr))
             .collect::<Vec<_>>()
             .join(", ");
-        let col_str = types.iter()
-            .flat_map(|type_| {
-                type_.repr()
+        let col_str = fields.iter()
+            .flat_map(|field| {
+                field.type_
+                    .repr()
                     .iter()
-                    .map(|_| type_.large_unique())
+                    .map(|_| field.type_.large_unique())
                     .collect::<Vec<_>>()
             })
             .enumerate()
@@ -448,24 +473,24 @@ impl FactDB for PgDB {
                         MatchExpr::Var(v) => {
                             let v = v as usize;
                             if v == var_type.len() {
-                                var_type.push(pred.types[idx].clone())
+                                var_type.push(pred.fields[idx].type_.clone())
                             } else if v > var_type.len() {
                                 bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
                                                               variable numbering.",
                                                              var_type.len() - 1,
                                                              v)));
-                            } else if var_type[v] != pred.types[idx].clone() {
+                            } else if var_type[v] != pred.fields[idx].type_.clone() {
                                 bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
                                                               incompatible types {:?} and {:?}",
                                                              v,
                                                              var_type[v],
-                                                             pred.types[idx])));
+                                                             pred.fields[idx].type_)));
                             }
                         }
                         // TODO: unify logic with above
                         MatchExpr::SubStr(_, _, var) => {
                             let v = var as usize;
-                            let repr = pred.types[idx].repr();
+                            let repr = pred.fields[idx].type_.repr();
                             if repr.len() != 1 {
                                 bail!(ErrorKind::Arg(format!("Substring matching performed on \
                                                               compound field")));
@@ -473,18 +498,18 @@ impl FactDB for PgDB {
                                 bail!(ErrorKind::Arg(format!("Substring matching performed on \
                                                               non-string or bytes")));
                             } else if v == var_type.len() {
-                                var_type.push(pred.types[idx].clone())
+                                var_type.push(pred.fields[idx].type_.clone())
                             } else if v > var_type.len() {
                                 bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
                                                               variable numbering.",
                                                              var_type.len() - 1,
                                                              v)));
-                            } else if var_type[v] != pred.types[idx].clone() {
+                            } else if var_type[v] != pred.fields[idx].type_.clone() {
                                 bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
                                                               incompatible types {:?} and {:?}",
                                                              v,
                                                              var_type[v],
-                                                             pred.types[idx])));
+                                                             pred.fields[idx].type_)));
                             }
                         }
                     }
@@ -527,9 +552,9 @@ impl FactDB for PgDB {
                                                    start_str,
                                                    end_str,
                                                    start_str));
-                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name]
-                                    .types[idx]
-                                .clone());
+                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name].fields[idx]
+                                    .type_
+                                    .clone());
                         } else {
                             let piece = format!("substring({}.arg{} from {} \
                                                  + 1 for {} - {} + 1) = {}",
@@ -548,9 +573,9 @@ impl FactDB for PgDB {
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
                             var_names.push(format!("{}.arg{}", alias_name, idx));
-                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name]
-                                    .types[idx]
-                                .clone());
+                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name].fields[idx]
+                                    .type_
+                                    .clone());
                         } else {
                             // The variable has occurred correctly, so we add it being equal
                             // to the canonical definition to the join clause for this table

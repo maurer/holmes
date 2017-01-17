@@ -13,5 +13,6 @@ mod rule_where;
 mod type_extend;
 mod rule_substr;
 mod reboot;
+mod metadata_basic;
 
 mod bugs;
