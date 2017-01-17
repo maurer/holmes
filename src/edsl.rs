@@ -52,6 +52,25 @@ macro_rules! holmes_exec {
   }};
 }
 
+#[macro_export]
+macro_rules! field {
+    ($holmes:ident, [$name:ident $t:tt $descr:expr]) => {{::holmes::engine::types::Field {
+        name: Some(stringify!($name).to_string()),
+        description: Some($descr.to_string()),
+        type_: htype!($holmes, $t)
+    }}};
+    ($holmes:ident, [$name:ident $t:tt]) => {{::holmes::engine::types::Field {
+        name: Some(stringify!($name).to_string()),
+        description: None,
+        type_: htype!($holmes, $t)
+    }}};
+    ($holmes:ident, $t:tt) => {{::holmes::engine::types::Field {
+        name: None,
+        description: None,
+        type_: htype!($holmes, $t)
+    }}};
+}
+
 /// Registers a predicate with the `Holmes` context.
 ///
 /// ```c
@@ -65,17 +84,24 @@ macro_rules! holmes_exec {
 /// a `holmes` parameter in its stead.
 #[macro_export]
 macro_rules! predicate {
+  ($holmes:ident, $pred_name:ident($($t:tt),*), $descr:expr) => {{
+    let fields = vec![$(field!($holmes, $t),)*];
+    $holmes.new_predicate(&::holmes::engine::types::Predicate {
+      name: stringify!($pred_name).to_string(),
+      description: Some($descr.to_string()),
+      fields: fields
+    })
+  }};
   ($holmes:ident, $pred_name:ident($($t:tt),*)) => {{
-    let fields = vec![$(::holmes::engine::types::Field {
-        name: None,
-        description: None,
-        type_: htype!($holmes, $t)
-    },)*];
+    let fields = vec![$(field!($holmes, $t),)*];
     $holmes.new_predicate(&::holmes::engine::types::Predicate {
       name: stringify!($pred_name).to_string(),
       description: None,
       fields: fields
     })
+  }};
+  ($pred_name:ident($($t:tt),*) : $descr:expr) => { |holmes: &mut ::holmes::Engine<_,_>| {
+    predicate!(holmes, $pred_name($($t),*), $descr)
   }};
   ($pred_name:ident($($t:tt),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
     predicate!(holmes, $pred_name($($t),*))

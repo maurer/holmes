@@ -115,6 +115,12 @@ impl<FE, FDB> Engine<FE, FDB>
         Ok(try!(self.fact_db.new_predicate(pred).chain_err(|| ErrorKind::FactDB)))
     }
 
+    /// Retrieves a named predicate from the database. This is primarily of use for
+    /// retrieving metadata about a predicate for display.
+    pub fn get_predicate(&self, name: &str) -> Result<Option<Predicate>> {
+        Ok(self.fact_db.get_predicate(name))
+    }
+
     /// Adds a new fact to the database
     /// If the fact is already present, a new copy will not be added.
     ///
