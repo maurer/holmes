@@ -44,3 +44,23 @@ pub fn predicate_roundtrip() {
         Ok(())
     })
 }
+
+#[test]
+pub fn named_field_rule() {
+    single(&|holmes: &mut Engine| {
+        holmes_exec!(holmes, {
+            predicate!(test_pred([foo string],
+                                 uint64,
+                                 [bar string]));
+            predicate!(out_pred(string));
+            rule!(out_pred(x) <= test_pred {bar = x, foo = ("woo")});
+            fact!(test_pred("woo", 3, "Right"));
+            fact!(test_pred("wow", 4, "Wrong"))
+        })?;
+
+        let ans = query!(holmes, out_pred(x))?;
+        assert_eq!(ans, vec![["Right".to_value()]]);
+
+        Ok(())
+    })
+}

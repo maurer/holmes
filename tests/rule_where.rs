@@ -54,7 +54,7 @@ pub fn where_destructure() {
         (n + 1, n + 2)
       });
       rule!(test_pred(y, (vec![2u8,2u8]), z) <= test_pred((3), [_], x), {
-        let y, z = {succs([x])}
+        let {y, z} = {succs([x])}
       });
       fact!(test_pred(3, vec![0u8,1u8], 16))
     }));
