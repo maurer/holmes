@@ -1,4 +1,6 @@
-use common::*;
+#[macro_use]
+extern crate holmes;
+use holmes::simple::*;
 
 #[test]
 pub fn simple_substr() {

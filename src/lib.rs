@@ -530,12 +530,14 @@ extern crate rustc_serialize;
 extern crate log;
 #[macro_use]
 extern crate error_chain;
+extern crate url;
 
 pub mod pg;
 pub mod fact_db;
 pub mod mem_db;
 pub mod engine;
 pub mod edsl;
+pub mod simple;
 
 pub use engine::{Engine, Result, Error, ErrorKind};
 pub use pg::PgDB;

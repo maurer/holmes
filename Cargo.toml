@@ -12,9 +12,16 @@ postgres = "0.13"
 rustc-serialize = "0.3"
 log = "0.3"
 error-chain = "0.7"
-
-[dev-dependencies]
 url = "1.2"
 
-[[test]]
-name = "lib"
+[[bench]]
+harness = false
+name = "clique"
+
+[[bench]]
+harness = false
+name = "graph"
+
+[[bench]]
+harness = false
+name = "induction"
