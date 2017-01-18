@@ -1,4 +1,6 @@
-use common::*;
+#[macro_use]
+extern crate holmes;
+use holmes::simple::*;
 
 // Bug #10
 // Originally generated:

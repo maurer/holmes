@@ -1,4 +1,8 @@
-use common::*;
+#[macro_use]
+extern crate holmes;
+extern crate postgres;
+use holmes::simple::*;
+
 use std::any::Any;
 use postgres::types::ToSql;
 use holmes::pg::RowIter;

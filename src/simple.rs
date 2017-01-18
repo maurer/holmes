@@ -1,17 +1,22 @@
+//! You likely don't want to use this module - its primary purpose is to make
+//! benchmarking and testing easier to do in practice.
+
 use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 use std::env;
 use url::percent_encoding::{percent_encode, PATH_SEGMENT_ENCODE_SET};
 pub use std::sync::Arc;
 
-pub use holmes::pg::dyn::values::ToValue;
-pub use holmes::pg::dyn::{Value, Type};
-pub use holmes::pg::dyn::values;
+pub use super::pg::dyn::values::ToValue;
+pub use super::pg::dyn::{Value, Type};
+pub use super::pg::dyn::values;
+pub use super::engine::types::{Fact, Rule, Clause, MatchExpr};
 
-use holmes::PgDB;
+use super::PgDB;
 
-pub use holmes::engine::Result;
-pub type Engine = ::holmes::Engine<::holmes::pg::Error, PgDB>;
+pub use engine::Result;
+/// Convenience type alias describing the `Engine` specialized to Postgres
+pub type Engine = super::Engine<super::pg::Error, PgDB>;
 
 static DB_NUM: AtomicIsize = ATOMIC_ISIZE_INIT;
 
@@ -34,6 +39,9 @@ fn get_db_addr(db_num: isize) -> String {
     }
 }
 
+/// Call a sequence of functions on the database, simulating a program
+/// termination in between each by constructing a fresh `Engine`.
+/// Data is _destroyed_ unless an error occurs.
 pub fn multi<A>(tests: &[&Fn(&mut Engine) -> Result<A>]) {
     let db_num = DB_NUM.fetch_add(1, SeqCst);
     let db_addr = get_db_addr(db_num);
@@ -45,10 +53,13 @@ pub fn multi<A>(tests: &[&Fn(&mut Engine) -> Result<A>]) {
     PgDB::destroy(&db_addr).unwrap();
 }
 
+/// Convenience wrapper around `multi` which just runs a single function
+/// Data is _destroyed_ unless an error occurs.
 pub fn single<A>(test: &Fn(&mut Engine) -> Result<A>) {
     multi(&[test])
 }
 
+/// Panics on success, and suppresses an error
 pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Engine) -> Result<()>>
     where F: 'static + Fn(&mut Engine) -> Result<A>
 {
