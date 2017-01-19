@@ -262,7 +262,6 @@ impl<FE, FDB> Engine<FE, FDB>
     }
 
     // Run a rule once on all body clause matches we have not yet run it on
-    // This function cascades via `new_rule`
     // TODO change recursive cascade to iterative cascade
     fn run_rule(&mut self, rule: &Rule) -> Result<()> {
         let cache = self.rule_cache(&rule)?;
@@ -279,11 +278,25 @@ impl<FE, FDB> Engine<FE, FDB>
             }
             states = next_states;
         }
+
+        let mut productive = false;
         for state in states {
             // TODO once we go multithreaded again, this could race, so I need to restructure this
             self.fact_db.cache_hit(cache, state.0).chain_err(|| ErrorKind::FactDB)?;
-            self.new_fact(&substitute(&rule.head, &state.1)).chain_err(|| ErrorKind::FactDB)?;
+            productive |= self.fact_db
+                .insert_fact(&substitute(&rule.head, &state.1))
+                .chain_err(|| ErrorKind::FactDB)?;
         }
+
+        if productive {
+            for rule in self.rules
+                .get(&rule.head.pred_name)
+                .unwrap_or(&vec![])
+                .clone() {
+                self.run_rule(&rule)?;
+            }
+        }
+
         Ok(())
     }
 

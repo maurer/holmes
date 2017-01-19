@@ -35,7 +35,7 @@ use postgres::types::{FromSql, ToSql};
 
 use engine::types::{Fact, Predicate, Field, MatchExpr, Clause, DBExpr};
 use std::cell::RefCell;
-
+use std::time::Instant;
 pub mod dyn;
 
 #[allow(missing_docs)]
@@ -304,13 +304,13 @@ impl PgDB {
             .map(|(ord, _)| format!("arg{}", ord))
             .collect::<Vec<_>>()
             .join(", ");
-        try!(self.conn
+        self.conn
             .execute(&format!("create table facts.{} (id serial primary \
                                key, {}, unique({}))",
                               name,
                               table_str,
                               col_str),
-                     &[]));
+                     &[])?;
         Ok(())
     }
 }
@@ -623,8 +623,9 @@ impl FactDB for PgDB {
                                join_query,
                                where_clause);
         trace!("search_facts: {}", raw_stmt);
+        let db_check = Instant::now();
         let rows = try!(self.conn.query(&raw_stmt, &vals));
-
+        trace!("search_facts query_time: {:?}", db_check.elapsed());
         rows.iter()
             .map(|row| {
                 let mut row_iter = RowIter::new(&row);
