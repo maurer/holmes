@@ -4,18 +4,20 @@ use holmes::simple::*;
 
 #[test]
 pub fn register_where_rule() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
       rule!(test_pred(("bar"), (vec![2u8,2u8]), x) <= test_pred(("foo"), [_], x), {
         let (42) = (42)})
-    })
+    })?;
+        core.run(holmes.quiesce()).unwrap();
+        Ok(())
     })
 }
 
 #[test]
 pub fn where_const() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
       rule!(test_pred(("bar"), (vec![2u8,2u8]), x) <= test_pred(("foo"), [_], [_]), {
@@ -23,6 +25,7 @@ pub fn where_const() {
       });
       fact!(test_pred("foo", vec![0u8,1u8], 16))
     }));
+        core.run(holmes.quiesce()).unwrap();
         assert_eq!(query!(holmes, test_pred(("bar"), x, y)).unwrap(),
                vec![vec![vec![2u8,2u8].to_value(), 42.to_value()]]);
         Ok(())
@@ -31,7 +34,7 @@ pub fn where_const() {
 
 #[test]
 pub fn where_plus_two() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
       func!(let plus_two : uint64 -> uint64 = |v : &u64| {v + 2});
@@ -40,6 +43,7 @@ pub fn where_plus_two() {
       });
       fact!(test_pred("foo", vec![0u8,1u8], 16))
     }));
+        core.run(holmes.quiesce()).unwrap();
         assert_eq!(query!(holmes, test_pred(("bar"), x, y)).unwrap(),
                vec![vec![vec![2u8,2u8].to_value(), 18.to_value()]]);
         let res: Result<()> = Ok(());
@@ -49,7 +53,7 @@ pub fn where_plus_two() {
 
 #[test]
 pub fn where_destructure() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(uint64, bytes, uint64));
       func!(let succs : uint64 -> (uint64, uint64) = |n : &u64| {
@@ -60,6 +64,7 @@ pub fn where_destructure() {
       });
       fact!(test_pred(3, vec![0u8,1u8], 16))
     }));
+        core.run(holmes.quiesce()).unwrap();
         assert_eq!(query!(holmes, test_pred(y, (vec![2u8,2u8]), z)).unwrap(),
                vec![vec![17.to_value(), 18.to_value()]]);
         Ok(())
@@ -68,7 +73,7 @@ pub fn where_destructure() {
 
 #[test]
 pub fn where_iter() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(uint64, bytes, uint64));
       func!(let succs : uint64 -> [uint64] = |n : &u64| {
@@ -79,6 +84,7 @@ pub fn where_iter() {
       });
       fact!(test_pred(3, vec![0u8,1u8], 16))
     }));
+        core.run(holmes.quiesce()).unwrap();
         assert_eq!(query!(holmes, test_pred([_], (vec![2u8,2u8]), x)).unwrap(),
                vec![vec![17.to_value()], vec![18.to_value()]]);
         Ok(())

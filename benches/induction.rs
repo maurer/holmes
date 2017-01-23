@@ -4,7 +4,7 @@ use holmes::simple::*;
 use std::time::Instant;
 
 fn run_induction(size: u64) {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         holmes_exec!(holmes, {
             predicate!(p(uint64));
             predicate!(q(uint64))
@@ -50,6 +50,9 @@ fn run_induction(size: u64) {
                 pred_name: "q".to_string(),
                 args: vec![1.to_value()],
             })?;
+
+        core.run(holmes.quiesce()).unwrap();
+
         Ok(())
     })
 }

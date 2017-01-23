@@ -12,7 +12,7 @@ use holmes::simple::*;
 // Bug fixed by moving all ON clauses to the last one.
 #[test]
 fn misordered_join() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         holmes_exec!(holmes, {
     predicate!(out(string, uint64, uint64));
     predicate!(assoc(string, uint64, uint64));
@@ -21,6 +21,8 @@ fn misordered_join() {
              assoc(name, [_], tgt) &
              look(name, addr, [_], next) &
              out(name, addr, tgt))
-    })
+    })?;
+        core.run(holmes.quiesce()).unwrap();
+        Ok(())
     })
 }

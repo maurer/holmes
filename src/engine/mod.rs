@@ -6,18 +6,143 @@
 pub mod types;
 
 use std::collections::hash_map::HashMap;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
-use fact_db::{FactDB, CacheId, FactId};
+use fact_db::{FactDB, CacheId};
+use tokio_core::reactor::Handle;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
+use futures::{Stream, Future, Async, Poll, done, BoxFuture};
+use futures::task::{park, Task};
+
+#[derive(Clone,Copy,PartialEq,Debug)]
+enum RuleState {
+    Idle,
+    Running,
+    Queued,
+    ShutDown,
+}
+
+#[derive(Clone,Debug)]
+struct Signal {
+    state: Rc<Cell<RuleState>>,
+    referents: Rc<RefCell<Vec<Task>>>,
+    task: Rc<RefCell<Option<Task>>>,
+}
+
+impl Signal {
+    fn new() -> Self {
+        Signal {
+            state: Rc::new(Cell::new(RuleState::Idle)),
+            referents: Rc::new(RefCell::new(Vec::new())),
+            task: Rc::new(RefCell::new(None)),
+        }
+    }
+
+    fn refer(&self, task: Task) {
+        self.referents.borrow_mut().push(task)
+    }
+
+    fn await(&self, task: Task) {
+        // Only one task can await a signal, if there's already
+        // one waiting, there's been a programming error
+        assert!(self.task.borrow().is_none());
+        *self.task.borrow_mut() = Some(task)
+    }
+
+    fn signal(&self) {
+        if self.state.get() != RuleState::ShutDown {
+            trace!("Queuing new work");
+            self.state.set(RuleState::Queued);
+            // If the target of this signal is blocked, unblock it
+            match self.task.borrow_mut().take() {
+                Some(t) => t.unpark(),
+                None => (),
+            }
+        }
+    }
+
+    fn done(&self) -> BoxFuture<(), ()> {
+        trace!("Done with work loop");
+        if self.state.get() == RuleState::Running {
+            trace!("And no new work arrived, going idle");
+            self.state.set(RuleState::Idle);
+
+            // We went idle, let anyone waiting for this know
+            for task in self.referents.borrow().iter() {
+                task.unpark();
+            }
+
+            // They'll wake up from the unpark, and so can let us
+            // know if they need to be woken up again.
+            self.referents.borrow_mut().truncate(0);
+        }
+        done(Ok(())).boxed()
+    }
+
+    fn dormant(&self) -> bool {
+        (self.state.get() == RuleState::Idle) || (self.state.get() == RuleState::ShutDown)
+    }
+}
+
+impl Stream for Signal {
+    type Item = ();
+    type Error = ();
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        trace!("Asking about new work");
+        use self::RuleState::*;
+        match self.state.get() {
+            Idle => {
+                trace!("None yet");
+                self.await(park());
+                Ok(Async::NotReady)
+            }
+            Running => panic!("Tried to ask for more work while still running"),
+            ShutDown => Ok(Async::Ready(None)),
+            Queued => {
+                trace!("New work arrived, waking up");
+                self.state.set(Running);
+                Ok(Async::Ready(Some(())))
+            }
+        }
+    }
+}
+
+/// Future representing the quiescence of the Holmes engine
+/// See `Engine::quiesce()` to create one
+pub struct Quiescence {
+    signals: Vec<Signal>,
+}
+
+impl Quiescence {
+    fn new(signals: Vec<Signal>) -> Self {
+        Quiescence { signals: signals }
+    }
+}
+
+impl Future for Quiescence {
+    type Item = ();
+    type Error = ();
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        trace!("Checking quiescence");
+        for signal in self.signals.iter() {
+            if !signal.dormant() {
+                signal.refer(park());
+                return Ok(Async::NotReady);
+            }
+        }
+        Ok(Async::Ready(()))
+    }
+}
 
 /// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine<FE: ::std::error::Error + Send + 'static, FDB: FactDB<Error = FE>> {
-    fact_db: FDB,
-    funcs: HashMap<String, Func>,
-    rules: HashMap<String, Vec<Rule>>,
-    rule_cache: HashMap<Rule, CacheId>,
+    fact_db: Rc<FDB>,
+    funcs: HashMap<String, Rc<Func>>,
+    rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
+    signals: Vec<Signal>,
+    event_loop: Handle,
 }
 
 #[allow(missing_docs)]
@@ -68,12 +193,13 @@ impl<FE, FDB> Engine<FE, FDB>
           FDB: FactDB<Error = FE>
 {
     /// Create a fresh engine by handing it a fact database to use
-    pub fn new(db: FDB) -> Self {
+    pub fn new(db: FDB, handle: Handle) -> Self {
         Engine {
-            fact_db: db,
+            fact_db: Rc::new(db),
             funcs: HashMap::new(),
             rules: HashMap::new(),
-            rule_cache: HashMap::new(),
+            signals: Vec::new(),
+            event_loop: handle,
         }
     }
     /// Seach the type registry for a named type
@@ -121,6 +247,10 @@ impl<FE, FDB> Engine<FE, FDB>
         Ok(self.fact_db.get_predicate(name))
     }
 
+    fn get_dep_rules(&mut self, pred: &String) -> Rc<RefCell<Vec<Signal>>> {
+        self.rules.entry(pred.to_string()).or_insert(Rc::new(RefCell::new(Vec::new()))).clone()
+    }
+
     /// Adds a new fact to the database
     /// If the fact is already present, a new copy will not be added.
     ///
@@ -143,12 +273,10 @@ impl<FE, FDB> Engine<FE, FDB>
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),
         }
         {
-            if try!(self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)) {
-                for rule in self.rules
-                    .get(&fact.pred_name)
-                    .unwrap_or(&vec![])
-                    .clone() {
-                    self.run_rule(&rule)?;
+            if self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)? {
+                let signals = self.get_dep_rules(&fact.pred_name);
+                for signal in signals.borrow().iter() {
+                    signal.signal();
                 }
             }
             Ok(())
@@ -161,143 +289,10 @@ impl<FE, FDB> Engine<FE, FDB>
         Ok(())
     }
 
-    // In an assignment statement, once the rhs has been computed, binds the
-    // rhs value onto the expression on the left, using the state to check that
-    // already bound variables are bound to the same things
-    // It returns list of output states, each of which is a list of var bindings
-    fn bind(&self, lhs: &BindExpr, rhs: Value, state: &Vec<Value>) -> Vec<Vec<Value>> {
-        use self::types::BindExpr::*;
-        use self::types::MatchExpr::*;
-        match *lhs {
-            // If we are unbound, we no-op
-            Normal(Unbound) => vec![state.clone()],
-            // Substring bindings don't make sense here
-            Normal(SubStr(_, _, _)) => panic!("Substring binding in where clause not allowed"),
-            // To bind to a variable,
-            Normal(Var(v)) => {
-                // If the variable is defined, check equality
-                if v < state.len() {
-                    if state[v] == rhs {
-                        vec![state.clone()]
-                    } else {
-                        vec![]
-                    }
-                    // If the variable is to be defined, define it
-                } else if v == state.len() {
-                    let mut next = state.clone();
-                    next.push(rhs.clone());
-                    vec![next]
-                    // Otherwise it is a malformed binding
-                } else {
-                    panic!("Variable out of range")
-                }
-            }
-            Normal(Const(ref v)) => {
-                if *v == rhs {
-                    vec![state.clone()]
-                } else {
-                    vec![]
-                }
-            }
-            Destructure(ref lhss) => {
-                let rhss = match rhs.get().downcast_ref::<Vec<Value>>() {
-                    Some(ref rhss) => rhss.iter(),
-                    _ => panic!("Attempted to destructure non-list"),
-                };
-                let mut next = vec![state.clone()];
-                for (lhs, rhs) in lhss.iter().zip(rhss) {
-                    let mut next_next = vec![];
-                    for state in next {
-                        next_next.extend(self.bind(lhs, rhs.clone(), &state));
-                    }
-                    next = next_next;
-                }
-                next
-            }
-            Iterate(ref inner) => {
-                let rhss = match rhs.get().downcast_ref::<Vec<Value>>() {
-                    Some(ref rhss) => rhss.iter(),
-                    _ => panic!("Attempted to destructure non-list"),
-                };
-                rhss.flat_map(|rhs| self.bind(inner, rhs.clone(), &state))
-                    .collect()
-            }
-        }
-    }
-
-    // Evaluates an expression, given a set of bindings to variables
-    fn eval(&self, expr: &Expr, subs: &Vec<Value>) -> Value {
-        use self::types::Expr::*;
-        match *expr {
-            Var(var) => subs[var as usize].clone(),
-            Val(ref val) => val.clone(),
-            App(ref fun_name, ref args) => {
-                let arg_vals: Vec<Value> = args.iter()
-                    .map(|arg_expr| self.eval(arg_expr, subs))
-                    .collect();
-                let arg = if arg_vals.len() == 1 {
-                    arg_vals[0].clone()
-                } else {
-                    values::Tuple::new(arg_vals) as Value
-                };
-                (self.funcs[fun_name].run)(arg)
-            }
-        }
-    }
-
     fn rule_cache(&mut self, rule: &Rule) -> Result<CacheId> {
-        match self.rule_cache.entry(rule.clone()) {
-            Occupied(e) => Ok(*e.get()),
-            Vacant(e) => {
-                let cid = self.fact_db
-                    .new_rule_cache(rule.body
-                        .iter()
-                        .map(|clause| clause.pred_name.clone())
-                        .collect())
-                    .chain_err(|| ErrorKind::FactDB)?;
-                e.insert(cid);
-                Ok(cid)
-            }
-        }
-    }
-
-    // Run a rule once on all body clause matches we have not yet run it on
-    // TODO change recursive cascade to iterative cascade
-    fn run_rule(&mut self, rule: &Rule) -> Result<()> {
-        let cache = self.rule_cache(&rule)?;
-        let mut states: Vec<(Vec<FactId>, Vec<Value>)> =
-            self.fact_db.search_facts(&rule.body, Some(cache)).chain_err(|| ErrorKind::FactDB)?;
-
-        for where_clause in rule.wheres.iter() {
-            let mut next_states: Vec<(Vec<FactId>, Vec<Value>)> = Vec::new();
-            for state in states {
-                let resp = self.eval(&where_clause.rhs, &state.1);
-                next_states.extend(self.bind(&where_clause.lhs, resp, &state.1)
-                    .into_iter()
-                    .map(|x| (state.0.clone(), x)));
-            }
-            states = next_states;
-        }
-
-        let mut productive = false;
-        for state in states {
-            // TODO once we go multithreaded again, this could race, so I need to restructure this
-            self.fact_db.cache_hit(cache, state.0).chain_err(|| ErrorKind::FactDB)?;
-            productive |= self.fact_db
-                .insert_fact(&substitute(&rule.head, &state.1))
-                .chain_err(|| ErrorKind::FactDB)?;
-        }
-
-        if productive {
-            for rule in self.rules
-                .get(&rule.head.pred_name)
-                .unwrap_or(&vec![])
-                .clone() {
-                self.run_rule(&rule)?;
-            }
-        }
-
-        Ok(())
+        self.fact_db
+            .new_rule_cache(rule.body.iter().map(|clause| clause.pred_name.clone()).collect())
+            .chain_err(|| ErrorKind::FactDB)
     }
 
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
@@ -310,16 +305,58 @@ impl<FE, FDB> Engine<FE, FDB>
     }
 
     /// Register a new rule with the database
-    pub fn new_rule(&mut self, rule: &Rule) -> Result<()> {
+    pub fn new_rule(&mut self, rule: &Rule) -> Result<()>
+        where FDB: 'static
+    {
+        let signal = Signal::new();
+        let trigger = signal.clone();
+        self.signals.push(signal.clone());
+
         for pred in &rule.body {
-            match self.rules.entry(pred.pred_name.clone()) {
-                Vacant(entry) => {
-                    entry.insert(vec![rule.clone()]);
-                }
-                Occupied(mut entry) => entry.get_mut().push(rule.clone()),
-            }
+            let dep_rules = self.get_dep_rules(&pred.pred_name);
+            dep_rules.borrow_mut().push(signal.clone());
         }
-        self.run_rule(rule)
+
+        let rule_future = {
+            let cache = self.rule_cache(&rule)?;
+            let fdb = self.fact_db.clone();
+            let funcs = self.funcs.clone();
+            let buddies = self.get_dep_rules(&rule.head.pred_name);
+            let rule = rule.clone();
+            let out_signal = signal.clone();
+            signal.for_each(move |_| {
+                trace!("Activating rule: {:?}", rule);
+                let mut states = fdb.search_facts(&rule.body, Some(cache)).unwrap();
+                for where_clause in rule.wheres.iter() {
+                    let mut next_states = Vec::new();
+                    for state in states {
+                        let resp = eval(&where_clause.rhs, &state.1, &funcs);
+                        next_states.extend(bind(&where_clause.lhs, resp, &state.1)
+                            .into_iter()
+                            .map(|x| (state.0.clone(), x)));
+                    }
+                    states = next_states;
+                }
+                let mut productive = false;
+                for state in states {
+                    fdb.cache_hit(cache, state.0).unwrap();
+                    productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
+                        .unwrap();
+                }
+
+                if productive {
+                    for buddy in buddies.borrow().iter() {
+                        buddy.signal();
+                    }
+                }
+
+                out_signal.done()
+            })
+        };
+
+        self.event_loop.spawn(rule_future);
+        trigger.signal();
+        Ok(())
     }
 
     /// Register a new function with the database, to be called from within a
@@ -328,7 +365,98 @@ impl<FE, FDB> Engine<FE, FDB>
     /// Do not attempt to register a function name multiple times.
     // TODO: stop function reregistration, document restriction
     pub fn reg_func(&mut self, name: String, func: Func) -> Result<()> {
-        self.funcs.insert(name, func);
+        self.funcs.insert(name, Rc::new(func));
         Ok(())
+    }
+
+    /// Creates a quiescence future to be run on the event loop provided when
+    /// the engine was created. The future will only gaurantee quiescence upon
+    /// completion so long as no new rules have been added.
+    pub fn quiesce(&self) -> Quiescence {
+        Quiescence::new(self.signals.clone())
+    }
+}
+
+// In an assignment statement, once the rhs has been computed, binds the
+// rhs value onto the expression on the left, using the state to check that
+// already bound variables are bound to the same things
+// It returns list of output states, each of which is a list of var bindings
+fn bind(lhs: &BindExpr, rhs: Value, state: &Vec<Value>) -> Vec<Vec<Value>> {
+    use self::types::BindExpr::*;
+    use self::types::MatchExpr::*;
+    match *lhs {
+        // If we are unbound, we no-op
+        Normal(Unbound) => vec![state.clone()],
+        // Substring bindings don't make sense here
+        Normal(SubStr(_, _, _)) => panic!("Substring binding in where clause not allowed"),
+        // To bind to a variable,
+        Normal(Var(v)) => {
+            // If the variable is defined, check equality
+            if v < state.len() {
+                if state[v] == rhs {
+                    vec![state.clone()]
+                } else {
+                    vec![]
+                }
+                // If the variable is to be defined, define it
+            } else if v == state.len() {
+                let mut next = state.clone();
+                next.push(rhs.clone());
+                vec![next]
+                // Otherwise it is a malformed binding
+            } else {
+                panic!("Variable out of range")
+            }
+        }
+        Normal(Const(ref v)) => {
+            if *v == rhs {
+                vec![state.clone()]
+            } else {
+                vec![]
+            }
+        }
+        Destructure(ref lhss) => {
+            let rhss = match rhs.get().downcast_ref::<Vec<Value>>() {
+                Some(ref rhss) => rhss.iter(),
+                _ => panic!("Attempted to destructure non-list"),
+            };
+            let mut next = vec![state.clone()];
+            for (lhs, rhs) in lhss.iter().zip(rhss) {
+                let mut next_next = vec![];
+                for state in next {
+                    next_next.extend(bind(lhs, rhs.clone(), &state));
+                }
+                next = next_next;
+            }
+            next
+        }
+        Iterate(ref inner) => {
+            let rhss = match rhs.get().downcast_ref::<Vec<Value>>() {
+                Some(ref rhss) => rhss.iter(),
+                _ => panic!("Attempted to destructure non-list"),
+            };
+            rhss.flat_map(|rhs| bind(inner, rhs.clone(), &state))
+                .collect()
+        }
+    }
+}
+
+// Evaluates an expression, given a set of bindings to variables
+fn eval(expr: &Expr, subs: &Vec<Value>, funcs: &HashMap<String, Rc<Func>>) -> Value {
+    use self::types::Expr::*;
+    match *expr {
+        Var(var) => subs[var as usize].clone(),
+        Val(ref val) => val.clone(),
+        App(ref fun_name, ref args) => {
+            let arg_vals: Vec<Value> = args.iter()
+                .map(|arg_expr| eval(arg_expr, subs, funcs))
+                .collect();
+            let arg = if arg_vals.len() == 1 {
+                arg_vals[0].clone()
+            } else {
+                values::Tuple::new(arg_vals) as Value
+            };
+            (funcs[fun_name].run)(arg)
+        }
     }
 }

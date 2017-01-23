@@ -22,9 +22,12 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # fn f () -> Result<()> {
-//! # let mut holmes = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes = Engine::new(MemDB::new(), core.handle());
 //! # let b = &mut holmes;
 //! # holmes_exec!(b, {
 //! predicate!(distance(string, string, uint64))
@@ -47,9 +50,12 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # fn f () -> Result<()> {
-//! # let mut holmes = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes = Engine::new(MemDB::new(), core.handle());
 //! # let b = &mut holmes;
 //! # holmes_exec!(b, {
 //! predicate!(distance(string, string, uint64));
@@ -72,9 +78,12 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # fn f () -> Result<()> {
-//! # let mut holmes = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes = Engine::new(MemDB::new(), core.handle());
 //! # let b = &mut holmes;
 //! # holmes_exec!(b, {
 //! predicate!(distance(string, string, uint64));
@@ -101,16 +110,21 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # use holmes::pg::dyn::values::ToValue;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! holmes_exec!(holmes, {
 //!   predicate!(distance(string, string, uint64));
 //!   fact!(distance("New York", "Albuquerque", 1810));
 //!   rule!(distance(B, A, N) <= distance(A, B, N))
 //! });
+//!
+//! # core.run(holmes.quiesce()).unwrap();
 //!
 //! let mut res = try!(query!(holmes, distance(A, [_], [_])));
 //!
@@ -133,10 +147,13 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # use holmes::pg::dyn::values::ToValue;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! holmes_exec!(holmes, {
 //!   predicate!(distance(string, string, uint64));
@@ -149,6 +166,7 @@
 //!   rule!(connected(A, B) <= distance(A, B, [_]));
 //!   rule!(connected(A, C) <= connected(A, B) & connected(B, C))
 //! });
+//! # core.run(holmes.quiesce()).unwrap();
 //! assert_eq!(try!(query!(holmes, connected(("Rome"), ("Las Vegas")))).len(),
 //!            0);
 //! let mut res = try!(query!(holmes, connected(("Palo Alto"), x)));
@@ -172,10 +190,19 @@
 //! ```
 //! #[macro_use]
 //! extern crate holmes;
+//! extern crate tokio_core;
 //! use holmes::{Engine, MemDB, Result};
+//! use tokio_core::reactor::Core;
 //! use holmes::pg::dyn::values::ToValue;
 //! fn f () -> Result<()> {
-//!   let mut holmes_own = Engine::new(MemDB::new());
+//!   // Holmes uses the `tokio_core` event loop in order to schedule work
+//!   // amongst various rules and enable asynchronous processing.
+//!   // Unless you specifically want to do something async, this just
+//!   // means you need to pass in a handle as shown here, and call
+//!   // `core.run(holmes.quiesce())` before any queries to wait for
+//!   // the engine to finish running.
+//!   let mut core = Core::new().unwrap();
+//!   let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //!   // For the moment, the `holmes_exec` macro needs a &mut ident. I'll
 //!   // try to make this more flexible in the future.
 //!   let holmes = &mut holmes_own;
@@ -190,6 +217,11 @@
 //!     rule!(connected(A, B) <= distance(A, B, [_]));
 //!     rule!(connected(A, C) <= connected(A, B) & connected(B, C))
 //!   });
+//!
+//!   // Now we force the database to compute until quiescence. Otherwise,
+//!   // any query results may be partial.
+//!   core.run(holmes.quiesce()).unwrap();
+//!
 //!   assert_eq!(try!(query!(holmes, connected(("Rome"), ("Las Vegas")))).len(),
 //!              0);
 //!   let mut res = try!(query!(holmes, connected(("Palo Alto"), x)));
@@ -224,9 +256,12 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! # try!(holmes_exec!(holmes, {
 //! func!(let f : uint64 -> uint64 = |x : &u64| {
@@ -256,9 +291,12 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! # holmes_exec!(holmes, {
 //! func!(let replicate : (string, uint64) -> [string] =
@@ -288,9 +326,12 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! holmes_exec!(holmes, {
 //!   predicate!(distance(string, string, uint64));
@@ -363,10 +404,13 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # use holmes::pg::dyn::values::ToValue;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! try!(holmes_exec!(holmes, {
 //!   predicate!(distance(string, string, uint64));
@@ -401,6 +445,7 @@
 //!     let NSum = {add([N1], [N2])}
 //!   })
 //! }));
+//! # core.run(holmes.quiesce()).unwrap();
 //! let mut res = query!(holmes, path(("New York"), dest, [_], dist))?;
 //! # res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
 //! #   ::std::cmp::Ordering::Greater));
@@ -456,10 +501,13 @@
 //! ```
 //! # #[macro_use]
 //! # extern crate holmes;
+//! # extern crate tokio_core;
 //! # use holmes::{Engine, MemDB, Result};
+//! # use tokio_core::reactor::Core;
 //! # use holmes::pg::dyn::values::ToValue;
 //! # fn f () -> Result<()> {
-//! # let mut holmes_own = Engine::new(MemDB::new());
+//! # let mut core = Core::new().unwrap();
+//! # let mut holmes_own = Engine::new(MemDB::new(), core.handle());
 //! # let holmes = &mut holmes_own;
 //! # try!(holmes_exec!(holmes, {
 //! #   predicate!(distance(string, string, uint64));
@@ -498,6 +546,7 @@
 //!   let [stop] = [path]
 //! })
 //! # }));
+//! # core.run(holmes.quiesce()).unwrap();
 //! let mut res = query!(holmes, on_the_road(("New York"), ("Palo Alto"),
 //!                                          stop))?;
 //! # res.sort_by(|x, y| x.partial_cmp(y).unwrap_or(
@@ -513,16 +562,6 @@
 //! # }
 //! # fn main () {f().unwrap()}
 //! ```
-//!
-//! # Caveats
-//!
-//! * If you use custom types, you cannot currently reconnect to the database.
-//!   This will be fixed in the near future.
-//! * Lists cannot be persisted in the postgres backend. If you must have a
-//!   list persisted, create a custom ListOfExtendedType type and Value.
-//!   Note that these will not be able to be used with an iteration bind,
-//!   so if you must do that, you will need to convert between them with a
-//!   function first.
 #![warn(missing_docs)]
 extern crate postgres;
 extern crate rustc_serialize;
@@ -530,6 +569,9 @@ extern crate rustc_serialize;
 extern crate log;
 #[macro_use]
 extern crate error_chain;
+extern crate tokio_core;
+extern crate futures;
+
 extern crate url;
 
 pub mod pg;
