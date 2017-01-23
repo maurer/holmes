@@ -4,7 +4,7 @@ use holmes::simple::*;
 
 #[test]
 pub fn reg_func() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, _| {
         func!(holmes,
       let test_func : uint64 -> uint64 =
         |_v : &u64| {

@@ -128,7 +128,9 @@ impl PartialEq for MatchExpr {
             (&Unbound, &Unbound) => true,
             (&Var(x), &Var(y)) => x == y,
             (&Const(ref v), &Const(ref vv)) => v == vv,
-            // TODO fix for substr
+            (&SubStr(ref dbe, ref dbe2, ref v), &SubStr(ref dbeb, ref dbeb2, ref vb)) => {
+                (dbe == dbeb) && (dbe2 == dbeb2) && (v == vb)
+            }
             _ => false,
         }
     }

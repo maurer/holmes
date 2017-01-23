@@ -2,10 +2,9 @@
 extern crate holmes;
 use holmes::simple::*;
 use std::time::Instant;
-use std::thread;
 
 fn run_graph(size: u64) {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         predicate!(holmes, reachable(uint64, uint64))?;
         predicate!(holmes, edge(uint64, uint64))?;
         predicate!(holmes, increasing(uint64, uint64))?;
@@ -29,7 +28,11 @@ fn run_graph(size: u64) {
             rule!(increasing(X, Y) <= edge(X, Z) & increasing(Z, Y), {
                 let (true) = {lt([X], [Z])}
             })
-        })
+        })?;
+
+        core.run(holmes.quiesce()).unwrap();
+
+        Ok(())
     })
 }
 
@@ -41,15 +44,8 @@ fn graph(size: u64) {
 }
 
 fn main() {
-    thread::Builder::new()
-        .stack_size(1024 * 1024 * 1024)
-        .spawn(|| {
-            println!("Warning: Results not statistically valid");
-            for i in &[10, 20, 30, 40, 50, 60, 70, 80, 90, 100] {
-                graph(*i)
-            }
-        })
-        .unwrap()
-        .join()
-        .unwrap();
+    println!("Warning: Results not statistically valid");
+    for i in &[10, 20, 30, 40, 50, 60, 70, 80, 90, 100] {
+        graph(*i)
+    }
 }

@@ -4,7 +4,7 @@ use holmes::simple::*;
 
 #[test]
 pub fn new_predicate_named_field() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, _| {
         holmes_exec!(holmes, {
             predicate!(test_pred([first string], bytes, uint64))
         })
@@ -13,7 +13,7 @@ pub fn new_predicate_named_field() {
 
 #[test]
 pub fn new_predicate_doc_field() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, _| {
         holmes_exec!(holmes, {
             predicate!(test_pred([first string "This is the first element"], bytes, uint64))
         })
@@ -22,7 +22,7 @@ pub fn new_predicate_doc_field() {
 
 #[test]
 pub fn new_predicate_doc_all() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, _| {
         holmes_exec!(holmes, {
             predicate!(test_pred([first string "This is the first element"],
                                   bytes, uint64)
@@ -33,7 +33,7 @@ pub fn new_predicate_doc_all() {
 
 #[test]
 pub fn predicate_roundtrip() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, _| {
         holmes_exec!(holmes, {
             predicate!(test_pred([first string "This is the first element"],
                                  bytes, uint64)
@@ -49,7 +49,7 @@ pub fn predicate_roundtrip() {
 
 #[test]
 pub fn named_field_rule() {
-    single(&|holmes: &mut Engine| {
+    single(&|holmes: &mut Engine, core: &mut Core| {
         holmes_exec!(holmes, {
             predicate!(test_pred([foo string],
                                  uint64,
@@ -59,6 +59,8 @@ pub fn named_field_rule() {
             fact!(test_pred("woo", 3, "Right"));
             fact!(test_pred("wow", 4, "Wrong"))
         })?;
+
+        core.run(holmes.quiesce()).unwrap();
 
         let ans = query!(holmes, out_pred(x))?;
         assert_eq!(ans, vec![["Right".to_value()]]);

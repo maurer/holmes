@@ -15,6 +15,9 @@ pub use super::engine::types::{Fact, Rule, Clause, MatchExpr};
 use super::PgDB;
 
 pub use engine::Result;
+
+pub use tokio_core::reactor::Core;
+
 /// Convenience type alias describing the `Engine` specialized to Postgres
 pub type Engine = super::Engine<super::pg::Error, PgDB>;
 
@@ -42,20 +45,21 @@ fn get_db_addr(db_num: isize) -> String {
 /// Call a sequence of functions on the database, simulating a program
 /// termination in between each by constructing a fresh `Engine`.
 /// Data is _destroyed_ unless an error occurs.
-pub fn multi<A>(tests: &[&Fn(&mut Engine) -> Result<A>]) {
+pub fn multi<A>(tests: &[&Fn(&mut Engine, &mut Core) -> Result<A>]) {
     let db_num = DB_NUM.fetch_add(1, SeqCst);
     let db_addr = get_db_addr(db_num);
     for test in tests {
+        let mut core = Core::new().unwrap();
         let db = PgDB::new(&db_addr).unwrap();
-        let mut holmes = Engine::new(db);
-        test(&mut holmes).unwrap();
+        let mut holmes = Engine::new(db, core.handle());
+        test(&mut holmes, &mut core).unwrap();
     }
     PgDB::destroy(&db_addr).unwrap();
 }
 
 /// Convenience wrapper around `multi` which just runs a single function
 /// Data is _destroyed_ unless an error occurs.
-pub fn single<A>(test: &Fn(&mut Engine) -> Result<A>) {
+pub fn single<A>(test: &Fn(&mut Engine, &mut Core) -> Result<A>) {
     multi(&[test])
 }
 
