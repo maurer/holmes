@@ -8,7 +8,7 @@ pub mod types;
 use std::collections::hash_map::HashMap;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
-use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr};
+use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection};
 use fact_db::{FactDB, CacheId};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
@@ -176,12 +176,13 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
         pred_name: clause.pred_name.clone(),
         args: clause.args
             .iter()
-            .map(|slot| {
-                match slot {
-                    &Unbound => panic!("Unbound is not allowed in substituted facts"),
-                    &SubStr(_, _, _) => panic!("Substring is not allowed in substituted facts"),
-                    &Var(ref n) => ans[*n as usize].clone(),
-                    &Const(ref v) => v.clone(),
+            .enumerate()
+            .map(|(idx, &(ref proj, ref slot))| {
+                assert_eq!(proj, &Projection::Slot(idx));
+                match *slot {
+                    Unbound => panic!("Unbound is not allowed in substituted facts"),
+                    Var(ref n) => ans[*n as usize].clone(),
+                    Const(ref v) => v.clone(),
                 }
             })
             .collect(),
@@ -387,8 +388,6 @@ fn bind(lhs: &BindExpr, rhs: Value, state: &Vec<Value>) -> Vec<Vec<Value>> {
     match *lhs {
         // If we are unbound, we no-op
         Normal(Unbound) => vec![state.clone()],
-        // Substring bindings don't make sense here
-        Normal(SubStr(_, _, _)) => panic!("Substring binding in where clause not allowed"),
         // To bind to a variable,
         Normal(Var(v)) => {
             // If the variable is defined, check equality

@@ -10,7 +10,7 @@ pub use std::sync::Arc;
 pub use super::pg::dyn::values::ToValue;
 pub use super::pg::dyn::{Value, Type};
 pub use super::pg::dyn::values;
-pub use super::engine::types::{Fact, Rule, Clause, MatchExpr};
+pub use super::engine::types::{Fact, Rule, Clause, MatchExpr, Projection};
 
 use super::PgDB;
 

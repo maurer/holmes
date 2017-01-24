@@ -135,9 +135,10 @@ macro_rules! fact {
 #[macro_export]
 macro_rules! clause {
     ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident($($m:tt),*)) => {{
+        let mut b = 0;
         ::holmes::engine::types::Clause {
             pred_name: stringify!($pred_name).to_string(),
-            args: vec![$(clause_match!($vars, $next, $m)),*]
+            args: vec![$(clause_match!($vars, b, $next, $m)),*]
         }
     }};
     ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident{$($field:ident = $m:tt),*}) => {{
@@ -145,16 +146,18 @@ macro_rules! clause {
         let pred_name = stringify!($pred_name).to_string();
         let pred = $holmes.get_predicate(&pred_name)?.unwrap();
         let mut matches = HashMap::new();
+        let mut b = 0;
         let _ = {
-          $(matches.insert(stringify!($field).to_string(), clause_match!($vars, $next, $m)));*
+          $(matches.insert(stringify!($field).to_string(), clause_match!($vars, b, $next, $m)));*
         };
-        let args: Vec<::holmes::engine::types::MatchExpr> = pred.fields.iter().map(|field| {
+        let args: Vec<_> = pred.fields.iter().enumerate().map(|(idx, field)| {
+            let slot = ::holmes::engine::types::Projection::Slot(idx);
             match field.name {
                 Some(ref name) => match matches.remove(name) {
-                    Some(cm) => cm,
-                    None => ::holmes::engine::types::MatchExpr::Unbound
+                    Some(cm) => (slot, cm.1),
+                    None => (slot, ::holmes::engine::types::MatchExpr::Unbound)
                 },
-                None => ::holmes::engine::types::MatchExpr::Unbound,
+                None => (slot, ::holmes::engine::types::MatchExpr::Unbound),
             }
         }).collect();
         ::holmes::engine::types::Clause {
@@ -334,10 +337,11 @@ pub mod internal {
             ::holmes::engine::types::BindExpr::Destructure(
                 vec![$(bind_match!($vars, $n, $bm)),*])
         };
-        ($vars:ident, $n:ident, $cm:tt) => {
+        ($vars:ident, $n:ident, $cm:tt) => {{
+            let mut b = 0;
             ::holmes::engine::types::BindExpr::Normal(
-                clause_match!($vars, $n, $cm))
-        };
+                clause_match!($vars, b, $n, $cm).1)
+        }};
     }
 
     /// Generates an expression structure
@@ -356,13 +360,14 @@ pub mod internal {
     ///   * `{f(expr, expr, expr)}`
     #[macro_export]
     macro_rules! hexpr {
-    ($vars:ident, $n:ident, [$hexpr_name:ident]) => {
-      match clause_match!($vars, $n, $hexpr_name) {
+    ($vars:ident, $n:ident, [$hexpr_name:ident]) => {{
+      let mut b = 0;
+      match clause_match!($vars, b, $n, $hexpr_name).1 {
         ::holmes::engine::types::MatchExpr::Var(var_no) =>
             ::holmes::engine::types::Expr::Var(var_no),
         _ => panic!("clause_match! returned non-var for var input")
       }
-    };
+    }};
     ($vars:ident, $n:ident, ($hexpr:expr)) => {
       ::holmes::engine::types::Expr::Val(
           ::holmes::pg::dyn::values::ToValue::to_value($hexpr))
@@ -377,11 +382,11 @@ pub mod internal {
     #[macro_export]
     macro_rules! db_expr {
     ($vars:ident, ($v:expr)) => {{
-       ::holmes::engine::types::DBExpr::Val($v)
+       ::holmes::engine::types::Projection::U64($v)
     }};
     ($vars:ident, [$n:ident]) => {{
        match $vars.get(stringify!($n)) {
-         Some(varnum) => ::holmes::engine::types::DBExpr::Var(*varnum),
+         Some(varnum) => ::holmes::engine::types::Projection::Var(*varnum),
          None => panic!("Referenced undefined variable in substring clause")
        }
     }};
@@ -403,9 +408,8 @@ pub mod internal {
     ///   * `x` -> variable bind
     #[macro_export]
     macro_rules! clause_match {
-    ($vars:ident, $n:ident, {$start:tt, $end:tt, $v:ident}) => {{
+    ($vars:ident, $m:ident, $n:ident, {$start:tt, $end:tt, $v:ident}) => {{
       use std::collections::hash_map::Entry::*;
-      use ::holmes::engine::types::MatchExpr::*;
       match $vars.entry(stringify!($v).to_string()) {
         Occupied(_) => (),
         Vacant(entry) => {
@@ -413,27 +417,39 @@ pub mod internal {
           entry.insert($n - 1);
         }
       }
-      SubStr(db_expr!($vars, $start), db_expr!($vars, $end),
-             *$vars.get(stringify!($v)).unwrap())
+      $m = $m + 1;
+      let col = ::holmes::engine::types::Projection::Slot($m - 1);
+      (::holmes::engine::types::Projection::SubStr {
+          buf: Box::new(col),
+          start_idx: Box::new(db_expr!($vars, $start)),
+          end_idx: Box::new(db_expr!($vars, $end))},
+          ::holmes::engine::types::MatchExpr::Var(
+             *$vars.get(stringify!($v)).unwrap()))
     }};
-    ($vars:ident, $n:ident, [_]) => {
-        ::holmes::engine::types::MatchExpr::Unbound
-    };
-    ($vars:ident, $n:ident, ($v:expr)) => {
-        ::holmes::engine::types::MatchExpr::Const(
-            ::holmes::pg::dyn::values::ToValue::to_value($v))
-    };
-    ($vars:ident, $n:ident, $m:ident) => {{
+    ($vars:ident, $m:ident, $n:ident, [_]) => {{
+        $m = $m + 1;
+        let col = ::holmes::engine::types::Projection::Slot($m - 1);
+        (col, ::holmes::engine::types::MatchExpr::Unbound)
+    }};
+    ($vars:ident, $m:ident, $n:ident, ($v:expr)) => {{
+        $m = $m + 1;
+        let col = ::holmes::engine::types::Projection::Slot($m - 1);
+        (col, ::holmes::engine::types::MatchExpr::Const(
+            ::holmes::pg::dyn::values::ToValue::to_value($v)))
+    }};
+    ($vars:ident, $b:ident, $n:ident, $m:ident) => {{
       use std::collections::hash_map::Entry::*;
       use ::holmes::engine::types::MatchExpr::*;
-      match $vars.entry(stringify!($m).to_string()) {
+      $b = $b + 1;
+      let col = ::holmes::engine::types::Projection::Slot($b - 1);
+      (col, match $vars.entry(stringify!($m).to_string()) {
         Occupied(entry) => Var(*entry.get()),
         Vacant(entry) => {
           $n = $n + 1;
           entry.insert($n - 1);
           Var($n - 1)
         }
-      }
+      })
     }};
   }
 }

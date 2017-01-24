@@ -32,6 +32,10 @@ pub use self::errors::*;
 /// While it can be useful for quick tests, it should not be depended on for
 /// anything serious, even if you want a standalone app. It is very slow and
 /// persists nothing.
+///
+/// MemDB does not currently support projections in any meaninful way. It will
+/// treat all projections as though they are simply the next column in sequence
+/// for the predicate they are attached to.
 pub struct MemDB {
     facts: RefCell<HashMap<FactId, Fact>>,
     facts_set: RefCell<HashSet<Fact>>,
@@ -128,7 +132,7 @@ impl FactDB for MemDB {
                                               nasgn.0.push(*id);
                                               nasgn
                                           }),
-                                          |o_asgn, (val, arg)| {
+                                          |o_asgn, (val, &(ref _proj, ref arg))| {
                                         o_asgn.and_then(|asgn| {
                                             match *arg {
                                                 MatchExpr::Unbound => Some(asgn),
@@ -140,9 +144,6 @@ impl FactDB for MemDB {
                                                     } else {
                                                         raw_option(&asgn.1[var] == val, asgn)
                                                     }
-                                                }
-                                                MatchExpr::SubStr(_, _, _) => {
-                                                    panic!("Substring not implemented in memdb")
                                                 }
                                                 MatchExpr::Const(ref k) => {
                                                     raw_option(k == val, asgn)

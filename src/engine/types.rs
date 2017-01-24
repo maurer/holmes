@@ -112,11 +112,6 @@ pub enum MatchExpr {
     Var(Var),
     /// Only match if the contents of the slot match the provided value
     Const(Value),
-    /// Perform a substring operation on the database side before performing the
-    /// rest of matching on this field
-    /// This really should be a MatchExpr, but I'm restricting it to Var for
-    /// implementation simplicity for the moment.
-    SubStr(DBExpr, DBExpr, Var),
 }
 
 // This is a temporary impl. PartialEq should be derivable, but a compiler bug
@@ -128,9 +123,6 @@ impl PartialEq for MatchExpr {
             (&Unbound, &Unbound) => true,
             (&Var(x), &Var(y)) => x == y,
             (&Const(ref v), &Const(ref vv)) => v == vv,
-            (&SubStr(ref dbe, ref dbe2, ref v), &SubStr(ref dbeb, ref dbeb2, ref vb)) => {
-                (dbe == dbeb) && (dbe2 == dbeb2) && (v == vb)
-            }
             _ => false,
         }
     }
@@ -166,10 +158,11 @@ pub enum BindExpr {
 /// (match all `foo`s, bind the second slot to x) would be constructed as
 ///
 /// ```
-/// use holmes::engine::types::{Clause,MatchExpr};
+/// use holmes::engine::types::{Clause,MatchExpr,Projection};
 /// Clause {
 ///   pred_name : "foo".to_string(),
-///   args : vec![MatchExpr::Unbound, MatchExpr::Var(0)]
+///   args : vec![(Projection::Slot(0), MatchExpr::Unbound),
+///               (Projection::Slot(1), MatchExpr::Var(0))]
 /// };
 /// ```
 #[derive(PartialEq,Clone,Debug,Hash,Eq)]
@@ -177,7 +170,29 @@ pub struct Clause {
     /// Name of the predicate to match against
     pub pred_name: String,
     /// List of how to restrict or bind each slot
-    pub args: Vec<MatchExpr>,
+    pub args: Vec<(Projection, MatchExpr)>,
+}
+
+/// A projection is a `FactDB`-side computed value which
+/// can then be matched against.
+#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+pub enum Projection {
+    /// The nth slot in the predicate being projected
+    Slot(usize),
+    /// A variable in the match, which must be
+    /// defined elsewhere.
+    Var(Var),
+    /// An integer literal
+    U64(u64),
+    /// A substring of a database-side value
+    SubStr {
+        /// String to take the substring of
+        buf: Box<Projection>,
+        /// Initial index (0-based)
+        start_idx: Box<Projection>,
+        /// Final index (0-based)
+        end_idx: Box<Projection>,
+    },
 }
 
 /// `Expr` represents the right hand side of the where clause sublanguage of
@@ -191,19 +206,6 @@ pub enum Expr {
     /// Applies the function in the registry named the first argument to the
     /// list of arguments provided as the second
     App(String, Vec<Expr>),
-}
-
-/// `DBExpr` represents the type of expressions computable database-side.
-/// Currently only used in the `SubStr` match expression.
-// TODO: SubStr should be promoted to a DBExpr, and both Var and SubStr should
-// be collapsed into one DBFun or DBExpr style binding.
-#[derive (Clone,Debug,Hash,PartialEq,Eq)]
-pub enum DBExpr {
-    /// Evaluate a variable database side (must be defined elsewhere by the query)
-    Var(Var),
-    /// Evaluates to the provided integer, primarily for purposes of indexing
-    /// large buffers
-    Val(u64),
 }
 
 // As per prvious, this is only needed due to a compiler bug. In the long

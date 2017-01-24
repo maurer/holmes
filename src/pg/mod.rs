@@ -33,9 +33,11 @@ use postgres::{rows, Connection, TlsMode};
 use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
-use engine::types::{Fact, Predicate, Field, MatchExpr, Clause, DBExpr};
+use engine::types::{Fact, Predicate, Field, MatchExpr, Clause, Projection};
 use std::cell::RefCell;
 use std::time::Instant;
+use std::sync::Arc;
+
 pub mod dyn;
 
 #[allow(missing_docs)]
@@ -72,10 +74,51 @@ use self::dyn::types;
 use self::dyn::{Type, Value};
 use fact_db::{FactDB, FactId, CacheId};
 
-fn db_expr(e: &DBExpr, names: &Vec<String>) -> String {
+fn db_expr(e: &Projection, names: &Vec<String>, table: &String) -> String {
     match *e {
-        DBExpr::Val(v) => format!("{}", v),
-        DBExpr::Var(v) => format!("CAST({} AS int)", names[v]),
+        Projection::U64(v) => format!("{}", v),
+        Projection::Var(v) => format!("{}", names[v]),
+        Projection::Slot(n) => format!("{}.arg{}", table, n),
+        Projection::SubStr { ref buf, ref start_idx, ref end_idx } => {
+            format!("substring({} from CAST({} as INT) + 1 for CAST({} as INT) - CAST({} AS \
+                     INT) + 1)",
+                    db_expr(buf, names, table),
+                    db_expr(start_idx, names, table),
+                    db_expr(end_idx, names, table),
+                    db_expr(start_idx, names, table))
+        }
+    }
+}
+
+fn db_type(e: &Projection, fields: &Vec<Field>, var_types: &Vec<Type>) -> Result<Type> {
+    match *e {
+        Projection::U64(_) => Ok(Arc::new(types::UInt64)),
+        Projection::Var(v) => Ok(var_types[v].clone()),
+        Projection::Slot(n) => Ok(fields[n].type_.clone()),
+        Projection::SubStr { ref buf, ref start_idx, ref end_idx } => {
+            let buf_type = db_type(&buf, fields, var_types)?;
+            if buf_type != Arc::new(types::String) && buf_type != Arc::new(types::Bytes) {
+                bail!(ErrorKind::Type(format!("Tried to take substring of non-string or bytes \
+                                               type: {:?} : {:?}",
+                                              buf,
+                                              buf_type)))
+            }
+            let start_type = db_type(&start_idx, fields, var_types)?;
+            let end_type = db_type(&start_idx, fields, var_types)?;
+            if start_type != Arc::new(types::UInt64) {
+                bail!(ErrorKind::Type(format!("Tried to index starting with non-numeric type: \
+                                               {:?} : {:?}",
+                                              start_idx,
+                                              start_type)))
+            }
+            if end_type != Arc::new(types::UInt64) {
+                bail!(ErrorKind::Type(format!("Tried to index ending with non-numeric type: \
+                                               {:?} : {:?}",
+                                              end_idx,
+                                              end_type)))
+            }
+            Ok(buf_type)
+        }
     }
 }
 
@@ -466,50 +509,26 @@ impl FactDB for PgDB {
                                                      clause.pred_name)))
                     }
                 };
-                for (idx, slot) in clause.args.iter().enumerate() {
-                    match *slot {
+                for &(ref proj, ref binding) in clause.args.iter() {
+                    match *binding {
                         MatchExpr::Unbound |
                         MatchExpr::Const(_) => (),
                         MatchExpr::Var(v) => {
                             let v = v as usize;
+                            let type_ = db_type(proj, &pred.fields, &var_type)?;
                             if v == var_type.len() {
-                                var_type.push(pred.fields[idx].type_.clone())
+                                var_type.push(type_)
                             } else if v > var_type.len() {
                                 bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
                                                               variable numbering.",
                                                              var_type.len() - 1,
                                                              v)));
-                            } else if var_type[v] != pred.fields[idx].type_.clone() {
+                            } else if &var_type[v] != &type_ {
                                 bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
                                                               incompatible types {:?} and {:?}",
                                                              v,
                                                              var_type[v],
-                                                             pred.fields[idx].type_)));
-                            }
-                        }
-                        // TODO: unify logic with above
-                        MatchExpr::SubStr(_, _, var) => {
-                            let v = var as usize;
-                            let repr = pred.fields[idx].type_.repr();
-                            if repr.len() != 1 {
-                                bail!(ErrorKind::Arg(format!("Substring matching performed on \
-                                                              compound field")));
-                            } else if (repr[0] != "bytea") && (repr[0] != "varchar") {
-                                bail!(ErrorKind::Arg(format!("Substring matching performed on \
-                                                              non-string or bytes")));
-                            } else if v == var_type.len() {
-                                var_type.push(pred.fields[idx].type_.clone())
-                            } else if v > var_type.len() {
-                                bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
-                                                              variable numbering.",
-                                                             var_type.len() - 1,
-                                                             v)));
-                            } else if var_type[v] != pred.fields[idx].type_.clone() {
-                                bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
-                                                              incompatible types {:?} and {:?}",
-                                                             v,
-                                                             var_type[v],
-                                                             pred.fields[idx].type_)));
+                                                             type_)));
                             }
                         }
                     }
@@ -535,62 +554,36 @@ impl FactDB for PgDB {
             let table_name = format!("facts.{}", clause.pred_name);
             // We will refer to it by a numbered alias, to make joining easier
             let alias_name = format!("t{}", idxc);
+            let pred = self.pred_by_name.borrow().get(&clause.pred_name).unwrap().clone();
             fact_ids.push(format!("{}.id", alias_name));
             let mut clause_elements = Vec::new();
-            for (idx, arg) in clause.args.iter().enumerate() {
-                match arg {
-                    &MatchExpr::Unbound => (),
-                    // TODO use recursion to make substr use normal var logic
-                    &MatchExpr::SubStr(ref start, ref end, var) => {
-                        let start_str = db_expr(start, &var_names);
-                        let end_str = db_expr(end, &var_names);
-                        if var >= var_names.len() {
-                            var_names.push(format!("substring({}.arg{} from \
-                                                   {} + 1 for {} - {} + 1)",
-                                                   alias_name,
-                                                   idx,
-                                                   start_str,
-                                                   end_str,
-                                                   start_str));
-                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name].fields[idx]
-                                    .type_
-                                    .clone());
-                        } else {
-                            let piece = format!("substring({}.arg{} from {} \
-                                                 + 1 for {} - {} + 1) = {}",
-                                                alias_name,
-                                                idx,
-                                                start_str,
-                                                end_str,
-                                                start_str,
-                                                var_names[var]);
-                            clause_elements.push(piece);
-                        }
-                    }
-                    &MatchExpr::Var(var) => {
+            for &(ref proj, ref arg) in clause.args.iter() {
+                let proj_str = db_expr(&proj, &var_names, &alias_name);
+                match *arg {
+                    MatchExpr::Unbound => (),
+                    MatchExpr::Var(var) => {
                         if var >= var_names.len() {
                             // This situation means it's the first occurrence of the variable
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
-                            var_names.push(format!("{}.arg{}", alias_name, idx));
-                            var_types.push(self.pred_by_name.borrow()[&clause.pred_name].fields[idx]
-                                    .type_
-                                    .clone());
+                            var_names.push(proj_str);
+                            let type_ = db_type(proj, &pred.fields, &var_types)?;
+                            var_types.push(type_);
                         } else {
                             // The variable has occurred correctly, so we add it being equal
                             // to the canonical definition to the join clause for this table
-                            let piece = format!("{}.arg{} = {}", alias_name, idx, var_names[var]);
+                            let piece = format!("{} = {}", proj_str, var_names[var]);
                             clause_elements.push(piece);
                         }
                     }
-                    &MatchExpr::Const(ref val) => {
+                    MatchExpr::Const(ref val) => {
                         // Since we're comparing against a constant, this restriction can
                         // go in the where clause.
                         // I stash the value in a buffer for later use with the prepared
                         // statement, and put the index into the buffer into the where
                         // clause chunk.
                         vals.extend(val.to_sql());
-                        restricts.push(format!("{}.arg{} = ${}", alias_name, idx, vals.len()));
+                        restricts.push(format!("{} = ${}", proj_str, vals.len()));
                     }
                 }
             }
