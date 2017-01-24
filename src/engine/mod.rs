@@ -13,8 +13,12 @@ use fact_db::{FactDB, CacheId};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::Arc;
 use futures::{Stream, Future, Async, Poll, done, BoxFuture};
 use futures::task::{park, Task};
+use futures::future::join_all;
+use futures_cpupool::CpuPool;
+use futures::stream;
 
 #[derive(Clone,Copy,PartialEq,Debug)]
 enum RuleState {
@@ -139,10 +143,11 @@ impl Future for Quiescence {
 /// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine<FE: ::std::error::Error + Send + 'static, FDB: FactDB<Error = FE>> {
     fact_db: Rc<FDB>,
-    funcs: HashMap<String, Rc<Func>>,
+    funcs: HashMap<String, Arc<Func>>,
     rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
     signals: Vec<Signal>,
     event_loop: Handle,
+    pool: CpuPool,
 }
 
 #[allow(missing_docs)]
@@ -200,6 +205,7 @@ impl<FE, FDB> Engine<FE, FDB>
             rules: HashMap::new(),
             signals: Vec::new(),
             event_loop: handle,
+            pool: CpuPool::new_num_cpus(),
         }
     }
     /// Seach the type registry for a named type
@@ -324,33 +330,49 @@ impl<FE, FDB> Engine<FE, FDB>
             let buddies = self.get_dep_rules(&rule.head.pred_name);
             let rule = rule.clone();
             let out_signal = signal.clone();
+            let pool = self.pool.clone();
             signal.for_each(move |_| {
                 trace!("Activating rule: {:?}", rule);
-                let mut states = fdb.search_facts(&rule.body, Some(cache)).unwrap();
-                for where_clause in rule.wheres.iter() {
-                    let mut next_states = Vec::new();
-                    for state in states {
-                        let resp = eval(&where_clause.rhs, &state.1, &funcs);
-                        next_states.extend(bind(&where_clause.lhs, resp, &state.1)
-                            .into_iter()
-                            .map(|x| (state.0.clone(), x)));
-                    }
-                    states = next_states;
-                }
-                let mut productive = false;
-                for state in states {
-                    fdb.cache_hit(cache, state.0).unwrap();
-                    productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
-                        .unwrap();
-                }
+                let states = fdb.search_facts(&rule.body, Some(cache)).unwrap();
+                rule.wheres
+                    .iter()
+                    .fold(done(Ok(states)).boxed(), move |states_f, where_clause| {
+                        states_f.and_then(move |states| {
+                                states.iter()
+                                    .fold(done(Ok(Vec::new())).boxed(),
+                                          move |next_states_f, state| {
+                                        eval(&where_clause.rhs, &state.1, &funcs, pool.clone())
+                                            .and_then(move |resp| {
+                                                next_states_f.and_then(move |mut next_states| {
+                                                    next_states.extend(bind(&where_clause.lhs,
+                                                                            resp,
+                                                                            &state.1)
+                                                        .into_iter()
+                                                        .map(move |x| (state.0.clone(), x)));
+                                                    done(Ok(next_states))
+                                                })
+                                            })
+                                            .boxed()
+                                    })
+                            })
+                            .boxed()
+                    })
+                    .and_then(move |states| {
+                        let mut productive = false;
+                        for state in states {
+                            fdb.cache_hit(cache, state.0).unwrap();
+                            productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
+                                .unwrap();
+                        }
 
-                if productive {
-                    for buddy in buddies.borrow().iter() {
-                        buddy.signal();
-                    }
-                }
+                        if productive {
+                            for buddy in buddies.borrow().iter() {
+                                buddy.signal();
+                            }
+                        }
 
-                out_signal.done()
+                        out_signal.done()
+                    })
             })
         };
 
@@ -365,7 +387,7 @@ impl<FE, FDB> Engine<FE, FDB>
     /// Do not attempt to register a function name multiple times.
     // TODO: stop function reregistration, document restriction
     pub fn reg_func(&mut self, name: String, func: Func) -> Result<()> {
-        self.funcs.insert(name, Rc::new(func));
+        self.funcs.insert(name, Arc::new(func));
         Ok(())
     }
 
@@ -442,21 +464,27 @@ fn bind(lhs: &BindExpr, rhs: Value, state: &Vec<Value>) -> Vec<Vec<Value>> {
 }
 
 // Evaluates an expression, given a set of bindings to variables
-fn eval(expr: &Expr, subs: &Vec<Value>, funcs: &HashMap<String, Rc<Func>>) -> Value {
+fn eval(expr: &Expr,
+        subs: &Vec<Value>,
+        funcs: &HashMap<String, Arc<Func>>,
+        pool: CpuPool)
+        -> BoxFuture<Value, ()> {
     use self::types::Expr::*;
     match *expr {
-        Var(var) => subs[var as usize].clone(),
-        Val(ref val) => val.clone(),
+        Var(var) => done(Ok(subs[var as usize].clone())).boxed(),
+        Val(ref val) => done(Ok(val.clone())).boxed(),
         App(ref fun_name, ref args) => {
-            let arg_vals: Vec<Value> = args.iter()
-                .map(|arg_expr| eval(arg_expr, subs, funcs))
-                .collect();
-            let arg = if arg_vals.len() == 1 {
-                arg_vals[0].clone()
-            } else {
-                values::Tuple::new(arg_vals) as Value
-            };
-            (funcs[fun_name].run)(arg)
+            join_all(args.iter().map(|arg_expr| eval(arg_expr, subs, funcs, pool.clone())))
+                .and_then(move |arg_vals| {
+                    let arg = if arg_vals.len() == 1 {
+                        arg_vals[0].clone()
+                    } else {
+                        values::Tuple::new(arg_vals) as Value
+                    };
+                    let func = funcs[fun_name].run.clone();
+                    pool.spawn_fn(move || done(Ok(func(arg))))
+                })
+                .boxed()
         }
     }
 }

@@ -3,6 +3,7 @@
 //! The types defined in this module are used to define the parts of the Holmes
 //! language itself, and are used for writing rules, facts, etc.
 use pg::dyn::{Value, Type};
+use std::sync::Arc;
 
 /// A `Predicate` is a name combined with a list of typed slots, e.g.
 ///
@@ -253,5 +254,5 @@ pub struct Func {
     /// The type of the `Value` the function will produce as output
     pub output_type: Type,
     /// The function itself
-    pub run: Box<Fn(Value) -> Value>,
+    pub run: Arc<Fn(Value) -> Value + Send + Sync>,
 }

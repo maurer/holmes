@@ -571,6 +571,7 @@ extern crate log;
 extern crate error_chain;
 extern crate tokio_core;
 extern crate futures;
+extern crate futures_cpupool;
 
 extern crate url;
 
