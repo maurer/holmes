@@ -8,6 +8,7 @@ use postgres::types::ToSql;
 use holmes::pg::RowIter;
 use holmes::pg::dyn::values::ValueT;
 use holmes::pg::dyn::types::TypeT;
+use std::fmt;
 
 #[derive(Debug,Clone,Hash)]
 struct BoolType;
@@ -43,6 +44,12 @@ pub struct BoolValue {
 impl ToValue for BoolValue {
     fn to_value(self) -> Value {
         Arc::new(BoolValue::new(self.val))
+    }
+}
+
+impl fmt::Display for BoolValue {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> ::std::result::Result<(), fmt::Error> {
+        write!(fmt, "{}", self.val)
     }
 }
 

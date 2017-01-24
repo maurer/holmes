@@ -8,7 +8,7 @@ pub mod types;
 use std::collections::hash_map::HashMap;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
-use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection};
+use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection, MatchExpr};
 use fact_db::{FactDB, CacheId};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
@@ -203,6 +203,7 @@ impl<FE, FDB> Engine<FE, FDB>
             event_loop: handle,
         }
     }
+
     /// Seach the type registry for a named type
     /// If present, it returns `Some(type)`, otherwise `None`
     pub fn get_type(&self, name: &str) -> Option<Type> {
@@ -303,6 +304,42 @@ impl<FE, FDB> Engine<FE, FDB>
             .into_iter()
             .map(|x| x.1)
             .collect())
+    }
+
+    /// Render a predicate as an html table
+    pub fn render(&self, pred_name: &String) -> Result<String> {
+        let pred = self.get_predicate(pred_name)?.ok_or(ErrorKind::Invalid("Predicate absent".to_string()))?;
+        let data = self.derive(&vec![Clause {
+            pred_name: pred_name.to_string(),
+            args: pred.fields.iter().enumerate().map(|(i, _)| {
+                (Projection::Slot(i), MatchExpr::Var(i))
+            }).collect()
+        }])?;
+        let descr = match pred.description {
+            Some(descr) => format!("<h3>{}</h3><br />", descr),
+            None => "".to_string(),
+        };
+        let mut html = format!("<h1>{}:</h1><br />{}<table><tr>", pred_name, descr);
+        for field in pred.fields {
+            let name = match field.name {
+                Some(ref name) => name,
+                None => "N/A"
+            };
+            let descr = match field.description {
+                Some(ref descr) => format!(" title={}", descr),
+                None => "".to_string()
+            };
+            html.push_str(&format!("<th{}>{}</th>", descr, name));
+        }
+        html.push_str("</tr>");
+        for row in data {
+            html.push_str("<tr>");
+            for col in row {
+                html.push_str(&format!("<td>{}</td>", col))
+            }
+        }
+        html.push_str("</table>");
+        Ok(html)
     }
 
     /// Register a new rule with the database
