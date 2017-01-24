@@ -1,16 +1,16 @@
 # Holmes
 
-[![Build Status](https://travis-ci.org/maurer/holmes.svg?branch=master)](https://travis-ci.org/maurer/holmes)
-[![Documentation](https://img.shields.io/badge/doc-master-green.svg)](https://maurer.github.io/holmes)
-[![Coverage Status](https://coveralls.io/repos/github/maurer/holmes/badge.svg?branch=master)](https://coveralls.io/github/maurer/holmes?branch=master)
+[![Build Status](https://travis-ci.org/maurer/holmes.svg?branch=v0.1.0)](https://travis-ci.org/maurer/holmes)
+[![Documentation](https://img.shields.io/badge/doc-master-green.svg)](https://maurer.github.io/holmes/v0.1.0)
+[![Coverage Status](https://coveralls.io/repos/github/maurer/holmes/badge.svg?branch=master)](https://coveralls.io/github/maurer/holmes?branch=v0.1.0)
 
 A system for integrating multiple analyses using a logic language.
 
 ## Requirements
-* **Rust** - Holmes is developed against [Rust 1.11.0](https://static.rust-lang.org/dist/rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz).
+* **Rust** - Holmes is developed against [Rust 1.14.0](https://static.rust-lang.org/dist/rust-1.14.0-x86_64-unknown-linux-gnu.tar.gz).
 
 * **PostgreSQL** - Holmes uses **PostgreSQL** to back its datastore.
-  I develop against 9.6 and test against 9.5 on [Travis](https://travis-ci.org/maurer/holmes).
+  I develop and test against 9.5 on [Travis](https://travis-ci.org/maurer/holmes).
   Other backing stores may become available in the future.
 
 * **Linux/X86_64** - This is not an explicit dependency.
