@@ -308,13 +308,16 @@ impl<FE, FDB> Engine<FE, FDB>
 
     /// Render a predicate as an html table
     pub fn render(&self, pred_name: &String) -> Result<String> {
-        let pred = self.get_predicate(pred_name)?.ok_or(ErrorKind::Invalid("Predicate absent".to_string()))?;
+        let pred = self.get_predicate(pred_name)?
+            .ok_or(ErrorKind::Invalid("Predicate absent".to_string()))?;
         let data = self.derive(&vec![Clause {
-            pred_name: pred_name.to_string(),
-            args: pred.fields.iter().enumerate().map(|(i, _)| {
-                (Projection::Slot(i), MatchExpr::Var(i))
-            }).collect()
-        }])?;
+                              pred_name: pred_name.to_string(),
+                              args: pred.fields
+                                  .iter()
+                                  .enumerate()
+                                  .map(|(i, _)| (Projection::Slot(i), MatchExpr::Var(i)))
+                                  .collect(),
+                          }])?;
         let descr = match pred.description {
             Some(descr) => format!("<h3>{}</h3><br />", descr),
             None => "".to_string(),
@@ -323,11 +326,11 @@ impl<FE, FDB> Engine<FE, FDB>
         for field in pred.fields {
             let name = match field.name {
                 Some(ref name) => name,
-                None => "N/A"
+                None => "N/A",
             };
             let descr = match field.description {
                 Some(ref descr) => format!(" title={}", descr),
-                None => "".to_string()
+                None => "".to_string(),
             };
             html.push_str(&format!("<th{}>{}</th>", descr, name));
         }
