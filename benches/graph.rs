@@ -15,6 +15,7 @@ fn run_graph(size: u64) {
                     args: vec![i.to_value(), (i + 1).to_value()],
                 })?;
         }
+        fact!(holmes, edge((size - 1), 0))?;
 
         holmes_exec!(holmes, {
             rule!(reachable(X, Y) <= edge(X, Y));
