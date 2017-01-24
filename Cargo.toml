@@ -1,7 +1,7 @@
 [package]
 
 name = "holmes"
-version = "0.0.1"
+version = "0.1.0"
 authors = [ "Matthew Maurer <maurer@matthewmaurer.org>" ]
 license = "MIT"
 description = "Holmes Inference System"
@@ -15,7 +15,7 @@ error-chain = "0.7"
 url = "1.2"
 tokio-core = "0.1"
 futures = "0.1"
-env_logger = "*"
+env_logger = "0.4"
 
 [[bench]]
 harness = false
