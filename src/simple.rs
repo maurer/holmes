@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
 use std::sync::atomic::Ordering::SeqCst;
 use std::env;
 use url::percent_encoding::{percent_encode, PATH_SEGMENT_ENCODE_SET};
+use env_logger;
 pub use std::sync::Arc;
 
 pub use super::pg::dyn::values::ToValue;
@@ -42,10 +43,13 @@ fn get_db_addr(db_num: isize) -> String {
     }
 }
 
+static LOGGER: ::std::sync::Once = ::std::sync::ONCE_INIT;
+
 /// Call a sequence of functions on the database, simulating a program
 /// termination in between each by constructing a fresh `Engine`.
 /// Data is _destroyed_ unless an error occurs.
 pub fn multi<A>(tests: &[&Fn(&mut Engine, &mut Core) -> Result<A>]) {
+    LOGGER.call_once(|| env_logger::init().unwrap());
     let db_num = DB_NUM.fetch_add(1, SeqCst);
     let db_addr = get_db_addr(db_num);
     for test in tests {

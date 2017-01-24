@@ -233,6 +233,9 @@ macro_rules! rule {
       }),*]
     })
   }};
+  ($holmes:ident, $($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
+      rule!($holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})
+  };
   ($($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
     |holmes: &mut ::holmes::Engine<_,_>| {
       rule!(holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})

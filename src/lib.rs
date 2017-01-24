@@ -572,6 +572,7 @@ extern crate error_chain;
 extern crate tokio_core;
 extern crate futures;
 
+extern crate env_logger;
 extern crate url;
 
 pub mod pg;

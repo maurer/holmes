@@ -619,6 +619,7 @@ impl FactDB for PgDB {
         let db_check = Instant::now();
         let rows = try!(self.conn.query(&raw_stmt, &vals));
         trace!("search_facts query_time: {:?}", db_check.elapsed());
+        trace!("search_facts: got {} rows", rows.len());
         rows.iter()
             .map(|row| {
                 let mut row_iter = RowIter::new(&row);

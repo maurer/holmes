@@ -399,7 +399,7 @@ pub mod values {
 
     /// This trait defines the interface any value must implement in order to be
     /// used in the Holmes language.
-    pub trait ValueT: Sync + Send + HashTO + fmt::Debug + Any {
+    pub trait ValueT: Sync + Send + HashTO + fmt::Debug + fmt::Display + Any {
         /// Returns the type of the value
         /// This is needed if to do type checking, or tuple values
         fn type_(&self) -> Type;
@@ -464,6 +464,21 @@ pub mod values {
         elements: Vec<Value>,
     }
 
+    impl fmt::Display for List {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "[")?;
+            let mut first = true;
+            for elem in self.elements.iter() {
+                if !first {
+                    write!(fmt, ", ")?;
+                    first = false;
+                }
+                write!(fmt, "{}", elem)?;
+            }
+            write!(fmt, "]")
+        }
+    }
+
     impl ValueT for List {
         fn type_(&self) -> Type {
             match self.elements.first() {
@@ -494,6 +509,22 @@ pub mod values {
     pub struct Tuple {
         elements: Vec<Value>,
     }
+
+    impl fmt::Display for Tuple {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "(")?;
+            let mut first = true;
+            for elem in self.elements.iter() {
+                if !first {
+                    write!(fmt, ", ")?;
+                    first = false;
+                }
+                write!(fmt, "{}", elem)?;
+            }
+            write!(fmt, ")")
+        }
+    }
+
 
     impl ValueT for Tuple {
         fn type_(&self) -> Type {
@@ -529,6 +560,12 @@ pub mod values {
         /// Creates a new boolean Holmes value
         pub fn new(b: bool) -> Arc<Self> {
             Arc::new(Bool { val: b })
+        }
+    }
+
+    impl fmt::Display for Bool {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "{}", self.val)
         }
     }
 
@@ -615,6 +652,12 @@ pub mod values {
         sql: i64,
     }
 
+    impl fmt::Display for UInt64 {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "{}", self.val)
+        }
+    }
+
     impl ValueT for UInt64 {
         fn type_(&self) -> Type {
             Arc::new(types::UInt64)
@@ -642,6 +685,12 @@ pub mod values {
     #[derive(Debug,PartialEq,PartialOrd,Hash)]
     pub struct String {
         val: ::std::string::String,
+    }
+
+    impl fmt::Display for String {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "{:?}", self.val)
+        }
     }
 
     impl ValueT for String {
@@ -683,6 +732,12 @@ pub mod values {
         valuet_boiler!();
     }
 
+    impl fmt::Display for Bytes {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "{:?}", self.val)
+        }
+    }
+
     impl Bytes {
         /// Creates a new Holmes value holding raw data.
         pub fn new(val: Vec<u8>) -> Arc<Self> {
@@ -707,6 +762,12 @@ pub mod values {
             vec![&self.val as &ToSql]
         }
         valuet_boiler!();
+    }
+
+    impl fmt::Display for LargeBytes {
+        fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(fmt, "(large)")
+        }
     }
 
     impl LargeBytes {
