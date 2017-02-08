@@ -329,7 +329,7 @@ impl<FE, FDB> Engine<FE, FDB>
                 None => "N/A",
             };
             let descr = match field.description {
-                Some(ref descr) => format!(" title={}", descr),
+                Some(ref descr) => format!(" title=\"{}\"", descr),
                 None => "".to_string(),
             };
             html.push_str(&format!("<th{}>{}</th>", descr, name));
