@@ -1,8 +1,8 @@
 # Holmes
 
-[![Build Status](https://travis-ci.org/maurer/holmes.svg?branch=v0.1.0)](https://travis-ci.org/maurer/holmes)
-[![Documentation](https://img.shields.io/badge/doc-master-green.svg)](https://maurer.github.io/holmes/v0.1.0)
-[![Coverage Status](https://coveralls.io/repos/github/maurer/holmes/badge.svg?branch=master)](https://coveralls.io/github/maurer/holmes?branch=v0.1.0)
+[![Build Status](https://travis-ci.org/maurer/holmes.svg?branch=master)](https://travis-ci.org/maurer/holmes)
+[![Documentation](https://img.shields.io/badge/doc-master-green.svg)](https://maurer.github.io/holmes/)
+[![Coverage Status](https://coveralls.io/repos/github/maurer/holmes/badge.svg?branch=master)](https://coveralls.io/github/maurer/holmes?branch=master)
 
 A system for integrating multiple analyses using a logic language.
 
