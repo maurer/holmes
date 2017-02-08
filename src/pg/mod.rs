@@ -97,7 +97,7 @@ fn db_type(e: &Projection, fields: &Vec<Field>, var_types: &Vec<Type>) -> Result
         Projection::Slot(n) => Ok(fields[n].type_.clone()),
         Projection::SubStr { ref buf, ref start_idx, ref end_idx } => {
             let buf_type = db_type(&buf, fields, var_types)?;
-            if buf_type != Arc::new(types::String) && buf_type != Arc::new(types::Bytes) {
+            if buf_type != Arc::new(types::String) && buf_type != Arc::new(types::Bytes) && buf_type != Arc::new(types::LargeBytes) {
                 bail!(ErrorKind::Type(format!("Tried to take substring of non-string or bytes \
                                                type: {:?} : {:?}",
                                               buf,
