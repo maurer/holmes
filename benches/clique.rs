@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate holmes;
-use holmes::simple::*;
+use holmes::simple::mem::*;
 use std::time::Instant;
 
 fn run_clique(size: u64) {

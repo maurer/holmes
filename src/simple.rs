@@ -78,3 +78,25 @@ pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Engine) -> Result<()>>
         }
     })
 }
+
+pub mod mem {
+    pub use mem_db::MemDB;
+    pub type Engine = super::super::engine::Engine<super::super::mem_db::Error, MemDB>;
+    pub use tokio_core::reactor::Core;
+    pub use engine::Result;
+    use env_logger;
+    pub use super::super::pg::dyn::values::ToValue;
+    pub use super::super::pg::dyn::{Value, Type};
+    pub use super::super::pg::dyn::values;
+    pub use super::super::engine::types::{Fact, Rule, Clause, MatchExpr, Projection};
+
+
+    /// Uses a `MemDB` rather than a `PgDB`.
+    pub fn single<A>(test: &Fn(&mut Engine, &mut Core) -> Result<A>) {
+        super::LOGGER.call_once(|| env_logger::init().unwrap());
+        let db = MemDB::new();
+        let mut core = Core::new().unwrap();
+        let mut holmes = Engine::new(db, core.handle());
+        test(&mut holmes, &mut core).unwrap();
+    }
+}
