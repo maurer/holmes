@@ -39,14 +39,16 @@ pub trait FactDB {
     /// Creates a cache table for a new rule, returning a handle
     fn new_rule_cache(&self, pred: Vec<String>) -> Result<CacheId, Self::Error>;
 
-    /// Update
-    fn cache_hit(&self, cache: CacheId, Vec<FactId>) -> Result<(), Self::Error>;
 
     /// Attempt to match the right hand side of a datalog rule against the
     /// database, returning a list of solution assignments to the bound
     /// variables.
     /// Optionally provide a cache handle to have the db filter already
     /// processed results based on a provided cache.
+    ///
+    /// If `search_facts` returns a given set of `FactId`s, those facts will
+    /// be added to the cache as already returned and not provided again in the
+    /// future.
     fn search_facts(&self,
                     query: &Vec<Clause>,
                     cache: Option<CacheId>)

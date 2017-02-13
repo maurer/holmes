@@ -357,6 +357,20 @@ impl PgDB {
                      &[])?;
         Ok(())
     }
+
+    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+        let borrow: Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
+        try!(self.conn
+            .execute(&format!("insert into cache.rule{} values ({})",
+                              cache,
+                              facts.iter()
+                                  .enumerate()
+                                  .map(|(x, _)| format!("${}", x + 1))
+                                  .collect::<Vec<_>>()
+                                  .join(", ")),
+                     borrow.as_slice()));
+        Ok(())
+    }
 }
 impl FactDB for PgDB {
     type Error = Error;
@@ -377,19 +391,6 @@ impl FactDB for PgDB {
                                             .join(", ")),
                                &[]));
         Ok(cache_id)
-    }
-    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
-        let borrow: Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
-        try!(self.conn
-            .execute(&format!("insert into cache.rule{} values ({})",
-                              cache,
-                              facts.iter()
-                                  .enumerate()
-                                  .map(|(x, _)| format!("${}", x + 1))
-                                  .collect::<Vec<_>>()
-                                  .join(", ")),
-                     borrow.as_slice()));
-        Ok(())
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
@@ -639,6 +640,15 @@ impl FactDB for PgDB {
                         Some(e) => vars.push(e),
                         None => bail!(ErrorKind::Internal(format!("Failure loading var from row"))),
                     }
+                }
+                // TODO this is not atomic with any error conditions, so if an error is hit
+                // loading another row, the cache will remain hit. When I add transactions, I
+                // should make this part of the transaction, and it should commit at the end
+                // Also, the cache should be updated in a single batch statement at he end of the
+                // loop for perf
+                match cache {
+                    Some(cache_id) => self.cache_hit(cache_id, ids.clone())?,
+                    None => (),
                 }
                 Ok((ids, vars))
             })

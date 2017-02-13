@@ -60,6 +60,10 @@ impl MemDB {
             preds: RefCell::new(HashMap::new()),
         }
     }
+    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+        self.rule_cache.borrow_mut()[cache as usize].insert(facts);
+        Ok(())
+    }
 }
 
 fn raw_option<T>(some: bool, val: T) -> Option<T> {
@@ -71,10 +75,6 @@ impl FactDB for MemDB {
     fn new_rule_cache(&self, _preds: Vec<String>) -> Result<CacheId> {
         self.rule_cache.borrow_mut().push(HashSet::new());
         Ok((self.rule_cache.borrow().len() - 1) as CacheId)
-    }
-    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
-        self.rule_cache.borrow_mut()[cache as usize].insert(facts);
-        Ok(())
     }
     fn insert_fact(&self, fact: &Fact) -> Result<bool> {
         if self.facts_set.borrow().contains(fact) {
@@ -159,7 +159,11 @@ impl FactDB for MemDB {
                 })
                 .filter(|&(ref facts, _)| {
                     match cache {
-                        Some(c) => !self.rule_cache.borrow()[c as usize].contains(facts),
+                        Some(c) => {
+                            let res = !self.rule_cache.borrow()[c as usize].contains(facts);
+                            self.cache_hit(c, facts.clone());
+                            res
+                        }
                         None => true,
                     }
                 })

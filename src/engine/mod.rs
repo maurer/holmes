@@ -380,7 +380,6 @@ impl<FE, FDB> Engine<FE, FDB>
                 }
                 let mut productive = false;
                 for state in states {
-                    fdb.cache_hit(cache, state.0).unwrap();
                     productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
                         .unwrap();
                 }
