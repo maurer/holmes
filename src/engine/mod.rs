@@ -293,7 +293,7 @@ impl<FE, FDB> Engine<FE, FDB>
 
     fn rule_cache(&mut self, rule: &Rule) -> Result<CacheId> {
         self.fact_db
-            .new_rule_cache(rule.body.iter().map(|clause| clause.pred_name.clone()).collect())
+            .new_rule_cache(&rule.body)
             .chain_err(|| ErrorKind::FactDB)
     }
 

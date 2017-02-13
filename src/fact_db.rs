@@ -37,7 +37,7 @@ pub trait FactDB {
     fn new_predicate(&self, pred: &Predicate) -> Result<(), Self::Error>;
 
     /// Creates a cache table for a new rule, returning a handle
-    fn new_rule_cache(&self, pred: Vec<String>) -> Result<CacheId, Self::Error>;
+    fn new_rule_cache(&self, query: &Vec<Clause>) -> Result<CacheId, Self::Error>;
 
 
     /// Attempt to match the right hand side of a datalog rule against the

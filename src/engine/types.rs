@@ -173,6 +173,23 @@ pub struct Clause {
     pub args: Vec<(Projection, MatchExpr)>,
 }
 
+impl Clause {
+    pub fn free(&self) -> Vec<Var> {
+        let mut out: Vec<Var> = self.args
+            .iter()
+            .filter_map(|&(_, ref arg)| {
+                match *arg {
+                    MatchExpr::Var(n) => Some(n),
+                    _ => None,
+                }
+            })
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    }
+}
+
 /// A projection is a `FactDB`-side computed value which
 /// can then be matched against.
 #[derive(PartialEq,Clone,Debug,Hash,Eq)]

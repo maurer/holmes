@@ -374,7 +374,8 @@ impl PgDB {
 }
 impl FactDB for PgDB {
     type Error = Error;
-    fn new_rule_cache(&self, preds: Vec<String>) -> Result<CacheId> {
+    fn new_rule_cache(&self, clause: &Vec<Clause>) -> Result<CacheId> {
+        let preds: Vec<String> = clause.iter().map(|x| x.pred_name.clone()).collect();
         let cache_stmt = try!(self.conn.prepare("select nextval('cache_id')"));
         let cache_res = try!(cache_stmt.query(&[]));
         let cache_id = cache_res.get(0).get(0);
