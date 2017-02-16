@@ -80,7 +80,7 @@ pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Engine) -> Result<()>>
 }
 
 pub mod mem {
-    pub use mem_db::MemDB;
+    pub use mem_db::{MemDB, GcPolicy};
     pub type Engine = super::super::engine::Engine<super::super::mem_db::Error, MemDB>;
     pub use tokio_core::reactor::Core;
     pub use engine::Result;
@@ -94,7 +94,7 @@ pub mod mem {
     /// Uses a `MemDB` rather than a `PgDB`.
     pub fn single<A>(test: &Fn(&mut Engine, &mut Core) -> Result<A>) {
         super::LOGGER.call_once(|| env_logger::init().unwrap());
-        let db = MemDB::new();
+        let db = MemDB::new_full(GcPolicy::Size(100000));
         let mut core = Core::new().unwrap();
         let mut holmes = Engine::new(db, core.handle());
         test(&mut holmes, &mut core).unwrap();

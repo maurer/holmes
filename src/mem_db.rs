@@ -235,6 +235,11 @@ fn extract(clause: &Clause, fact: &Fact) -> Option<Assignment> {
     Some(asgn)
 }
 
+pub enum GcPolicy {
+    Never,
+    Size(usize),
+}
+
 /// MemDB is an in-memory mock up of the fact database interface.
 ///
 /// While it can be useful for quick tests, it should not be depended on for
@@ -256,11 +261,15 @@ pub struct MemDB {
     cache_index: RefCell<HashMap<CacheId, Index>>,
     types: RefCell<HashMap<String, Type>>,
     preds: RefCell<HashMap<String, Predicate>>,
+    gc_policy: GcPolicy,
 }
 
 impl MemDB {
-    /// Creates a fresh empty `MemDB`.
     pub fn new() -> MemDB {
+        MemDB::new_full(GcPolicy::Never)
+    }
+    /// Creates a fresh empty `MemDB`.
+    pub fn new_full(gc_policy: GcPolicy) -> MemDB {
         MemDB {
             facts: RefCell::new(HashMap::new()),
             next_id: Cell::new(0),
@@ -274,6 +283,20 @@ impl MemDB {
                 .filter_map(|type_| type_.name().map(|name| (name.to_owned(), type_.clone())))
                 .collect()),
             preds: RefCell::new(HashMap::new()),
+            gc_policy: gc_policy,
+        }
+    }
+    fn gc_old(&self) {
+        let num_purge = self.facts.borrow().len() / 2;
+        let purge_ids = self.facts.borrow().keys().take(num_purge).cloned().collect::<Vec<_>>();
+        for fact_id in purge_ids.iter() {
+            let fact = (self.facts.borrow_mut().remove(fact_id)).unwrap();
+            self.facts_set.borrow_mut().remove(&fact);
+        }
+        for (_, cache) in self.cache_out.borrow_mut().iter_mut() {
+            cache.retain(|&(ref fids, _)| {
+                fids.iter().all(|fid| self.facts.borrow().contains_key(fid))
+            });
         }
     }
     fn fetch_cache_update(&self, c: CacheId) -> Vec<(Vec<FactId>, Assignment)> {
@@ -375,6 +398,10 @@ impl FactDB for MemDB {
                 index.update(cid, id, fact, self);
                 self.cache_index.borrow_mut().insert(cid, index);
             }
+        }
+        match self.gc_policy {
+            GcPolicy::Size(n) if n < self.facts_set.borrow().len() => self.gc_old(),
+            _ => (),
         }
         Ok(true)
     }
