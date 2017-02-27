@@ -9,6 +9,7 @@ use std::collections::hash_map::HashMap;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection, MatchExpr};
+use super::mem_db::{MemDB, GcPolicy};
 use fact_db::{FactDB, CacheId};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
@@ -139,9 +140,11 @@ impl Future for Quiescence {
 /// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine<FE: ::std::error::Error + Send + 'static, FDB: FactDB<Error = FE>> {
     fact_db: Rc<FDB>,
+    cache_db: Rc<MemDB>,
     funcs: HashMap<String, Rc<Func>>,
     rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
     signals: Vec<Signal>,
+    cache_signals: Rc<RefCell<Vec<Signal>>>,
     event_loop: Handle,
 }
 
@@ -197,9 +200,11 @@ impl<FE, FDB> Engine<FE, FDB>
     pub fn new(db: FDB, handle: Handle) -> Self {
         Engine {
             fact_db: Rc::new(db),
+            cache_db: Rc::new(MemDB::new_full(GcPolicy::Size(1000))),
             funcs: HashMap::new(),
             rules: HashMap::new(),
             signals: Vec::new(),
+            cache_signals: Rc::new(RefCell::new(Vec::new())),
             event_loop: handle,
         }
     }
@@ -212,7 +217,10 @@ impl<FE, FDB> Engine<FE, FDB>
     /// Register a new type
     /// This type must be a named type (e.g. type.name() should return `Some`)
     pub fn add_type(&self, type_: Type) -> Result<()> {
-        Ok(try!(self.fact_db.add_type(type_).chain_err(|| ErrorKind::FactDB)))
+        self.fact_db.add_type(type_.clone()).chain_err(|| ErrorKind::FactDB)?;
+        // TODO nounwrap
+        self.cache_db.add_type(type_).unwrap();
+        Ok(())
     }
     /// Register a new predicate
     /// This defines the type signature of a predicate and persists it
@@ -240,7 +248,10 @@ impl<FE, FDB> Engine<FE, FDB>
             None => (),
         }
 
-        Ok(try!(self.fact_db.new_predicate(pred).chain_err(|| ErrorKind::FactDB)))
+        self.fact_db.new_predicate(pred).chain_err(|| ErrorKind::FactDB)?;
+        // TODO nounwrap
+        self.cache_db.new_predicate(pred).unwrap();
+        Ok(())
     }
 
     /// Retrieves a named predicate from the database. This is primarily of use for
@@ -275,10 +286,15 @@ impl<FE, FDB> Engine<FE, FDB>
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),
         }
         {
-            if self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)? {
-                let signals = self.get_dep_rules(&fact.pred_name);
-                for signal in signals.borrow().iter() {
-                    signal.signal();
+            // TODO nounwrap
+            // If the cache has it, don't hit the db
+            if self.cache_db.insert_fact(&fact).unwrap() {
+                // If cache doesn't have it, check that the db doesn't have it
+                if self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)? {
+                    let signals = self.get_dep_rules(&fact.pred_name);
+                    for signal in signals.borrow().iter() {
+                        signal.signal();
+                    }
                 }
             }
             Ok(())
@@ -291,10 +307,12 @@ impl<FE, FDB> Engine<FE, FDB>
         Ok(())
     }
 
-    fn rule_cache(&mut self, rule: &Rule) -> Result<CacheId> {
-        self.fact_db
-            .new_rule_cache(&rule.body)
-            .chain_err(|| ErrorKind::FactDB)
+    fn rule_cache(&mut self, rule: &Rule) -> Result<(CacheId, CacheId)> {
+        // TODO nounwrap
+        Ok((self.fact_db
+                .new_rule_cache(&rule.body)
+                .chain_err(|| ErrorKind::FactDB)?,
+            self.cache_db.new_rule_cache(&rule.body).unwrap()))
     }
 
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
@@ -350,24 +368,77 @@ impl<FE, FDB> Engine<FE, FDB>
         where FDB: 'static
     {
         let signal = Signal::new();
+        let cache_signal = Signal::new();
         let trigger = signal.clone();
+        let cache_trigger = cache_signal.clone();
         self.signals.push(signal.clone());
+        self.cache_signals.borrow_mut().push(cache_signal.clone());
 
         for pred in &rule.body {
             let dep_rules = self.get_dep_rules(&pred.pred_name);
             dep_rules.borrow_mut().push(signal.clone());
+            dep_rules.borrow_mut().push(cache_signal.clone());
         }
 
-        let rule_future = {
-            let cache = self.rule_cache(&rule)?;
+        let (db_cache, cache_cache) = self.rule_cache(&rule)?;
+        let db_rule_future = {
             let fdb = self.fact_db.clone();
+            let cdb = self.cache_db.clone();
             let funcs = self.funcs.clone();
             let buddies = self.get_dep_rules(&rule.head.pred_name);
             let rule = rule.clone();
             let out_signal = signal.clone();
+            let cache_signals = self.cache_signals.clone();
             signal.for_each(move |_| {
                 trace!("Activating rule: {:?}", rule);
-                let mut states = fdb.search_facts(&rule.body, Some(cache)).unwrap();
+                let fdb = fdb.clone();
+                let cdb = cdb.clone();
+                let funcs = funcs.clone();
+                let out_signal = out_signal.clone();
+                let rule = rule.clone();
+                let buddies = buddies.clone();
+                Quiescence::new(cache_signals.borrow().clone()).and_then(move |()| {
+                    trace!("All caches calm, running: {:?}", rule);
+                    let mut states = fdb.search_facts(&rule.body, Some(db_cache)).unwrap();
+                    for where_clause in rule.wheres.iter() {
+                        let mut next_states = Vec::new();
+                        for state in states {
+                            let resp = eval(&where_clause.rhs, &state.1, &funcs);
+                            next_states.extend(bind(&where_clause.lhs, resp, &state.1)
+                                .into_iter()
+                                .map(|x| (state.0.clone(), x)));
+                        }
+                        states = next_states;
+                    }
+                    let mut productive = false;
+                    for state in states {
+                        let fact = substitute(&rule.head, &state.1);
+                        if cdb.insert_fact(&fact).unwrap() {
+                        productive |= fdb.insert_fact(&fact)
+                            .unwrap();
+                        }
+                    }
+
+                    if productive {
+                        for buddy in buddies.borrow().iter() {
+                            buddy.signal();
+                        }
+                    }
+
+                    out_signal.done()
+                })
+            })
+        };
+        let cache_rule_future = {
+            let fdb = self.cache_db.clone();
+            let funcs = self.funcs.clone();
+            let buddies = self.get_dep_rules(&rule.head.pred_name);
+            let rule = rule.clone();
+            let out_signal = cache_signal.clone();
+            let rdb = self.fact_db.clone();
+            cache_signal.for_each(move |_| {
+                trace!("Activating cache rule: {:?}", rule);
+                let mut states = fdb.search_facts(&rule.body, Some(cache_cache)).unwrap();
                 for where_clause in rule.wheres.iter() {
                     let mut next_states = Vec::new();
                     for state in states {
@@ -380,8 +451,13 @@ impl<FE, FDB> Engine<FE, FDB>
                 }
                 let mut productive = false;
                 for state in states {
-                    productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
-                        .unwrap();
+                    let fact = substitute(&rule.head, &state.1);
+                    if fdb.insert_fact(&fact)
+                        .unwrap() {
+                        trace!("Cache rule productive");
+                        productive = true;
+                        rdb.insert_fact(&fact).unwrap();
+                    }
                 }
 
                 if productive {
@@ -394,7 +470,10 @@ impl<FE, FDB> Engine<FE, FDB>
             })
         };
 
-        self.event_loop.spawn(rule_future);
+
+        self.event_loop.spawn(db_rule_future);
+        self.event_loop.spawn(cache_rule_future);
+        cache_trigger.signal();
         trigger.signal();
         Ok(())
     }

@@ -10,10 +10,11 @@
 use fact_db::{FactDB, FactId, CacheId};
 use pg::dyn::{Value, Type};
 use pg::dyn::types::default_types;
+use pg::dyn::values::{LargeBytes, UInt64};
 use engine::types::{Fact, Clause, Predicate, MatchExpr, Var, Projection};
 use std::collections::{HashMap, HashSet};
 
-use std::cell::{RefCell, Cell};
+use std::cell::{Ref, RefCell, Cell};
 
 #[allow(missing_docs)]
 mod errors {
@@ -27,15 +28,49 @@ mod errors {
 
 pub use self::errors::*;
 
+
+#[derive(Hash, PartialEq, Eq, Clone)]
+enum PV {
+    Value(Box<Value>),
+    Proj(Fact, Projection),
+}
+
 #[derive(Hash, PartialEq, Eq, Clone)]
 struct Assignment {
-    inner: Vec<Option<Value>>,
+    inner: Vec<Option<PV>>,
 }
 
 impl ::std::ops::Index<Var> for Assignment {
-    type Output = Value;
-    fn index(&self, index: Var) -> &Value {
+    type Output = PV;
+    fn index(&self, index: Var) -> &PV {
         self.get(index)
+    }
+}
+
+fn eval_asgn(asgn: &Assignment, proj: Projection, fact: &Fact) -> Value {
+    match proj {
+        Projection::Slot(n) => fact.args[n].clone(),
+        Projection::U64(u) => UInt64::new(u),
+        Projection::Var(n) => {
+            match asgn[n] {
+                PV::Value(ref v) => *v.clone(),
+                PV::Proj(_, _) => panic!("chained projections not supported in cache"),
+            }
+        }
+        Projection::SubStr { buf, start_idx, end_idx } => {
+            let buf_val = eval_asgn(asgn, *buf, fact);
+            let s: &Vec<u8> = {
+                if buf_val.type_().name().unwrap() != "largebytes".to_string() {
+                    panic!("Substringing non-large bytes in cache")
+                }
+                buf_val.get().downcast_ref::<Vec<u8>>().unwrap()
+            };
+            let start: u64 =
+                *eval_asgn(asgn, *start_idx, fact).get().downcast_ref::<u64>().unwrap();
+            let end: u64 = *eval_asgn(asgn, *end_idx, fact).get().downcast_ref::<u64>().unwrap();
+            let sub: Vec<u8> = s.as_slice()[start as usize..end as usize].iter().cloned().collect();
+            LargeBytes::new(sub)
+        }
     }
 }
 
@@ -50,24 +85,32 @@ impl Assignment {
             self.inner[v as usize].is_none()
         }
     }
-    fn set(&mut self, var: Var, val: Value) {
+    fn set(&mut self, var: Var, val: PV) {
         if self.inner.len() <= var {
             self.inner.resize(var + 1 as usize, None);
         }
         self.inner[var as usize] = Some(val)
     }
-    fn get(&self, var: Var) -> &Value {
+    fn get(&self, var: Var) -> &PV {
         self.inner[var as usize].as_ref().unwrap()
     }
     fn complete(self) -> Vec<Value> {
-        self.inner.into_iter().map(|x| x.unwrap()).collect()
+        // TODO: make this properly general instead
+        let base = self.clone();
+        self.inner
+            .into_iter()
+            .map(|x| match x.unwrap() {
+                PV::Value(val) => *val,
+                PV::Proj(fact, proj) => eval_asgn(&base, proj, &fact),
+            })
+            .collect()
     }
     fn mask(&self, vars: &[Var]) -> Assignment {
         let mut asgn = Assignment {
             inner: self.inner
                 .iter()
                 .enumerate()
-                .map(|(n, ov)| -> Option<Value> {
+                .map(|(n, ov)| -> Option<PV> {
                     match *ov {
                         Some(ref v) => raw_option(vars.contains(&n), v.clone()),
                         None => None,
@@ -209,10 +252,10 @@ impl Index {
 // If I want to use this for real work, I'll need to figure out how to return
 // maybe matches" and then actually run the projection and verify the fuzzy
 // matches right before outputting
-fn eval(proj: &Projection, fact: &Fact) -> Value {
+fn eval(proj: &Projection, fact: &Fact) -> PV {
     match *proj {
-        Projection::Slot(n) => fact.args[n].clone(),
-        _ => panic!("See todo, eval broken"),
+        Projection::Slot(n) => PV::Value(Box::new(fact.args[n].clone())),
+        ref p => PV::Proj(fact.clone(), p.clone()),
     }
 }
 
@@ -225,8 +268,13 @@ fn extract(clause: &Clause, fact: &Fact) -> Option<Assignment> {
         match *mat {
             MatchExpr::Unbound => (),
             MatchExpr::Const(ref val) => {
-                if val != &eval(proj, fact) {
-                    return None;
+                match eval(proj, fact) {
+                    PV::Value(e_val) => {
+                        if val != &*e_val {
+                            return None;
+                        }
+                    }
+                    _ => return None,
                 }
             }
             MatchExpr::Var(ref v) => asgn.set(*v, eval(proj, fact)),
@@ -287,6 +335,7 @@ impl MemDB {
         }
     }
     fn gc_old(&self) {
+        trace!("GC Old Cache Entries");
         let num_purge = self.facts.borrow().len() / 2;
         let purge_ids = self.facts.borrow().keys().take(num_purge).cloned().collect::<Vec<_>>();
         for fact_id in purge_ids.iter() {
@@ -336,10 +385,16 @@ impl MemDB {
                                                 MatchExpr::Var(var) => {
                                                     if asgn.1.undefined(var) {
                                                         let mut next = asgn.clone();
-                                                        next.1.set(var, val.clone());
+                                                        next.1
+                                                            .set(var,
+                                                                 PV::Value(Box::new(val.clone())));
                                                         Some(next)
                                                     } else {
-                                                        raw_option(&asgn.1[var] == val, asgn)
+                                                        let cond = match asgn.1[var] {
+                                                            PV::Value(ref a_val) => &**a_val == val,
+                                                            _ => false,
+                                                        };
+                                                        raw_option(cond, asgn)
                                                     }
                                                 }
                                                 MatchExpr::Const(ref k) => {
