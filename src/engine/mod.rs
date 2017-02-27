@@ -200,7 +200,7 @@ impl<FE, FDB> Engine<FE, FDB>
     pub fn new(db: FDB, handle: Handle) -> Self {
         Engine {
             fact_db: Rc::new(db),
-            cache_db: Rc::new(MemDB::new_full(GcPolicy::Size(1000))),
+            cache_db: Rc::new(MemDB::new_full(GcPolicy::Size(30000))),
             funcs: HashMap::new(),
             rules: HashMap::new(),
             signals: Vec::new(),
@@ -288,7 +288,11 @@ impl<FE, FDB> Engine<FE, FDB>
         {
             // TODO nounwrap
             // If the cache has it, don't hit the db
+<<<<<<< HEAD
             if self.cache_db.insert_fact(&fact).unwrap() {
+=======
+            if self.fact_db.insert_fact(&fact).unwrap() {
+>>>>>>> 5b420c05fe4650a2fb5a8de9f507a05aadc5dd13
                 // If cache doesn't have it, check that the db doesn't have it
                 if self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)? {
                     let signals = self.get_dep_rules(&fact.pred_name);
@@ -392,13 +396,20 @@ impl<FE, FDB> Engine<FE, FDB>
             signal.for_each(move |_| {
                 trace!("Activating rule: {:?}", rule);
                 let fdb = fdb.clone();
+<<<<<<< HEAD
                 let cdb = cdb.clone();
+=======
+>>>>>>> 5b420c05fe4650a2fb5a8de9f507a05aadc5dd13
                 let funcs = funcs.clone();
                 let out_signal = out_signal.clone();
                 let rule = rule.clone();
                 let buddies = buddies.clone();
                 Quiescence::new(cache_signals.borrow().clone()).and_then(move |()| {
+<<<<<<< HEAD
                     trace!("All caches calm, running: {:?}", rule);
+=======
+                    trace!("All caches calm");
+>>>>>>> 5b420c05fe4650a2fb5a8de9f507a05aadc5dd13
                     let mut states = fdb.search_facts(&rule.body, Some(db_cache)).unwrap();
                     for where_clause in rule.wheres.iter() {
                         let mut next_states = Vec::new();
@@ -412,11 +423,16 @@ impl<FE, FDB> Engine<FE, FDB>
                     }
                     let mut productive = false;
                     for state in states {
+<<<<<<< HEAD
                         let fact = substitute(&rule.head, &state.1);
                         if cdb.insert_fact(&fact).unwrap() {
                         productive |= fdb.insert_fact(&fact)
                             .unwrap();
                         }
+=======
+                        productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
+                            .unwrap();
+>>>>>>> 5b420c05fe4650a2fb5a8de9f507a05aadc5dd13
                     }
 
                     if productive {
@@ -435,7 +451,10 @@ impl<FE, FDB> Engine<FE, FDB>
             let buddies = self.get_dep_rules(&rule.head.pred_name);
             let rule = rule.clone();
             let out_signal = cache_signal.clone();
+<<<<<<< HEAD
             let rdb = self.fact_db.clone();
+=======
+>>>>>>> 5b420c05fe4650a2fb5a8de9f507a05aadc5dd13
             cache_signal.for_each(move |_| {
                 trace!("Activating cache rule: {:?}", rule);
                 let mut states = fdb.search_facts(&rule.body, Some(cache_cache)).unwrap();
