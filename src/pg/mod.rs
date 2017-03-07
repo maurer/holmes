@@ -31,8 +31,12 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use r2d2_postgres::{TlsMode, PostgresConnectionManager};
 use r2d2;
 
+use fallible_iterator::FallibleIterator;
+
 use postgres;
 use postgres::{rows, Connection};
+use postgres::rows::LazyRows;
+use postgres::stmt::Statement;
 use postgres::transaction::Transaction;
 use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
@@ -138,6 +142,18 @@ fn db_type(e: &Projection, fields: &Vec<Field>, var_types: &Vec<Type>) -> Result
 pub struct RowIter<'a> {
     row: &'a rows::Row<'a>,
     index: usize,
+}
+
+pub struct QueryIter<'trans> {
+    stmt: Statement<'trans>,
+    rows: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)> + 'trans>,
+}
+
+impl<'trans> Iterator for QueryIter<'trans> {
+    type Item = (Vec<FactId>, Vec<Value>);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.rows.next()
+    }
 }
 
 impl<'a> RowIter<'a> {
@@ -489,11 +505,11 @@ impl PgDB {
     /// Attempt to match the right hand side of a datalog rule against the
     /// database, returning a list of solution assignments to the bound
     /// variables.
-    pub fn search_facts(&self,
-                        query: &Vec<Clause>,
-                        cache: Option<CacheId>,
-                        trans: &Transaction)
-                        -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
+    pub fn search_facts<'a>(&self,
+                            query: &Vec<Clause>,
+                            cache: Option<CacheId>,
+                            trans: &'a Transaction<'a>)
+                            -> Result<QueryIter<'a>> {
         let cache_clause = match cache {
             Some(cache_id) => {
                 format!("not exists (select 1 from cache.rule{} WHERE {})",
@@ -633,31 +649,32 @@ impl PgDB {
                                where_clause);
         trace!("search_facts: {}", raw_stmt);
         let db_check = Instant::now();
-        let rows = trans.query(&raw_stmt, &vals)?;
+        let stmt = trans.prepare_cached(&raw_stmt)?;
+        let rows = stmt.lazy_query(trans, &vals, 16384)?;
         trace!("search_facts query_time: {:?}", db_check.elapsed());
-        trace!("search_facts: got {} rows", rows.len());
-        rows.iter()
-            .map(|row| {
-                let mut row_iter = RowIter::new(&row);
-                let mut ids = Vec::new();
-                for _ in fact_ids.iter() {
-                    match row_iter.next() {
-                        Some(e) => ids.push(e),
-                        None => {
-                            bail!(ErrorKind::Internal(format!("Failure loading fact ids from row")))
+        Ok(QueryIter {
+            stmt: stmt,
+            rows: Box::new(rows.iterator()
+                .map(move |row_res| {
+                    let row = row_res.unwrap();
+                    let mut row_iter = RowIter::new(&row);
+                    let mut ids = Vec::new();
+                    for _ in fact_ids.iter() {
+                        match row_iter.next() {
+                            Some(e) => ids.push(e),
+                            None => panic!("Failure loading fact ids from row"),
                         }
                     }
-                }
-                let mut vars = Vec::new();
-                for var_type in var_types.iter() {
-                    match var_type.extract(&mut row_iter) {
-                        Some(e) => vars.push(e),
-                        None => bail!(ErrorKind::Internal(format!("Failure loading var from row"))),
+                    let mut vars = Vec::new();
+                    for var_type in var_types.iter() {
+                        match var_type.extract(&mut row_iter) {
+                            Some(e) => vars.push(e),
+                            None => panic!("Failure loading var from row"),
+                        }
                     }
-                }
-                Ok((ids, vars))
-            })
-            .collect()
+                    (ids, vars)
+                })),
+        })
     }
 }
 

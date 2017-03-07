@@ -9,7 +9,7 @@ use std::collections::hash_map::HashMap;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection, MatchExpr};
-use pg::{CacheId, PgDB};
+use pg::{FactId, CacheId, PgDB};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -305,11 +305,12 @@ impl Engine {
     pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
         let conn = self.fact_db.conn()?;
         let trans = conn.transaction()?;
-        Ok(self.fact_db
+        let res = self.fact_db
             .search_facts(query, None, &trans)?
-            .into_iter()
             .map(|x| x.1)
-            .collect())
+            .collect();
+        trans.commit()?;
+        Ok(res)
     }
 
     /// Render a predicate as an html table
@@ -373,22 +374,29 @@ impl Engine {
             signal.for_each(move |_| {
                 trace!("Activating rule: {:?}", rule);
                 let trans = conn.transaction().unwrap();
-                let mut states = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
-                for where_clause in rule.wheres.iter() {
-                    let mut next_states = Vec::new();
-                    for state in states {
-                        let resp = eval(&where_clause.rhs, &state.1, &funcs);
-                        next_states.extend(bind(&where_clause.lhs, resp, &state.1)
-                            .into_iter()
-                            .map(|x| (state.0.clone(), x)));
-                    }
-                    states = next_states;
-                }
                 let mut productive = false;
-                for state in states {
-                    fdb.cache_hit(cache, state.0).unwrap();
-                    productive |= fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
-                        .unwrap();
+                {
+                    let mut states_0 = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
+                    let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
+                        Box::new(states_0);
+                    for where_clause in rule.wheres.iter() {
+                        let wc = where_clause.clone();
+                        let bf = &funcs;
+                        let mut next_states = states.flat_map(move |state| {
+                            let resp = eval(&wc.rhs, &state.1, bf);
+                            let out: Vec<_> = bind(&wc.lhs, resp, &state.1)
+                                .into_iter()
+                                .map(|x| (state.0.clone(), x))
+                                .collect();
+                            out
+                        });
+                        states = Box::new(next_states);
+                    }
+                    for state in states {
+                        fdb.cache_hit(cache, state.0).unwrap();
+                        productive |= fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
+                            .unwrap();
+                    }
                 }
                 trans.commit().unwrap();
 

@@ -5,6 +5,7 @@
 //!
 #![warn(missing_docs)]
 extern crate postgres;
+extern crate fallible_iterator;
 extern crate r2d2;
 extern crate r2d2_postgres;
 extern crate rustc_serialize;
