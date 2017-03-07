@@ -147,6 +147,8 @@ pub struct Engine {
 
 #[allow(missing_docs)]
 mod errors {
+    use pg;
+    use postgres;
     error_chain! {
         errors {
             Invalid(msg: String) {
@@ -161,9 +163,10 @@ mod errors {
                 description("Type Error")
                 display("Type Error: {}", msg)
             }
-            FactDB {
-                description("FactDB propagated error")
-            }
+        }
+        foreign_links {
+            FactDB(pg::Error);
+            Postgres(postgres::error::Error);
         }
     }
 }
@@ -209,7 +212,7 @@ impl Engine {
     /// Register a new type
     /// This type must be a named type (e.g. type.name() should return `Some`)
     pub fn add_type(&self, type_: Type) -> Result<()> {
-        Ok(try!(self.fact_db.add_type(type_).chain_err(|| ErrorKind::FactDB)))
+        Ok(self.fact_db.add_type(type_)?)
     }
     /// Register a new predicate
     /// This defines the type signature of a predicate and persists it
@@ -237,7 +240,7 @@ impl Engine {
             None => (),
         }
 
-        Ok(try!(self.fact_db.new_predicate(pred).chain_err(|| ErrorKind::FactDB)))
+        Ok(self.fact_db.new_predicate(pred)?)
     }
 
     /// Retrieves a named predicate from the database. This is primarily of use for
@@ -272,11 +275,15 @@ impl Engine {
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),
         }
         {
-            if self.fact_db.insert_fact(&fact).chain_err(|| ErrorKind::FactDB)? {
+            let conn = self.fact_db.conn()?;
+            let trans = conn.transaction()?;
+            if self.fact_db
+                .insert_fact(&fact, &trans)? {
                 let signals = self.get_dep_rules(&fact.pred_name);
                 for signal in signals.borrow().iter() {
                     signal.signal();
                 }
+                trans.commit()?;
             }
             Ok(())
         }
@@ -289,15 +296,17 @@ impl Engine {
     }
 
     fn rule_cache(&mut self, rule: &Rule) -> Result<CacheId> {
-        self.fact_db
-            .new_rule_cache(rule.body.iter().map(|clause| clause.pred_name.clone()).collect())
-            .chain_err(|| ErrorKind::FactDB)
+        Ok(self.fact_db
+            .new_rule_cache(rule.body.iter().map(|clause| clause.pred_name.clone()).collect())?)
     }
 
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
     /// of satisfying answers in the database.
     pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
-        Ok(try!(self.fact_db.search_facts(query, None).chain_err(|| ErrorKind::FactDB))
+        let conn = self.fact_db.conn()?;
+        let trans = conn.transaction()?;
+        Ok(self.fact_db
+            .search_facts(query, None, &trans)?
             .into_iter()
             .map(|x| x.1)
             .collect())
@@ -360,9 +369,11 @@ impl Engine {
             let buddies = self.get_dep_rules(&rule.head.pred_name);
             let rule = rule.clone();
             let out_signal = signal.clone();
+            let conn = fdb.conn().unwrap();
             signal.for_each(move |_| {
                 trace!("Activating rule: {:?}", rule);
-                let mut states = fdb.search_facts(&rule.body, Some(cache)).unwrap();
+                let trans = conn.transaction().unwrap();
+                let mut states = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
                 for where_clause in rule.wheres.iter() {
                     let mut next_states = Vec::new();
                     for state in states {
@@ -376,9 +387,10 @@ impl Engine {
                 let mut productive = false;
                 for state in states {
                     fdb.cache_hit(cache, state.0).unwrap();
-                    productive |= fdb.insert_fact(&substitute(&rule.head, &state.1))
+                    productive |= fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
                         .unwrap();
                 }
+                trans.commit().unwrap();
 
                 if productive {
                     for buddy in buddies.borrow().iter() {

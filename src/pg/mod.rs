@@ -33,6 +33,7 @@ use r2d2;
 
 use postgres;
 use postgres::{rows, Connection};
+use postgres::transaction::Transaction;
 use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
@@ -231,6 +232,10 @@ impl PgDB {
         Ok(db)
     }
 
+    pub fn conn(&self) -> Result<r2d2::PooledConnection<PostgresConnectionManager>> {
+        Ok(self.conn_pool.get()?)
+    }
+
     /// Kick everyone off the database and destroy the data at the provided URI
     pub fn destroy(uri: &str) -> Result<()> {
         let mut params = try!(uri.into_connect_params()
@@ -402,17 +407,17 @@ impl PgDB {
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
-    pub fn insert_fact(&self, fact: &Fact) -> Result<bool> {
+    pub fn insert_fact(&self, fact: &Fact, trans: &Transaction) -> Result<bool> {
         let stmt: String = try!(self.insert_by_name
                 .borrow()
                 .get(&fact.pred_name)
                 .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string())))
             .clone();
-        Ok(try!(self.conn_pool.get()?.execute(&stmt,
-                                              &fact.args
-                                                  .iter()
-                                                  .flat_map(|x| x.to_sql().into_iter())
-                                                  .collect::<Vec<_>>())) > 0)
+        Ok(try!(trans.execute(&stmt,
+                              &fact.args
+                                  .iter()
+                                  .flat_map(|x| x.to_sql().into_iter())
+                                  .collect::<Vec<_>>())) > 0)
     }
 
     /// Registers a new type with the database.
@@ -486,9 +491,9 @@ impl PgDB {
     /// variables.
     pub fn search_facts(&self,
                         query: &Vec<Clause>,
-                        cache: Option<CacheId>)
+                        cache: Option<CacheId>,
+                        trans: &Transaction)
                         -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
-        let conn = self.conn_pool.get()?;
         let cache_clause = match cache {
             Some(cache_id) => {
                 format!("not exists (select 1 from cache.rule{} WHERE {})",
@@ -628,7 +633,7 @@ impl PgDB {
                                where_clause);
         trace!("search_facts: {}", raw_stmt);
         let db_check = Instant::now();
-        let rows = try!(conn.query(&raw_stmt, &vals));
+        let rows = trans.query(&raw_stmt, &vals)?;
         trace!("search_facts query_time: {:?}", db_check.elapsed());
         trace!("search_facts: got {} rows", rows.len());
         rows.iter()
