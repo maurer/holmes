@@ -368,9 +368,9 @@ impl Engine {
             let buddies = self.get_dep_rules(&rule.head.pred_name);
             let rule = rule.clone();
             let out_signal = signal.clone();
-            let conn = fdb.conn().unwrap();
             signal.for_each(move |_| {
                 trace!("Activating rule: {:?}", rule);
+                let conn = fdb.conn().unwrap();
                 let trans = conn.transaction().unwrap();
                 let mut productive = false;
                 {
