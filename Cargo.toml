@@ -9,6 +9,8 @@ repository = "https://github.com/maurer/holmes"
 
 [dependencies]
 postgres = "0.13"
+r2d2 = "*"
+r2d2_postgres = "*"
 rustc-serialize = "0.3"
 log = "0.3"
 error-chain = "0.7"

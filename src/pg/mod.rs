@@ -28,8 +28,11 @@
 //! to make the `dyn` module abstract over databases.
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use r2d2_postgres::{TlsMode, PostgresConnectionManager};
+use r2d2;
 
-use postgres::{rows, Connection, TlsMode};
+use postgres;
+use postgres::{rows, Connection};
 use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
@@ -43,6 +46,7 @@ pub mod dyn;
 #[allow(missing_docs)]
 mod errors {
     use postgres as pg;
+    use r2d2;
     error_chain! {
             errors {
                 UriParse {
@@ -64,6 +68,8 @@ mod errors {
             foreign_links {
                 Connect(pg::error::ConnectError);
                 Db(pg::error::Error);
+                R2D2Init(r2d2::InitializationError);
+                R2D2Get(r2d2::GetTimeout);
             }
     }
 }
@@ -154,7 +160,7 @@ impl<'a> RowIter<'a> {
 
 /// Object representing a postgres-backed fact database instance
 pub struct PgDB {
-    conn: Connection,
+    conn_pool: r2d2::Pool<PostgresConnectionManager>,
     pred_by_name: RefCell<HashMap<String, Predicate>>,
     insert_by_name: RefCell<HashMap<String, String>>,
     named_types: RefCell<HashMap<String, Type>>,
@@ -176,15 +182,17 @@ impl PgDB {
         match params.database.clone() {
             Some(db) => {
                 params.database = Some("postgres".to_owned());
-                let conn = try!(Connection::connect(params, TlsMode::None));
+                let conn = try!(Connection::connect(params, ::postgres::TlsMode::None));
                 let create_query = format!("CREATE DATABASE {}", &db);
                 // TODO only suppress db exists error
                 let _ = conn.execute(&create_query, &[]);
             }
             None => (),
         }
-        // Establish the connection
-        let conn = try!(Connection::connect(uri, TlsMode::None));
+        // Establish the pool
+        let manager = PostgresConnectionManager::new(uri, TlsMode::None)?;
+        let pool = r2d2::Pool::new(r2d2::Config::default(), manager)?;
+        let conn = pool.get()?;
 
         // Create schemas
         try!(conn.execute("create schema if not exists facts", &[]));
@@ -209,7 +217,7 @@ impl PgDB {
 
         // Create incremental PgDB object
         let db = PgDB {
-            conn: conn,
+            conn_pool: pool,
             pred_by_name: RefCell::new(HashMap::new()),
             insert_by_name: RefCell::new(HashMap::new()),
             named_types: RefCell::new(types::default_types()
@@ -232,7 +240,7 @@ impl PgDB {
                     ErrorKind::Arg(format!(
                             "No database specified to destroy in {}.", uri))));
         params.database = Some("postgres".to_owned());
-        let conn = try!(Connection::connect(params, TlsMode::None));
+        let conn = try!(Connection::connect(params, postgres::TlsMode::None));
         let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM \
                                    pg_stat_activity WHERE pg_stat_activity.datname = '{}' AND \
                                    pid <> pg_backend_pid()",
@@ -252,11 +260,13 @@ impl PgDB {
         *self.pred_by_name.borrow_mut() = HashMap::new();
         *self.insert_by_name.borrow_mut() = HashMap::new();
         {
+            let conn = self.conn_pool.get()?;
             // Scoped borrow of connection
-            let pred_stmt = try!(self.conn
-                .prepare("select predicates.name, predicates.description, fields.name, \
-                          fields.description, fields.type from predicates JOIN fields ON \
-                          predicates.id = fields.pred_id ORDER BY predicates.id, fields.ordinal"));
+            let pred_stmt =
+                conn.prepare("select predicates.name, predicates.description, fields.name, \
+                              fields.description, fields.type from predicates JOIN fields ON \
+                              predicates.id = fields.pred_id ORDER BY predicates.id, \
+                              fields.ordinal")?;
             let pred_types = try!(pred_stmt.query(&[]));
             for type_entry in pred_types.iter() {
                 let mut row = RowIter::new(&type_entry);
@@ -316,12 +326,12 @@ impl PgDB {
     // _only_ puts record of the predicate into the database.
     fn insert_predicate(&self, pred: &Predicate) -> Result<()> {
         let &Predicate { ref name, ref description, ref fields } = pred;
-        let stmt = self.conn
+        let conn = self.conn_pool.get()?;
+        let stmt = conn
             .prepare("insert into predicates (name, description) values ($1, $2) returning id")?;
         let pred_id: i32 = stmt.query(&[name, description])?.get(0).get(0);
         for (ordinal, field) in fields.iter().enumerate() {
-            try!(self.conn
-                .execute("insert into fields (pred_id, name, description, type, ordinal) \
+            try!(conn.execute("insert into fields (pred_id, name, description, type, ordinal) \
                           values ($1, $2, $3, $4, $5)",
                          &[&pred_id,
                            &field.name,
@@ -350,7 +360,8 @@ impl PgDB {
             .map(|(ord, _)| format!("arg{}", ord))
             .collect::<Vec<_>>()
             .join(", ");
-        self.conn
+        self.conn_pool
+            .get()?
             .execute(&format!("create table facts.{} (id serial primary \
                                key, {}, unique({}))",
                               name,
@@ -360,34 +371,33 @@ impl PgDB {
         Ok(())
     }
     pub fn new_rule_cache(&self, preds: Vec<String>) -> Result<CacheId> {
-        let cache_stmt = try!(self.conn.prepare("select nextval('cache_id')"));
+        let conn = self.conn_pool.get()?;
+        let cache_stmt = conn.prepare("select nextval('cache_id')")?;
         let cache_res = try!(cache_stmt.query(&[]));
         let cache_id = cache_res.get(0).get(0);
-        try!(self.conn.execute(&format!("create table cache.rule{} ({})",
-                                        cache_id,
-                                        preds.into_iter()
-                                            .enumerate()
-                                            .map(|(n, pred)| {
-                                                format!("id{} serial references facts.{}(id)",
-                                                        n,
-                                                        pred)
-                                            })
-                                            .collect::<Vec<_>>()
-                                            .join(", ")),
-                               &[]));
+        conn.execute(&format!("create table cache.rule{} ({})",
+                              cache_id,
+                              preds.into_iter()
+                                  .enumerate()
+                                  .map(|(n, pred)| {
+                                      format!("id{} serial references facts.{}(id)", n, pred)
+                                  })
+                                  .collect::<Vec<_>>()
+                                  .join(", ")),
+                     &[])?;
         Ok(cache_id)
     }
     pub fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
         let borrow: Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
-        try!(self.conn
-            .execute(&format!("insert into cache.rule{} values ({})",
+        let conn = self.conn_pool.get()?;
+        conn.execute(&format!("insert into cache.rule{} values ({})",
                               cache,
                               facts.iter()
                                   .enumerate()
                                   .map(|(x, _)| format!("${}", x + 1))
                                   .collect::<Vec<_>>()
                                   .join(", ")),
-                     borrow.as_slice()));
+                     borrow.as_slice())?;
         Ok(())
     }
     /// Adds a new fact to the database, returning false if the fact was already
@@ -398,11 +408,11 @@ impl PgDB {
                 .get(&fact.pred_name)
                 .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string())))
             .clone();
-        Ok(try!(self.conn.execute(&stmt,
-                                  &fact.args
-                                      .iter()
-                                      .flat_map(|x| x.to_sql().into_iter())
-                                      .collect::<Vec<_>>())) > 0)
+        Ok(try!(self.conn_pool.get()?.execute(&stmt,
+                                              &fact.args
+                                                  .iter()
+                                                  .flat_map(|x| x.to_sql().into_iter())
+                                                  .collect::<Vec<_>>())) > 0)
     }
 
     /// Registers a new type with the database.
@@ -478,6 +488,7 @@ impl PgDB {
                         query: &Vec<Clause>,
                         cache: Option<CacheId>)
                         -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
+        let conn = self.conn_pool.get()?;
         let cache_clause = match cache {
             Some(cache_id) => {
                 format!("not exists (select 1 from cache.rule{} WHERE {})",
@@ -617,7 +628,7 @@ impl PgDB {
                                where_clause);
         trace!("search_facts: {}", raw_stmt);
         let db_check = Instant::now();
-        let rows = try!(self.conn.query(&raw_stmt, &vals));
+        let rows = try!(conn.query(&raw_stmt, &vals));
         trace!("search_facts query_time: {:?}", db_check.elapsed());
         trace!("search_facts: got {} rows", rows.len());
         rows.iter()
