@@ -305,11 +305,9 @@ impl Engine {
     pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
         let conn = self.fact_db.conn()?;
         let trans = conn.transaction()?;
-        let res = self.fact_db
-            .search_facts(query, None, &trans)?
-            .map(|x| x.1)
-            .collect();
-        trans.commit()?;
+        let query = self.fact_db.search_facts(query, None, &trans)?;
+        let query_iter = query.run();
+        let res = query_iter.map(|x| x.1).collect();
         Ok(res)
     }
 
@@ -376,7 +374,8 @@ impl Engine {
                 let trans = conn.transaction().unwrap();
                 let mut productive = false;
                 {
-                    let mut states_0 = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
+                    let query = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
+                    let mut states_0 = query.run();
                     let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
                         Box::new(states_0);
                     for where_clause in rule.wheres.iter() {

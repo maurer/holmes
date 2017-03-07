@@ -144,15 +144,57 @@ pub struct RowIter<'a> {
     index: usize,
 }
 
-pub struct QueryIter<'trans> {
-    stmt: Statement<'trans>,
-    rows: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)> + 'trans>,
+pub struct Query<'trans, 'stmt> {
+    stmt: Statement<'stmt>,
+    trans: &'trans Transaction<'trans>,
+    vals: Vec<Value>,
+    fact_ids: usize,
+    var_types: Vec<Type>,
+}
+// -> Result<QueryIter<'rows>>
+
+impl<'trans, 'stmt> Query<'trans, 'stmt> {
+    pub fn run(&self) -> QueryIter {
+        let sql: Vec<_> = self.vals.iter().flat_map(|x| x.to_sql()).collect();
+        QueryIter {
+            rows: self.stmt.lazy_query(self.trans, &sql, 16384).unwrap(),
+            fact_ids: self.fact_ids,
+            var_types: self.var_types.clone(),
+        }
+
+    }
 }
 
-impl<'trans> Iterator for QueryIter<'trans> {
+pub struct QueryIter<'trans, 'stmt> {
+    rows: LazyRows<'trans, 'stmt>,
+    fact_ids: usize,
+    var_types: Vec<Type>,
+}
+
+impl<'trans, 'stmt> Iterator for QueryIter<'trans, 'stmt> {
     type Item = (Vec<FactId>, Vec<Value>);
-    fn next(&mut self) -> Option<Self::Item> {
-        self.rows.next()
+    fn next(&mut self) -> Option<(Vec<FactId>, Vec<Value>)> {
+        match self.rows.next().unwrap() {
+            None => None,
+            Some(row) => {
+                let mut row_iter = RowIter::new(&row);
+                let mut ids = Vec::new();
+                for _ in 0..self.fact_ids {
+                    match row_iter.next() {
+                        Some(e) => ids.push(e),
+                        None => panic!("Failure loading fact ids from row"),
+                    }
+                }
+                let mut vars = Vec::new();
+                for var_type in self.var_types.iter() {
+                    match var_type.extract(&mut row_iter) {
+                        Some(e) => vars.push(e),
+                        None => panic!("Failure loading var from row"),
+                    }
+                }
+                Some((ids, vars))
+            }
+        }
     }
 }
 
@@ -509,7 +551,7 @@ impl PgDB {
                             query: &Vec<Clause>,
                             cache: Option<CacheId>,
                             trans: &'a Transaction<'a>)
-                            -> Result<QueryIter<'a>> {
+                            -> Result<Query<'a, 'a>> {
         let cache_clause = match cache {
             Some(cache_id) => {
                 format!("not exists (select 1 from cache.rule{} WHERE {})",
@@ -578,7 +620,7 @@ impl PgDB {
         let mut fact_ids = Vec::new(); // Translation of fact ids to sql exprs
         let mut var_types = Vec::new(); // Translation of variable numbers to
                                     // Types
-        let mut vals: Vec<&ToSql> = Vec::new(); // Values to be quoted into the
+        let mut vals: Vec<Value> = Vec::new(); // Values to be quoted into the
                                              // prepared statement
 
         for (idxc, clause) in query.iter().enumerate() {
@@ -614,7 +656,7 @@ impl PgDB {
                         // I stash the value in a buffer for later use with the prepared
                         // statement, and put the index into the buffer into the where
                         // clause chunk.
-                        vals.extend(val.to_sql());
+                        vals.push(val.clone());
                         restricts.push(format!("{} = ${}", proj_str, vals.len()));
                     }
                 }
@@ -648,32 +690,12 @@ impl PgDB {
                                join_query,
                                where_clause);
         trace!("search_facts: {}", raw_stmt);
-        let db_check = Instant::now();
-        let stmt = trans.prepare_cached(&raw_stmt)?;
-        let rows = stmt.lazy_query(trans, &vals, 16384)?;
-        trace!("search_facts query_time: {:?}", db_check.elapsed());
-        Ok(QueryIter {
-            stmt: stmt,
-            rows: Box::new(rows.iterator()
-                .map(move |row_res| {
-                    let row = row_res.unwrap();
-                    let mut row_iter = RowIter::new(&row);
-                    let mut ids = Vec::new();
-                    for _ in fact_ids.iter() {
-                        match row_iter.next() {
-                            Some(e) => ids.push(e),
-                            None => panic!("Failure loading fact ids from row"),
-                        }
-                    }
-                    let mut vars = Vec::new();
-                    for var_type in var_types.iter() {
-                        match var_type.extract(&mut row_iter) {
-                            Some(e) => vars.push(e),
-                            None => panic!("Failure loading var from row"),
-                        }
-                    }
-                    (ids, vars)
-                })),
+        Ok(Query {
+            stmt: trans.prepare_cached(&raw_stmt)?,
+            trans: trans,
+            fact_ids: fact_ids.len(),
+            vals: vals,
+            var_types: var_types,
         })
     }
 }
