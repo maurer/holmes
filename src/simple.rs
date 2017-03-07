@@ -19,8 +19,7 @@ pub use engine::Result;
 
 pub use tokio_core::reactor::Core;
 
-/// Convenience type alias describing the `Engine` specialized to Postgres
-pub type Engine = super::Engine<super::pg::Error, PgDB>;
+pub use Engine;
 
 static DB_NUM: AtomicIsize = ATOMIC_ISIZE_INIT;
 

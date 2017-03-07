@@ -72,7 +72,9 @@ pub use self::errors::*;
 
 use self::dyn::types;
 use self::dyn::{Type, Value};
-use fact_db::{FactDB, FactId, CacheId};
+
+pub type FactId = i32;
+pub type CacheId = i64;
 
 fn db_expr(e: &Projection, names: &Vec<String>, table: &String) -> String {
     match *e {
@@ -357,10 +359,7 @@ impl PgDB {
                      &[])?;
         Ok(())
     }
-}
-impl FactDB for PgDB {
-    type Error = Error;
-    fn new_rule_cache(&self, preds: Vec<String>) -> Result<CacheId> {
+    pub fn new_rule_cache(&self, preds: Vec<String>) -> Result<CacheId> {
         let cache_stmt = try!(self.conn.prepare("select nextval('cache_id')"));
         let cache_res = try!(cache_stmt.query(&[]));
         let cache_id = cache_res.get(0).get(0);
@@ -378,7 +377,7 @@ impl FactDB for PgDB {
                                &[]));
         Ok(cache_id)
     }
-    fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
+    pub fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
         let borrow: Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
         try!(self.conn
             .execute(&format!("insert into cache.rule{} values ({})",
@@ -393,7 +392,7 @@ impl FactDB for PgDB {
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
-    fn insert_fact(&self, fact: &Fact) -> Result<bool> {
+    pub fn insert_fact(&self, fact: &Fact) -> Result<bool> {
         let stmt: String = try!(self.insert_by_name
                 .borrow()
                 .get(&fact.pred_name)
@@ -410,7 +409,7 @@ impl FactDB for PgDB {
     /// This is unstable, and will likely need to be moved to the initialization
     /// of the database object in order to allow reconnecting to an existing
     /// database.
-    fn add_type(&self, type_: Type) -> Result<()> {
+    pub fn add_type(&self, type_: Type) -> Result<()> {
         let name = type_.name()
             .ok_or(ErrorKind::Arg("Tried to add a type with no name".to_string()))?;
         if !self.named_types.borrow().contains_key(name) {
@@ -425,12 +424,12 @@ impl FactDB for PgDB {
     /// This function is primarily useful for the DSL shorthand for constructing
     /// queries, since it allows you to use names of types when declaring
     /// functions rather than type objects.
-    fn get_type(&self, type_str: &str) -> Option<Type> {
+    pub fn get_type(&self, type_str: &str) -> Option<Type> {
         self.named_types.borrow().get(type_str).map(|x| x.clone())
     }
 
     /// Fetches a predicate by name
-    fn get_predicate(&self, pred_name: &str) -> Option<Predicate> {
+    pub fn get_predicate(&self, pred_name: &str) -> Option<Predicate> {
         self.pred_by_name.borrow().get(pred_name).cloned()
     }
 
@@ -443,7 +442,7 @@ impl FactDB for PgDB {
     /// names rather than using the names of predicates, but this helps a lot
     /// with debugging for now.
     // TODO lift restriction on predicate names
-    fn new_predicate(&self, pred: &Predicate) -> Result<()> {
+    pub fn new_predicate(&self, pred: &Predicate) -> Result<()> {
         // The predicate name is used as a table name, check it for legality
         if !valid_name(&pred.name) {
             bail!(ErrorKind::Arg("Invalid name: Use lowercase and \
@@ -475,10 +474,10 @@ impl FactDB for PgDB {
     /// Attempt to match the right hand side of a datalog rule against the
     /// database, returning a list of solution assignments to the bound
     /// variables.
-    fn search_facts(&self,
-                    query: &Vec<Clause>,
-                    cache: Option<CacheId>)
-                    -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
+    pub fn search_facts(&self,
+                        query: &Vec<Clause>,
+                        cache: Option<CacheId>)
+                        -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
         let cache_clause = match cache {
             Some(cache_id) => {
                 format!("not exists (select 1 from cache.rule{} WHERE {})",

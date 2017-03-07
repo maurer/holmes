@@ -9,7 +9,7 @@ use std::collections::hash_map::HashMap;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection, MatchExpr};
-use fact_db::{FactDB, CacheId};
+use pg::{CacheId, PgDB};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -137,8 +137,8 @@ impl Future for Quiescence {
 }
 
 /// The `Engine` type contains the context necessary to run a Holmes program
-pub struct Engine<FE: ::std::error::Error + Send + 'static, FDB: FactDB<Error = FE>> {
-    fact_db: Rc<FDB>,
+pub struct Engine {
+    fact_db: Rc<PgDB>,
     funcs: HashMap<String, Rc<Func>>,
     rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
     signals: Vec<Signal>,
@@ -189,12 +189,9 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
     }
 }
 
-impl<FE, FDB> Engine<FE, FDB>
-    where FE: ::std::error::Error + Send + 'static,
-          FDB: FactDB<Error = FE>
-{
+impl Engine {
     /// Create a fresh engine by handing it a fact database to use
-    pub fn new(db: FDB, handle: Handle) -> Self {
+    pub fn new(db: PgDB, handle: Handle) -> Self {
         Engine {
             fact_db: Rc::new(db),
             funcs: HashMap::new(),
@@ -346,9 +343,7 @@ impl<FE, FDB> Engine<FE, FDB>
     }
 
     /// Register a new rule with the database
-    pub fn new_rule(&mut self, rule: &Rule) -> Result<()>
-        where FDB: 'static
-    {
+    pub fn new_rule(&mut self, rule: &Rule) -> Result<()> {
         let signal = Signal::new();
         let trigger = signal.clone();
         self.signals.push(signal.clone());

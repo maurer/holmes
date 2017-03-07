@@ -100,10 +100,10 @@ macro_rules! predicate {
       fields: fields
     })
   }};
-  ($pred_name:ident($($t:tt),*) : $descr:expr) => { |holmes: &mut ::holmes::Engine<_,_>| {
+  ($pred_name:ident($($t:tt),*) : $descr:expr) => { |holmes: &mut ::holmes::Engine| {
     predicate!(holmes, $pred_name($($t),*), $descr)
   }};
-  ($pred_name:ident($($t:tt),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
+  ($pred_name:ident($($t:tt),*)) => { |holmes: &mut ::holmes::Engine| {
     predicate!(holmes, $pred_name($($t),*))
   }};
 }
@@ -127,7 +127,7 @@ macro_rules! fact {
       args : vec![$(::holmes::pg::dyn::values::ToValue::to_value($a)),*]
     })
   };
-  ($pred_name:ident($($a:expr),*)) => { |holmes: &mut ::holmes::Engine<_,_>| {
+  ($pred_name:ident($($a:expr),*)) => { |holmes: &mut ::holmes::Engine| {
     fact!(holmes, $pred_name($($a),*))
   }};
 }
@@ -237,13 +237,13 @@ macro_rules! rule {
       rule!($holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})
   };
   ($($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
-    |holmes: &mut ::holmes::Engine<_,_>| {
+    |holmes: &mut ::holmes::Engine| {
       rule!(holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})
     }
   };
   ($($head_name:ident $head_inner:tt),* <=
    $($body_name:ident $inner:tt)&*, {$(let $bind:tt = $hexpr:tt);*}) => {
-    |holmes: &mut ::holmes::Engine<_,_>| {
+    |holmes: &mut ::holmes::Engine| {
       rule!(holmes, $($head_name $head_inner),* <=
                     $($body_name $inner)&*, {$(let $bind = $hexpr);*})
     }
@@ -277,7 +277,7 @@ macro_rules! func {
                      })})
   }};
   (let $name:ident : $src:tt -> $dst:tt = $body:expr) => {
-    |holmes: &mut ::holmes::Engine<_,_>| {
+    |holmes: &mut ::holmes::Engine| {
       func!(holmes, let $name : $src -> $dst = $body)
     }
   };
