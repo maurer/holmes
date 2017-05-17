@@ -386,7 +386,7 @@ impl PgDB {
             .map(|(k, _)| format!("${}", k + 1))
             .collect();
         let stmt = format!("insert into facts.{} values (DEFAULT, {}) ON \
-                            CONFLICT DO NOTHING",
+                            CONFLICT DO NOTHING RETURNING id",
                            pred.name,
                            args.join(", "));
         self.insert_by_name.borrow_mut().insert(pred.name.clone(), stmt);
@@ -473,17 +473,20 @@ impl PgDB {
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
-    pub fn insert_fact(&self, fact: &Fact, trans: &Transaction) -> Result<bool> {
-        let stmt: String = try!(self.insert_by_name
+    pub fn insert_fact(&self, fact: &Fact, trans: &Transaction) -> Result<Option<FactId>> {
+        let stmt_str = try!(self.insert_by_name
                 .borrow()
                 .get(&fact.pred_name)
-                .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string())))
-            .clone();
-        Ok(try!(trans.execute(&stmt,
+                .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string()))).clone();
+        let stmt = trans.prepare(&stmt_str)?;
+
+
+        let out = try!(stmt.query(
                               &fact.args
                                   .iter()
                                   .flat_map(|x| x.to_sql().into_iter())
-                                  .collect::<Vec<_>>())) > 0)
+                                  .collect::<Vec<_>>()));
+        Ok(out.iter().next().map(|x| x.get(0)))
     }
 
     /// Registers a new type with the database.

@@ -278,7 +278,7 @@ impl Engine {
             let conn = self.fact_db.conn()?;
             let trans = conn.transaction()?;
             if self.fact_db
-                .insert_fact(&fact, &trans)? {
+                .insert_fact(&fact, &trans)?.is_some() {
                 let signals = self.get_dep_rules(&fact.pred_name);
                 for signal in signals.borrow().iter() {
                     signal.signal();
@@ -399,7 +399,7 @@ impl Engine {
                     }
                     for state in states {
                         if fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
-                            .unwrap() {
+                            .unwrap().is_some() {
                             productive += 1;
                         }
                     }
