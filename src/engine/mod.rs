@@ -372,16 +372,22 @@ impl Engine {
                 trace!("Activating rule: {:?}", rule);
                 let conn = fdb.conn().unwrap();
                 let trans = conn.transaction().unwrap();
-                let mut productive = false;
+                let mut productive: usize = 0;
+                let mut results: usize = 0;
                 {
                     let query = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
-                    let mut states_0 = query.run();
+                    let states_0 = query.run();
+                    trace!("Query submitted");
                     let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
-                        Box::new(states_0);
+                        Box::new(states_0.map(|state| {
+                            results += 1;
+                            fdb.cache_hit(cache, state.0.clone()).unwrap();
+                            state
+                        }));
                     for where_clause in rule.wheres.iter() {
                         let wc = where_clause.clone();
                         let bf = &funcs;
-                        let mut next_states = states.flat_map(move |state| {
+                        let next_states = states.flat_map(move |state| {
                             let resp = eval(&wc.rhs, &state.1, bf);
                             let out: Vec<_> = bind(&wc.lhs, resp, &state.1)
                                 .into_iter()
@@ -392,14 +398,18 @@ impl Engine {
                         states = Box::new(next_states);
                     }
                     for state in states {
-                        fdb.cache_hit(cache, state.0).unwrap();
-                        productive |= fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
-                            .unwrap();
+                        if fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
+                            .unwrap() {
+                            productive += 1;
+                        }
                     }
                 }
                 trans.commit().unwrap();
+                trace!("Generated {} results, turned into {} facts.",
+                       results,
+                       productive);
 
-                if productive {
+                if productive > 0 {
                     for buddy in buddies.borrow().iter() {
                         buddy.signal();
                     }

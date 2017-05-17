@@ -223,14 +223,15 @@ macro_rules! rule {
     let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
     let mut n : ::holmes::engine::types::Var = 0;
     let body = vec![$(clause!($holmes, vars, n, $body_name $body_inner)),*];
+    let wheres = vec![$(::holmes::engine::types::WhereClause {
+        lhs: bind_match!(vars, n, $bind),
+        rhs: hexpr!(vars, n, $hexpr)
+    }),*];
     let head = clause!($holmes, vars, n, $head_name $head_inner);
     $holmes.new_rule(&::holmes::engine::types::Rule {
       body: body,
       head: head,
-      wheres : vec! [$(::holmes::engine::types::WhereClause {
-        lhs   : bind_match!(vars, n, $bind),
-        rhs   : hexpr!(vars, n, $hexpr)
-      }),*]
+      wheres: wheres,
     })
   }};
   ($holmes:ident, $($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {

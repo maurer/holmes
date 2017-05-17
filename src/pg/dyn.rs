@@ -178,7 +178,7 @@ pub mod types {
             panic!("Tried to extract from a trap")
         }
         fn repr(&self) -> Vec<::std::string::String> {
-            panic!("Tried to observe the representation of a trap")
+            vec![]
         }
     }
     impl Trap {

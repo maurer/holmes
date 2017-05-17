@@ -87,18 +87,24 @@ use self::dyn::{Type, Value};
 pub type FactId = i32;
 pub type CacheId = i64;
 
-fn db_expr(e: &Projection, names: &Vec<String>, table: &String) -> String {
+fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &String) -> Vec<String> {
     match *e {
-        Projection::U64(v) => format!("{}", v),
-        Projection::Var(v) => format!("{}", names[v]),
-        Projection::Slot(n) => format!("{}.arg{}", table, n),
+        Projection::U64(v) => vec![format!("{}", v)],
+        Projection::Var(v) => vec![format!("{}", names[v])],
+        Projection::Slot(n) => {
+            let base = types.iter().take(n).map(|field| field.type_.repr().len()).sum();
+            let len = types[n].type_.repr().len();
+            (base..(base + len))
+                .map(|k: usize| format!("{}.arg{}", table, k))
+                .collect::<Vec<_>>()
+        }
         Projection::SubStr { ref buf, ref start_idx, ref end_idx } => {
-            format!("substring({} from CAST({} as INT) + 1 for CAST({} as INT) - CAST({} AS \
+            vec![format!("substring({} from CAST({} as INT) + 1 for CAST({} as INT) - CAST({} AS \
                      INT) + 1)",
-                    db_expr(buf, names, table),
-                    db_expr(start_idx, names, table),
-                    db_expr(end_idx, names, table),
-                    db_expr(start_idx, names, table))
+                         db_expr(buf, types, names, table).join(", "),
+                         db_expr(start_idx, types, names, table).join(", "),
+                         db_expr(end_idx, types, names, table).join(", "),
+                         db_expr(start_idx, types, names, table).join(", "))]
         }
     }
 }
@@ -374,6 +380,7 @@ impl PgDB {
     fn gen_insert_stmt(&self, pred: &Predicate) {
         let args: Vec<String> = pred.fields
             .iter()
+            .flat_map(|x| x.type_.repr())
             .enumerate()
             .map(|(k, _)| format!("${}", k + 1))
             .collect();
@@ -622,6 +629,7 @@ impl PgDB {
                                     // Types
         let mut vals: Vec<Value> = Vec::new(); // Values to be quoted into the
                                              // prepared statement
+        let mut param_num = 1;
 
         for (idxc, clause) in query.iter().enumerate() {
             // The clause refers to a table named by the predicate
@@ -632,7 +640,7 @@ impl PgDB {
             fact_ids.push(format!("{}.id", alias_name));
             let mut clause_elements = Vec::new();
             for &(ref proj, ref arg) in clause.args.iter() {
-                let proj_str = db_expr(&proj, &var_names, &alias_name);
+                let proj_str = db_expr(&proj, &pred.fields, &var_names, &alias_name);
                 match *arg {
                     MatchExpr::Unbound => (),
                     MatchExpr::Var(var) => {
@@ -640,13 +648,13 @@ impl PgDB {
                             // This situation means it's the first occurrence of the variable
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
-                            var_names.push(proj_str);
+                            var_names.push(proj_str.join(", "));
                             let type_ = db_type(proj, &pred.fields, &var_types)?;
                             var_types.push(type_);
                         } else {
                             // The variable has occurred correctly, so we add it being equal
                             // to the canonical definition to the join clause for this table
-                            let piece = format!("{} = {}", proj_str, var_names[var]);
+                            let piece = format!("({}) = ({})", proj_str.join(", "), var_names[var]);
                             clause_elements.push(piece);
                         }
                     }
@@ -657,7 +665,10 @@ impl PgDB {
                         // statement, and put the index into the buffer into the where
                         // clause chunk.
                         vals.push(val.clone());
-                        restricts.push(format!("{} = ${}", proj_str, vals.len()));
+                        for part in proj_str {
+                            restricts.push(format!("{} = ${}", part, param_num));
+                            param_num += 1;
+                        }
                     }
                 }
             }
