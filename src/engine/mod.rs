@@ -9,7 +9,7 @@ use std::collections::hash_map::HashMap;
 use pg::dyn::{Value, Type};
 use pg::dyn::values;
 use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection, MatchExpr};
-use pg::{FactId, CacheId, PgDB};
+use pg::{FactId, Epoch, PgDB};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -295,11 +295,6 @@ impl Engine {
         Ok(())
     }
 
-    fn rule_cache(&mut self, rule: &Rule) -> Result<CacheId> {
-        Ok(self.fact_db
-            .new_rule_cache(rule.body.iter().map(|clause| clause.pred_name.clone()).collect())?)
-    }
-
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
     /// of satisfying answers in the database.
     pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
@@ -362,7 +357,7 @@ impl Engine {
         }
 
         let rule_future = {
-            let cache = self.rule_cache(&rule)?;
+            let mut epoch = 0;
             let fdb = self.fact_db.clone();
             let funcs = self.funcs.clone();
             let buddies = self.get_dep_rules(&rule.head.pred_name);
@@ -375,13 +370,13 @@ impl Engine {
                 let mut productive: usize = 0;
                 let mut results: usize = 0;
                 {
-                    let query = fdb.search_facts(&rule.body, Some(cache), &trans).unwrap();
+                    let query = fdb.search_facts(&rule.body, Some(epoch), &trans).unwrap();
+                    epoch = query.epoch();
                     let states_0 = query.run();
                     trace!("Query submitted");
                     let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
                         Box::new(states_0.map(|state| {
                             results += 1;
-                            fdb.cache_hit(cache, state.0.clone()).unwrap();
                             state
                         }));
                     for where_clause in rule.wheres.iter() {

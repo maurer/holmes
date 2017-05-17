@@ -84,8 +84,8 @@ pub use self::errors::*;
 use self::dyn::types;
 use self::dyn::{Type, Value};
 
-pub type FactId = i32;
-pub type CacheId = i64;
+pub type FactId = i64;
+pub type Epoch = i64;
 
 fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &String) -> Vec<String> {
     match *e {
@@ -167,7 +167,12 @@ impl<'trans, 'stmt> Query<'trans, 'stmt> {
             fact_ids: self.fact_ids,
             var_types: self.var_types.clone(),
         }
-
+    }
+    pub fn epoch(&self) -> Epoch {
+        match self.trans.query("select max(epoch) from pending_facts", &[]).unwrap().get(0).get(0) {
+            Some(epoch) => epoch,
+            _ => 0
+        }
     }
 }
 
@@ -261,7 +266,6 @@ impl PgDB {
 
         // Create schemas
         try!(conn.execute("create schema if not exists facts", &[]));
-        try!(conn.execute("create schema if not exists cache", &[]));
 
         // Create Tables
         try!(conn.execute("create table if not exists predicates (id serial primary key, \
@@ -275,11 +279,9 @@ impl PgDB {
                            name varchar, \
                            description varchar)",
                           &[]));
-        try!(conn.execute("create table if not exists rules (id serial primary key , rule varchar \
-                      not null)",
-                     &[]));
         try!(conn.execute("create sequence if not exists fact_id", &[]));
-        try!(conn.execute("create sequence if not exists cache_id", &[]));
+        try!(conn.execute("create sequence if not exists fact_epoch", &[]));
+        try!(conn.execute("create table if not exists pending_facts (fact_id int8, epoch int8)", &[]));
 
         // Create incremental PgDB object
         let db = PgDB {
@@ -433,42 +435,12 @@ impl PgDB {
             .join(", ");
         self.conn_pool
             .get()?
-            .execute(&format!("create table facts.{} (id INT4 DEFAULT nextval('fact_id') NOT NULL primary \
+            .execute(&format!("create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT NULL primary \
                                key, {}, unique({}))",
                               name,
                               table_str,
                               col_str),
                      &[])?;
-        Ok(())
-    }
-    pub fn new_rule_cache(&self, preds: Vec<String>) -> Result<CacheId> {
-        let conn = self.conn_pool.get()?;
-        let cache_stmt = conn.prepare("select nextval('cache_id')")?;
-        let cache_res = try!(cache_stmt.query(&[]));
-        let cache_id = cache_res.get(0).get(0);
-        conn.execute(&format!("create table cache.rule{} ({})",
-                              cache_id,
-                              preds.into_iter()
-                                  .enumerate()
-                                  .map(|(n, pred)| {
-                                      format!("id{} serial references facts.{}(id)", n, pred)
-                                  })
-                                  .collect::<Vec<_>>()
-                                  .join(", ")),
-                     &[])?;
-        Ok(cache_id)
-    }
-    pub fn cache_hit(&self, cache: CacheId, facts: Vec<FactId>) -> Result<()> {
-        let borrow: Vec<&ToSql> = facts.iter().map(|x| x as &ToSql).collect();
-        let conn = self.conn_pool.get()?;
-        conn.execute(&format!("insert into cache.rule{} values ({})",
-                              cache,
-                              facts.iter()
-                                  .enumerate()
-                                  .map(|(x, _)| format!("${}", x + 1))
-                                  .collect::<Vec<_>>()
-                                  .join(", ")),
-                     borrow.as_slice())?;
         Ok(())
     }
     /// Adds a new fact to the database, returning false if the fact was already
@@ -486,6 +458,19 @@ impl PgDB {
                                   .iter()
                                   .flat_map(|x| x.to_sql().into_iter())
                                   .collect::<Vec<_>>()));
+        if out.len() > 0 {
+
+          //TODO this is not async or threadsafe
+          let epoch_stmt = trans.prepare("select nextval('fact_epoch')")?;
+          let epoch: Epoch = epoch_stmt.query(&[])?.iter().next().unwrap().get(0);
+          
+          let pending_stmt = trans.prepare(&format!("insert into pending_facts VALUES {}",
+                                                     (0..out.len()).map(|i| format!("(${}, ${})", i * 2 + 1, i * 2 + 2)).collect::<Vec<_>>().join(", ")))?;
+          let out_vec: Vec<Box<ToSql>> = out.iter().flat_map(|x| vec![Box::new(x.get::<_, FactId>(0)) as Box<ToSql>, Box::new(epoch) as Box<ToSql>].into_iter()).collect();
+          let out_sql: Vec<&ToSql> = out_vec.iter().map(|x| x.as_ref()).collect::<Vec<_>>();
+          pending_stmt.query(out_sql.as_slice())?;
+        }
+        
         Ok(out.iter().next().map(|x| x.get(0)))
     }
 
@@ -560,21 +545,17 @@ impl PgDB {
     /// variables.
     pub fn search_facts<'a>(&self,
                             query: &Vec<Clause>,
-                            cache: Option<CacheId>,
+                            epoch: Option<Epoch>,
                             trans: &'a Transaction<'a>)
                             -> Result<Query<'a, 'a>> {
-        let cache_clause = match cache {
-            Some(cache_id) => {
-                format!("not exists (select 1 from cache.rule{} WHERE {})",
-                        cache_id,
+        let cache_clause = epoch.map(|epoch|
+                format!("(epoch >= {}) AND ({})",
+                        epoch,
                         query.iter()
                             .enumerate()
-                            .map(|(n, _)| format!("id{} = t{}.id", n, n))
+                            .map(|(n, _)| format!("fact_id = t{}.id", n))
                             .collect::<Vec<_>>()
-                            .join(" AND "))
-            }
-            None => format!("1 = 1"),
-        };
+                            .join(" OR ")));
         // Check there is at least one clause
         if query.len() == 0 {
             bail!(ErrorKind::Arg("Empty search query".to_string()));
@@ -624,7 +605,7 @@ impl PgDB {
         // Actually build and execute the query
         let mut tables = Vec::new();    // Predicate names involved in the query,
                                     // in the sequence they appear
-        let mut restricts = Vec::new(); // Unification expressions, indexed by
+        let mut restricts = vec![format!("1 = 1")]; // Unification expressions, indexed by
                                     // which join they belong on.
         let mut var_names = Vec::new(); // Translation of variable numbers to
                                     // sql exprs
@@ -689,6 +670,13 @@ impl PgDB {
         merge_vars.extend(var_names.into_iter());
 
         let vars = format!("{}", merge_vars.join(", "));
+        match cache_clause {
+            Some(clause) => {
+                restricts.push(clause);
+                tables.push(format!("pending_facts"));
+            }
+            _ => ()
+        }
         tables.reverse();
         restricts.reverse();
         let main_table = tables.pop()
@@ -697,7 +685,6 @@ impl PgDB {
             .map(|table| format!("JOIN {} ON true", table))
             .collect::<Vec<_>>()
             .join(" ");
-        restricts.push(cache_clause);
         let where_clause = format!("WHERE {}", restricts.join(" AND "));
         let raw_stmt = format!("SELECT {} FROM {} {} {}",
                                vars,
