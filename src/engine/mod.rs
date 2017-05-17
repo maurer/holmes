@@ -436,7 +436,7 @@ impl Engine {
         }
 
         let rule_future = {
-            let mut epoch = 0;
+            let mut epoch = None;
             let fdb = self.fact_db.clone();
             let funcs = self.funcs.clone();
             let buddies = self.get_dep_rules(&rule.head.pred_name);
@@ -449,8 +449,8 @@ impl Engine {
                 let mut productive: usize = 0;
                 let mut results: usize = 0;
                 {
-                    let query = fdb.search_facts(&rule.body, Some(epoch), &trans).unwrap();
-                    epoch = query.epoch() + 1;
+                    let query = fdb.search_facts(&rule.body, epoch, &trans).unwrap();
+                    epoch = Some(query.epoch() + 1);
                     let states_0 = query.run();
                     trace!("Query submitted");
                     let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
@@ -489,7 +489,7 @@ impl Engine {
                     }
                 }
 
-                gc_handle.update(epoch);
+                gc_handle.update(epoch.unwrap());
 
                 out_signal.done()
             })
