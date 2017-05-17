@@ -278,6 +278,7 @@ impl PgDB {
         try!(conn.execute("create table if not exists rules (id serial primary key , rule varchar \
                       not null)",
                      &[]));
+        try!(conn.execute("create sequence if not exists fact_id", &[]));
         try!(conn.execute("create sequence if not exists cache_id", &[]));
 
         // Create incremental PgDB object
@@ -432,7 +433,7 @@ impl PgDB {
             .join(", ");
         self.conn_pool
             .get()?
-            .execute(&format!("create table facts.{} (id serial primary \
+            .execute(&format!("create table facts.{} (id INT4 DEFAULT nextval('fact_id') NOT NULL primary \
                                key, {}, unique({}))",
                               name,
                               table_str,
