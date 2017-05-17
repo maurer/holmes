@@ -299,6 +299,11 @@ impl PgDB {
         Ok(db)
     }
 
+    pub fn purge_pending(&self, epoch: Epoch) -> Result<()> {
+        self.conn()?.execute("delete from pending_facts where epoch < $1", &[&epoch])?;
+        Ok(())
+    }
+
     pub fn conn(&self) -> Result<r2d2::PooledConnection<PostgresConnectionManager>> {
         Ok(self.conn_pool.get()?)
     }

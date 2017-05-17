@@ -25,6 +25,53 @@ enum RuleState {
 }
 
 #[derive(Clone,Debug)]
+struct GcEpoch {
+    state: Rc<RefCell<Vec<Epoch>>>,
+    task: Rc<RefCell<Option<Task>>>,
+    past: Rc<Cell<Epoch>>
+}
+
+struct GcEpochHandle {
+    parent: GcEpoch,
+    index: usize
+}
+
+impl GcEpochHandle {
+    fn update(&self, epoch: Epoch) {
+        let mut state = self.parent.state.borrow_mut();
+        state[self.index] = epoch;
+        let new_min: Epoch = *state.iter().min().unwrap();
+        if new_min > self.parent.past.get() {
+            match self.parent.task.borrow_mut().take() {
+                Some(t) => t.unpark(),
+                None => ()
+            }
+        }
+    }
+}
+
+impl GcEpoch {
+    fn new() -> Self {
+        GcEpoch {
+            state: Rc::new(RefCell::new(vec![])),
+            task: Rc::new(RefCell::new(None)),
+            past: Rc::new(Cell::new(0))
+        }
+    }
+    fn handle(&self) -> GcEpochHandle {
+        self.state.borrow_mut().push(0);
+        GcEpochHandle {
+            parent: self.clone(),
+            index: self.state.borrow().len() - 1
+        }
+    }
+    fn await(&self, task: Task) {
+        assert!(self.task.borrow().is_none());
+        *self.task.borrow_mut() = Some(task)
+    }
+}
+
+#[derive(Clone,Debug)]
 struct Signal {
     state: Rc<Cell<RuleState>>,
     referents: Rc<RefCell<Vec<Task>>>,
@@ -109,6 +156,26 @@ impl Stream for Signal {
     }
 }
 
+impl Stream for GcEpoch {
+    type Item = Epoch;
+    type Error = ();
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        trace!("Checking for GC wakeup");
+        let new_min = match self.state.borrow().iter().min() {
+            Some(epoch) => *epoch,
+            None => 0
+        };
+        if new_min > self.past.get() {
+            trace!("All rules have moved past epoch {}, waking GC", new_min);
+            self.past.set(new_min);
+            Ok(Async::Ready(Some(new_min)))
+        } else {
+            self.await(park());
+            Ok(Async::NotReady)
+        }
+    }
+}
+
 /// Future representing the quiescence of the Holmes engine
 /// See `Engine::quiesce()` to create one
 pub struct Quiescence {
@@ -142,6 +209,7 @@ pub struct Engine {
     funcs: HashMap<String, Rc<Func>>,
     rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
     signals: Vec<Signal>,
+    gc_epoch: GcEpoch,
     event_loop: Handle,
 }
 
@@ -195,13 +263,23 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
 impl Engine {
     /// Create a fresh engine by handing it a fact database to use
     pub fn new(db: PgDB, handle: Handle) -> Self {
-        Engine {
+        let engine = Engine {
             fact_db: Rc::new(db),
             funcs: HashMap::new(),
             rules: HashMap::new(),
             signals: Vec::new(),
+            gc_epoch: GcEpoch::new(),
             event_loop: handle,
-        }
+        };
+        let gc_future = {
+            let fdb = engine.fact_db.clone();
+            engine.gc_epoch.clone().for_each(move |epoch| {
+                fdb.purge_pending(epoch).unwrap();
+                Ok(())
+            })
+        };
+        engine.event_loop.spawn(gc_future);
+        engine
     }
 
     /// Seach the type registry for a named type
@@ -351,6 +429,7 @@ impl Engine {
         let trigger = signal.clone();
         self.signals.push(signal.clone());
 
+        let gc_handle = self.gc_epoch.handle();
         for pred in &rule.body {
             let dep_rules = self.get_dep_rules(&pred.pred_name);
             dep_rules.borrow_mut().push(signal.clone());
@@ -371,7 +450,7 @@ impl Engine {
                 let mut results: usize = 0;
                 {
                     let query = fdb.search_facts(&rule.body, Some(epoch), &trans).unwrap();
-                    epoch = query.epoch();
+                    epoch = query.epoch() + 1;
                     let states_0 = query.run();
                     trace!("Query submitted");
                     let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
@@ -409,6 +488,8 @@ impl Engine {
                         buddy.signal();
                     }
                 }
+
+                gc_handle.update(epoch);
 
                 out_signal.done()
             })
