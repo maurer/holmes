@@ -284,7 +284,7 @@ impl PgDB {
                           &[]));
         try!(conn.execute("create sequence if not exists fact_id", &[]));
         try!(conn.execute("create sequence if not exists fact_epoch", &[]));
-        try!(conn.execute("create table if not exists pending_facts (fact_id int8, epoch int8)", &[]));
+        try!(conn.execute("create table if not exists pending_facts (fact_id int8 primary key, epoch int8)", &[]));
 
         // Create incremental PgDB object
         let db = PgDB {
