@@ -10,10 +10,11 @@ fn run_graph(size: u64) {
         predicate!(holmes, increasing(uint64, uint64))?;
 
         for i in 0..(size - 1) {
-            holmes.new_fact(&Fact {
-                    pred_name: "edge".to_string(),
-                    args: vec![i.to_value(), (i + 1).to_value()],
-                })?;
+            holmes
+                .new_fact(&Fact {
+                               pred_name: "edge".to_string(),
+                               args: vec![i.to_value(), (i + 1).to_value()],
+                           })?;
         }
         fact!(holmes, edge((size - 1), 0))?;
 

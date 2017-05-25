@@ -1,17 +1,17 @@
 //! You likely don't want to use this module - its primary purpose is to make
 //! benchmarking and testing easier to do in practice.
 
-use std::sync::atomic::{AtomicIsize, ATOMIC_ISIZE_INIT};
+use std::sync::atomic::{ATOMIC_ISIZE_INIT, AtomicIsize};
 use std::sync::atomic::Ordering::SeqCst;
 use std::env;
-use url::percent_encoding::{percent_encode, PATH_SEGMENT_ENCODE_SET};
+use url::percent_encoding::{PATH_SEGMENT_ENCODE_SET, percent_encode};
 use env_logger;
 pub use std::sync::Arc;
 
 pub use super::pg::dyn::values::ToValue;
-pub use super::pg::dyn::{Value, Type};
+pub use super::pg::dyn::{Type, Value};
 pub use super::pg::dyn::values;
-pub use super::engine::types::{Fact, Rule, Clause, MatchExpr, Projection};
+pub use super::engine::types::{Clause, Fact, MatchExpr, Projection, Rule};
 
 use super::PgDB;
 
@@ -71,9 +71,9 @@ pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Engine) -> Result<()>>
     where F: 'static + Fn(&mut Engine) -> Result<A>
 {
     Box::new(move |holmes: &mut Engine| {
-        match f(holmes) {
-            Ok(_) => panic!("should_fail"), //TODO put something more reasonable here?
-            Err(_) => Ok(()),
-        }
-    })
+                 match f(holmes) {
+                     Ok(_) => panic!("should_fail"), //TODO put something more reasonable here?
+                     Err(_) => Ok(()),
+                 }
+             })
 }

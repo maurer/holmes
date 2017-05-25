@@ -24,5 +24,5 @@ pub mod engine;
 pub mod edsl;
 pub mod simple;
 
-pub use engine::{Engine, Result, Error, ErrorKind};
+pub use engine::{Engine, Error, ErrorKind, Result};
 pub use pg::PgDB;

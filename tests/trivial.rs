@@ -9,8 +9,5 @@ pub fn turn_on() {
 
 #[test]
 pub fn macro_check() {
-    single(&|holmes: &mut Engine, _| {
-        holmes_exec!(holmes, {
-        })
-    })
+    single(&|holmes: &mut Engine, _| holmes_exec!(holmes, {}))
 }

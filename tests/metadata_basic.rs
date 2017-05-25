@@ -5,30 +5,30 @@ use holmes::simple::*;
 #[test]
 pub fn new_predicate_named_field() {
     single(&|holmes: &mut Engine, _| {
-        holmes_exec!(holmes, {
+                holmes_exec!(holmes, {
             predicate!(test_pred([first string], bytes, uint64))
         })
-    })
+            })
 }
 
 #[test]
 pub fn new_predicate_doc_field() {
     single(&|holmes: &mut Engine, _| {
-        holmes_exec!(holmes, {
+                holmes_exec!(holmes, {
             predicate!(test_pred([first string "This is the first element"], bytes, uint64))
         })
-    })
+            })
 }
 
 #[test]
 pub fn new_predicate_doc_all() {
     single(&|holmes: &mut Engine, _| {
-        holmes_exec!(holmes, {
+                holmes_exec!(holmes, {
             predicate!(test_pred([first string "This is the first element"],
                                   bytes, uint64)
                        : "This is a test predicate")
         })
-    })
+            })
 }
 
 #[test]

@@ -218,7 +218,10 @@ pub mod types {
             Some(values::Tuple::new(out))
         }
         fn repr(&self) -> Vec<::std::string::String> {
-            self.elements.iter().flat_map(|elem| elem.repr()).collect()
+            self.elements
+                .iter()
+                .flat_map(|elem| elem.repr())
+                .collect()
         }
     }
 
@@ -259,11 +262,13 @@ pub mod types {
     /// Provides a list of provided named types for use by the database
     /// as a default set of types.
     pub fn default_types() -> Vec<Type> {
-        vec![Arc::new(UInt64),
-             Arc::new(String),
-             Arc::new(Bytes),
-             Arc::new(LargeBytes),
-             Arc::new(Bool)]
+        vec![
+            Arc::new(UInt64),
+            Arc::new(String),
+            Arc::new(Bytes),
+            Arc::new(LargeBytes),
+            Arc::new(Bool),
+        ]
     }
 
     /// Boolean type
@@ -292,7 +297,8 @@ pub mod types {
             Some("uint64")
         }
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
-            rows.next().map(|x: i64| values::UInt64::new(x as u64) as Value)
+            rows.next()
+                .map(|x: i64| values::UInt64::new(x as u64) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["int8".to_string()]
@@ -528,16 +534,16 @@ pub mod values {
 
     impl ValueT for Tuple {
         fn type_(&self) -> Type {
-            types::Tuple::new(self.elements
-                .iter()
-                .map(|val| val.type_())
-                .collect())
+            types::Tuple::new(self.elements.iter().map(|val| val.type_()).collect())
         }
         fn get(&self) -> &Any {
             &self.elements as &Any
         }
         fn to_sql(&self) -> Vec<&ToSql> {
-            self.elements.iter().flat_map(|val| val.to_sql()).collect()
+            self.elements
+                .iter()
+                .flat_map(|val| val.to_sql())
+                .collect()
         }
         valuet_boiler!();
     }
@@ -675,9 +681,9 @@ pub mod values {
         /// Creates Holmes value holding an unsigned 64-bit integer
         pub fn new(val: u64) -> Arc<Self> {
             Arc::new(UInt64 {
-                val: val,
-                sql: val as i64,
-            })
+                         val: val,
+                         sql: val as i64,
+                     })
         }
     }
 

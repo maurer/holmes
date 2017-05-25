@@ -28,20 +28,20 @@
 //! to make the `dyn` module abstract over databases.
 use std::collections::hash_map::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use r2d2_postgres::{TlsMode, PostgresConnectionManager};
+use r2d2_postgres::{PostgresConnectionManager, TlsMode};
 use r2d2;
 
 use fallible_iterator::FallibleIterator;
 
 use postgres;
-use postgres::{rows, Connection};
+use postgres::{Connection, rows};
 use postgres::rows::LazyRows;
 use postgres::stmt::Statement;
 use postgres::transaction::Transaction;
 use postgres::params::IntoConnectParams;
 use postgres::types::{FromSql, ToSql};
 
-use engine::types::{Fact, Predicate, Field, MatchExpr, Clause, Projection};
+use engine::types::{Clause, Fact, Field, MatchExpr, Predicate, Projection};
 use std::cell::RefCell;
 use std::time::Instant;
 use std::sync::Arc;
@@ -92,19 +92,29 @@ fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &Stri
         Projection::U64(v) => vec![format!("{}", v)],
         Projection::Var(v) => vec![format!("{}", names[v])],
         Projection::Slot(n) => {
-            let base = types.iter().take(n).map(|field| field.type_.repr().len()).sum();
+            let base = types
+                .iter()
+                .take(n)
+                .map(|field| field.type_.repr().len())
+                .sum();
             let len = types[n].type_.repr().len();
             (base..(base + len))
                 .map(|k: usize| format!("{}.arg{}", table, k))
                 .collect::<Vec<_>>()
         }
-        Projection::SubStr { ref buf, ref start_idx, ref end_idx } => {
-            vec![format!("substring({} from CAST({} as INT) + 1 for CAST({} as INT) - CAST({} AS \
+        Projection::SubStr {
+            ref buf,
+            ref start_idx,
+            ref end_idx,
+        } => {
+            vec![
+                format!("substring({} from CAST({} as INT) + 1 for CAST({} as INT) - CAST({} AS \
                      INT) + 1)",
-                         db_expr(buf, types, names, table).join(", "),
-                         db_expr(start_idx, types, names, table).join(", "),
-                         db_expr(end_idx, types, names, table).join(", "),
-                         db_expr(start_idx, types, names, table).join(", "))]
+                        db_expr(buf, types, names, table).join(", "),
+                        db_expr(start_idx, types, names, table).join(", "),
+                        db_expr(end_idx, types, names, table).join(", "),
+                        db_expr(start_idx, types, names, table).join(", ")),
+            ]
         }
     }
 }
@@ -114,7 +124,11 @@ fn db_type(e: &Projection, fields: &Vec<Field>, var_types: &Vec<Type>) -> Result
         Projection::U64(_) => Ok(Arc::new(types::UInt64)),
         Projection::Var(v) => Ok(var_types[v].clone()),
         Projection::Slot(n) => Ok(fields[n].type_.clone()),
-        Projection::SubStr { ref buf, ref start_idx, ref end_idx } => {
+        Projection::SubStr {
+            ref buf,
+            ref start_idx,
+            ref end_idx,
+        } => {
             let buf_type = db_type(&buf, fields, var_types)?;
             if buf_type != Arc::new(types::String) && buf_type != Arc::new(types::Bytes) &&
                buf_type != Arc::new(types::LargeBytes) {
@@ -172,9 +186,13 @@ impl<'trans, 'stmt> Query<'trans, 'stmt> {
         }
     }
     pub fn epoch(&self) -> Epoch {
-        match self.trans.query("select max(epoch) from pending_facts", &[]).unwrap().get(0).get(0) {
+        match self.trans
+                  .query("select max(epoch) from pending_facts", &[])
+                  .unwrap()
+                  .get(0)
+                  .get(0) {
             Some(epoch) => epoch,
-            _ => 0
+            _ => 0,
         }
     }
 }
@@ -215,10 +233,7 @@ impl<'trans, 'stmt> Iterator for QueryIter<'trans, 'stmt> {
 impl<'a> RowIter<'a> {
     /// Create a new row iterator starting at the beginning of the provided row
     pub fn new(row: &'a rows::Row) -> Self {
-        RowIter {
-            row: row,
-            index: 0,
-        }
+        RowIter { row: row, index: 0 }
     }
     /// Gets the next item in the row, using a `FromSql` instance to read it.
     /// If there is not a next item, returns `None`
@@ -251,7 +266,7 @@ impl PgDB {
         // Create database if it doesn't already exist and we can
         // TODO do this only on connection failure?
         let mut params = try!(uri.into_connect_params()
-            .map_err(|_| ErrorKind::UriParse));
+                                  .map_err(|_| ErrorKind::UriParse));
         match params.database.clone() {
             Some(db) => {
                 params.database = Some("postgres".to_owned());
@@ -284,7 +299,9 @@ impl PgDB {
                           &[]));
         try!(conn.execute("create sequence if not exists fact_id", &[]));
         try!(conn.execute("create sequence if not exists fact_epoch", &[]));
-        try!(conn.execute("create table if not exists pending_facts (fact_id int8 primary key, epoch int8)", &[]));
+        try!(conn.execute("create table if not exists pending_facts (fact_id int8 primary key, \
+                           epoch int8)",
+                          &[]));
 
         // Create incremental PgDB object
         let db = PgDB {
@@ -292,9 +309,16 @@ impl PgDB {
             pred_by_name: RefCell::new(HashMap::new()),
             insert_by_name: RefCell::new(HashMap::new()),
             named_types: RefCell::new(types::default_types()
-                .iter()
-                .filter_map(|type_| type_.name().map(|name| (name.to_owned(), type_.clone())))
-                .collect()),
+                                          .iter()
+                                          .filter_map(|type_| {
+                                                          type_
+                                                              .name()
+                                                              .map(|name| {
+                                                                       (name.to_owned(),
+                                                                        type_.clone())
+                                                                   })
+                                                      })
+                                          .collect()),
         };
 
         try!(db.rebuild_predicate_cache());
@@ -303,7 +327,8 @@ impl PgDB {
     }
 
     pub fn purge_pending(&self, epoch: Epoch) -> Result<()> {
-        self.conn()?.execute("delete from pending_facts where epoch < $1", &[&epoch])?;
+        self.conn()?
+            .execute("delete from pending_facts where epoch < $1", &[&epoch])?;
         Ok(())
     }
 
@@ -314,7 +339,7 @@ impl PgDB {
     /// Kick everyone off the database and destroy the data at the provided URI
     pub fn destroy(uri: &str) -> Result<()> {
         let mut params = try!(uri.into_connect_params()
-            .map_err(|_| ErrorKind::UriParse));
+                                  .map_err(|_| ErrorKind::UriParse));
         let old_db = try!(params.database
             .ok_or_else(||
                     ErrorKind::Arg(format!(
@@ -342,9 +367,11 @@ impl PgDB {
         {
             let conn = self.conn_pool.get()?;
             // Scoped borrow of connection
-            let pred_stmt =
-                conn.prepare("select predicates.name, predicates.description, fields.name, \
-                              fields.description, fields.type from predicates JOIN fields ON \
+            let pred_stmt = conn.prepare("select predicates.name,
+                              predicates.description, \
+                              fields.name, \
+                              fields.description, \
+                              fields.type from predicates JOIN fields ON \
                               predicates.id = fields.pred_id ORDER BY predicates.id, \
                               fields.ordinal")?;
             let pred_types = try!(pred_stmt.query(&[]));
@@ -368,10 +395,10 @@ impl PgDB {
                 match self.pred_by_name.borrow_mut().entry(name.clone()) {
                     Vacant(entry) => {
                         entry.insert(Predicate {
-                            name: name.clone(),
-                            description: pred_descr,
-                            fields: vec![field],
-                        });
+                                         name: name.clone(),
+                                         description: pred_descr,
+                                         fields: vec![field],
+                                     });
                     }
                     Occupied(mut entry) => {
                         entry.get_mut().fields.push(field);
@@ -380,7 +407,11 @@ impl PgDB {
             }
         }
         // Populate fact insert cache
-        self.pred_by_name.borrow().values().inspect(|pred| self.gen_insert_stmt(pred)).count();
+        self.pred_by_name
+            .borrow()
+            .values()
+            .inspect(|pred| self.gen_insert_stmt(pred))
+            .count();
         Ok(())
     }
 
@@ -399,14 +430,20 @@ impl PgDB {
                             CONFLICT DO NOTHING RETURNING id",
                            pred.name,
                            args.join(", "));
-        self.insert_by_name.borrow_mut().insert(pred.name.clone(), stmt);
+        self.insert_by_name
+            .borrow_mut()
+            .insert(pred.name.clone(), stmt);
     }
 
     // Persist a predicate into the database
     // This function is internal because it does not add it to the object, it
     // _only_ puts record of the predicate into the database.
     fn insert_predicate(&self, pred: &Predicate) -> Result<()> {
-        let &Predicate { ref name, ref description, ref fields } = pred;
+        let &Predicate {
+                 ref name,
+                 ref description,
+                 ref fields,
+             } = pred;
         let conn = self.conn_pool.get()?;
         let stmt = conn
             .prepare("insert into predicates (name, description) values ($1, $2) returning id")?;
@@ -414,28 +451,35 @@ impl PgDB {
         for (ordinal, field) in fields.iter().enumerate() {
             try!(conn.execute("insert into fields (pred_id, name, description, type, ordinal) \
                           values ($1, $2, $3, $4, $5)",
-                         &[&pred_id,
-                           &field.name,
-                           &field.description,
-                           &field.type_
-                               .name()
-                               .ok_or(ErrorKind::Arg("Field type had no name".to_string()))?,
-                           &(ordinal as i32)]));
+                              &[
+                &pred_id,
+                &field.name,
+                &field.description,
+                &field
+                     .type_
+                     .name()
+                     .ok_or(ErrorKind::Arg("Field type had no name"
+                                               .to_string()))?,
+                &(ordinal as i32),
+            ]));
         }
-        let table_str = fields.iter()
+        let table_str = fields
+            .iter()
             .flat_map(|field| field.type_.repr())
             .enumerate()
             .map(|(ord, repr)| format!("arg{} {}", ord, repr))
             .collect::<Vec<_>>()
             .join(", ");
-        let col_str = fields.iter()
+        let col_str = fields
+            .iter()
             .flat_map(|field| {
-                field.type_
-                    .repr()
-                    .iter()
-                    .map(|_| field.type_.large_unique())
-                    .collect::<Vec<_>>()
-            })
+                          field
+                              .type_
+                              .repr()
+                              .iter()
+                              .map(|_| field.type_.large_unique())
+                              .collect::<Vec<_>>()
+                      })
             .enumerate()
             .filter(|&(_, x)| !x)
             .map(|(ord, _)| format!("arg{}", ord))
@@ -443,8 +487,8 @@ impl PgDB {
             .join(", ");
         self.conn_pool
             .get()?
-            .execute(&format!("create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT NULL primary \
-                               key, {}, unique({}))",
+            .execute(&format!("create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT \
+                               NULL primary key, {}, unique({}))",
                               name,
                               table_str,
                               col_str),
@@ -455,30 +499,45 @@ impl PgDB {
     /// present in the database, and true if it was inserted.
     pub fn insert_fact(&self, fact: &Fact, trans: &Transaction) -> Result<Option<FactId>> {
         let stmt_str = try!(self.insert_by_name
-                .borrow()
-                .get(&fact.pred_name)
-                .ok_or_else(|| ErrorKind::Internal("Insert Statement Missing".to_string()))).clone();
+                                .borrow()
+                                .get(&fact.pred_name)
+                                .ok_or_else(|| {
+                                                ErrorKind::Internal("Insert Statement Missing"
+                                                                        .to_string())
+                                            }))
+                .clone();
         let stmt = trans.prepare(&stmt_str)?;
 
 
-        let out = try!(stmt.query(
-                              &fact.args
-                                  .iter()
-                                  .flat_map(|x| x.to_sql().into_iter())
-                                  .collect::<Vec<_>>()));
+        let out = try!(stmt.query(&fact.args
+                                       .iter()
+                                       .flat_map(|x| x.to_sql().into_iter())
+                                       .collect::<Vec<_>>()));
         if out.len() > 0 {
 
-          //TODO this is not async or threadsafe
-          let epoch_stmt = trans.prepare("select nextval('fact_epoch')")?;
-          let epoch: Epoch = epoch_stmt.query(&[])?.iter().next().unwrap().get(0);
-          
-          let pending_stmt = trans.prepare(&format!("insert into pending_facts VALUES {}",
-                                                     (0..out.len()).map(|i| format!("(${}, ${})", i * 2 + 1, i * 2 + 2)).collect::<Vec<_>>().join(", ")))?;
-          let out_vec: Vec<Box<ToSql>> = out.iter().flat_map(|x| vec![Box::new(x.get::<_, FactId>(0)) as Box<ToSql>, Box::new(epoch) as Box<ToSql>].into_iter()).collect();
-          let out_sql: Vec<&ToSql> = out_vec.iter().map(|x| x.as_ref()).collect::<Vec<_>>();
-          pending_stmt.query(out_sql.as_slice())?;
+            // TODO this is not async or threadsafe
+            let epoch_stmt = trans.prepare("select nextval('fact_epoch')")?;
+            let epoch: Epoch = epoch_stmt.query(&[])?.iter().next().unwrap().get(0);
+
+            let pending_stmt = trans
+                .prepare(&format!("insert into pending_facts VALUES {}",
+                                  (0..out.len())
+                                      .map(|i| format!("(${}, ${})", i * 2 + 1, i * 2 + 2))
+                                      .collect::<Vec<_>>()
+                                      .join(", ")))?;
+            let out_vec: Vec<Box<ToSql>> = out.iter()
+                .flat_map(|x| {
+                              vec![
+                        Box::new(x.get::<_, FactId>(0)) as Box<ToSql>,
+                        Box::new(epoch) as Box<ToSql>,
+                    ]
+                                      .into_iter()
+                          })
+                .collect();
+            let out_sql: Vec<&ToSql> = out_vec.iter().map(|x| x.as_ref()).collect::<Vec<_>>();
+            pending_stmt.query(out_sql.as_slice())?;
         }
-        
+
         Ok(out.iter().next().map(|x| x.get(0)))
     }
 
@@ -487,10 +546,13 @@ impl PgDB {
     /// of the database object in order to allow reconnecting to an existing
     /// database.
     pub fn add_type(&self, type_: Type) -> Result<()> {
-        let name = type_.name()
+        let name = type_
+            .name()
             .ok_or(ErrorKind::Arg("Tried to add a type with no name".to_string()))?;
         if !self.named_types.borrow().contains_key(name) {
-            self.named_types.borrow_mut().insert(name.to_owned(), type_.clone());
+            self.named_types
+                .borrow_mut()
+                .insert(name.to_owned(), type_.clone());
             self.rebuild_predicate_cache()
         } else {
             bail!(ErrorKind::Type(format!("{} already registered", name)))
@@ -502,7 +564,10 @@ impl PgDB {
     /// queries, since it allows you to use names of types when declaring
     /// functions rather than type objects.
     pub fn get_type(&self, type_str: &str) -> Option<Type> {
-        self.named_types.borrow().get(type_str).map(|x| x.clone())
+        self.named_types
+            .borrow()
+            .get(type_str)
+            .map(|x| x.clone())
     }
 
     /// Fetches a predicate by name
@@ -524,7 +589,7 @@ impl PgDB {
         if !valid_name(&pred.name) {
             bail!(ErrorKind::Arg("Invalid name: Use lowercase and \
                                  underscores only"
-                .to_string()));
+                                         .to_string()));
         }
         // If this predicate was already registered, check for a match
         match self.pred_by_name.borrow().get(&pred.name) {
@@ -544,7 +609,9 @@ impl PgDB {
 
         try!(self.insert_predicate(&pred));
         self.gen_insert_stmt(&pred);
-        self.pred_by_name.borrow_mut().insert(pred.name.clone(), pred.clone());
+        self.pred_by_name
+            .borrow_mut()
+            .insert(pred.name.clone(), pred.clone());
         Ok(())
     }
 
@@ -556,14 +623,16 @@ impl PgDB {
                             epoch: Option<Epoch>,
                             trans: &'a Transaction<'a>)
                             -> Result<Query<'a, 'a>> {
-        let cache_clause = epoch.map(|epoch|
-                format!("(epoch >= {}) AND ({})",
-                        epoch,
-                        query.iter()
-                            .enumerate()
-                            .map(|(n, _)| format!("fact_id = t{}.id", n))
-                            .collect::<Vec<_>>()
-                            .join(" OR ")));
+        let cache_clause = epoch.map(|epoch| {
+            format!("(epoch >= {}) AND ({})",
+                    epoch,
+                    query
+                        .iter()
+                        .enumerate()
+                        .map(|(n, _)| format!("fact_id = t{}.id", n))
+                        .collect::<Vec<_>>()
+                        .join(" OR "))
+        });
         // Check there is at least one clause
         if query.len() == 0 {
             bail!(ErrorKind::Arg("Empty search query".to_string()));
@@ -576,7 +645,10 @@ impl PgDB {
         {
             let mut var_type: Vec<Type> = Vec::new();
             for clause in query.iter() {
-                let pred = match self.pred_by_name.borrow().get(&clause.pred_name).cloned() {
+                let pred = match self.pred_by_name
+                          .borrow()
+                          .get(&clause.pred_name)
+                          .cloned() {
                     Some(pred) => pred,
                     None => {
                         bail!(ErrorKind::Arg(format!("{} is not a registered predicate.",
@@ -611,17 +683,17 @@ impl PgDB {
         }
 
         // Actually build and execute the query
-        let mut tables = Vec::new();    // Predicate names involved in the query,
-                                    // in the sequence they appear
+        let mut tables = Vec::new(); // Predicate names involved in the query,
+        // in the sequence they appear
         let mut restricts = vec![format!("1 = 1")]; // Unification expressions, indexed by
-                                    // which join they belong on.
+        // which join they belong on.
         let mut var_names = Vec::new(); // Translation of variable numbers to
-                                    // sql exprs
+        // sql exprs
         let mut fact_ids = Vec::new(); // Translation of fact ids to sql exprs
         let mut var_types = Vec::new(); // Translation of variable numbers to
-                                    // Types
+        // Types
         let mut vals: Vec<Value> = Vec::new(); // Values to be quoted into the
-                                             // prepared statement
+        // prepared statement
         let mut param_num = 1;
 
         for (idxc, clause) in query.iter().enumerate() {
@@ -629,7 +701,11 @@ impl PgDB {
             let table_name = format!("facts.{}", clause.pred_name);
             // We will refer to it by a numbered alias, to make joining easier
             let alias_name = format!("t{}", idxc);
-            let pred = self.pred_by_name.borrow().get(&clause.pred_name).unwrap().clone();
+            let pred = self.pred_by_name
+                .borrow()
+                .get(&clause.pred_name)
+                .unwrap()
+                .clone();
             fact_ids.push(format!("{}.id", alias_name));
             let mut clause_elements = Vec::new();
             for &(ref proj, ref arg) in clause.args.iter() {
@@ -683,13 +759,16 @@ impl PgDB {
                 restricts.push(clause);
                 tables.push(format!("pending_facts"));
             }
-            _ => ()
+            _ => (),
         }
         tables.reverse();
         restricts.reverse();
-        let main_table = tables.pop()
-            .ok_or(ErrorKind::Internal(format!("Match clause accesses no tables")))?;
-        let join_query = tables.iter()
+        let main_table =
+            tables
+                .pop()
+                .ok_or(ErrorKind::Internal(format!("Match clause accesses no tables")))?;
+        let join_query = tables
+            .iter()
             .map(|table| format!("JOIN {} ON true", table))
             .collect::<Vec<_>>()
             .join(" ");
@@ -701,18 +780,19 @@ impl PgDB {
                                where_clause);
         trace!("search_facts: {}", raw_stmt);
         Ok(Query {
-            stmt: trans.prepare_cached(&raw_stmt)?,
-            trans: trans,
-            fact_ids: fact_ids.len(),
-            vals: vals,
-            var_types: var_types,
-        })
+               stmt: trans.prepare_cached(&raw_stmt)?,
+               trans: trans,
+               fact_ids: fact_ids.len(),
+               vals: vals,
+               var_types: var_types,
+           })
     }
 }
 
 fn valid_name(name: &String) -> bool {
-    name.chars().all(|ch| match ch {
-        'a'...'z' | '_' => true,
-        _ => false,
-    })
+    name.chars()
+        .all(|ch| match ch {
+                 'a'...'z' | '_' => true,
+                 _ => false,
+             })
 }

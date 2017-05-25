@@ -10,50 +10,60 @@ fn run_induction(size: u64) {
             predicate!(q(uint64))
         })?;
         for i in 0..(size - 1) {
-            holmes.new_rule(&Rule {
-                    head: Clause {
-                        pred_name: "p".to_string(),
-                        args: vec![(Projection::Slot(0), MatchExpr::Const((i + 1).to_value()))],
-                    },
-                    body: vec![Clause {
+            holmes
+                .new_rule(&Rule {
+                               head: Clause {
                                    pred_name: "p".to_string(),
-                                   args: vec![(Projection::Slot(0),
-                                               MatchExpr::Const(i.to_value()))],
+                                   args: vec![
+                    (Projection::Slot(0),
+                     MatchExpr::Const((i + 1).to_value())),
+                ],
                                },
-                               Clause {
-                                   pred_name: "q".to_string(),
-                                   args: vec![(Projection::Slot(0),
-                                               MatchExpr::Const((i + 1).to_value()))],
-                               }],
-                    wheres: vec![],
-                })?;
-            holmes.new_rule(&Rule {
-                    head: Clause {
+                               body: vec![
+                    Clause {
+                        pred_name: "p".to_string(),
+                        args: vec![(Projection::Slot(0), MatchExpr::Const(i.to_value()))],
+                    },
+                    Clause {
                         pred_name: "q".to_string(),
                         args: vec![(Projection::Slot(0), MatchExpr::Const((i + 1).to_value()))],
                     },
-                    body: vec![Clause {
-                                   pred_name: "p".to_string(),
-                                   args: vec![(Projection::Slot(0),
-                                               MatchExpr::Const(i.to_value()))],
-                               },
-                               Clause {
+                ],
+                               wheres: vec![],
+                           })?;
+            holmes
+                .new_rule(&Rule {
+                               head: Clause {
                                    pred_name: "q".to_string(),
-                                   args: vec![(Projection::Slot(0),
-                                               MatchExpr::Const(i.to_value()))],
-                               }],
-                    wheres: vec![],
-                })?;
+                                   args: vec![
+                    (Projection::Slot(0),
+                     MatchExpr::Const((i + 1).to_value())),
+                ],
+                               },
+                               body: vec![
+                    Clause {
+                        pred_name: "p".to_string(),
+                        args: vec![(Projection::Slot(0), MatchExpr::Const(i.to_value()))],
+                    },
+                    Clause {
+                        pred_name: "q".to_string(),
+                        args: vec![(Projection::Slot(0), MatchExpr::Const(i.to_value()))],
+                    },
+                ],
+                               wheres: vec![],
+                           })?;
 
         }
-        holmes.new_fact(&Fact {
-                pred_name: "p".to_string(),
-                args: vec![0.to_value()],
-            })?;
-        holmes.new_fact(&Fact {
-                pred_name: "q".to_string(),
-                args: vec![1.to_value()],
-            })?;
+        holmes
+            .new_fact(&Fact {
+                           pred_name: "p".to_string(),
+                           args: vec![0.to_value()],
+                       })?;
+        holmes
+            .new_fact(&Fact {
+                           pred_name: "q".to_string(),
+                           args: vec![1.to_value()],
+                       })?;
 
         core.run(holmes.quiesce()).unwrap();
 

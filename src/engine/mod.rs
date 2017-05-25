@@ -6,15 +6,15 @@
 pub mod types;
 
 use std::collections::hash_map::HashMap;
-use pg::dyn::{Value, Type};
+use pg::dyn::{Type, Value};
 use pg::dyn::values;
-use self::types::{Fact, Rule, Func, Predicate, Clause, Expr, BindExpr, Projection, MatchExpr};
-use pg::{FactId, Epoch, PgDB};
+use self::types::{BindExpr, Clause, Expr, Fact, Func, MatchExpr, Predicate, Projection, Rule};
+use pg::{Epoch, FactId, PgDB};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use futures::{Stream, Future, Async, Poll, done, BoxFuture};
-use futures::task::{park, Task};
+use futures::{Async, BoxFuture, Future, Poll, Stream, done};
+use futures::task::{Task, park};
 
 #[derive(Clone,Copy,PartialEq,Debug)]
 enum RuleState {
@@ -28,12 +28,12 @@ enum RuleState {
 struct GcEpoch {
     state: Rc<RefCell<Vec<Epoch>>>,
     task: Rc<RefCell<Option<Task>>>,
-    past: Rc<Cell<Epoch>>
+    past: Rc<Cell<Epoch>>,
 }
 
 struct GcEpochHandle {
     parent: GcEpoch,
-    index: usize
+    index: usize,
 }
 
 impl GcEpochHandle {
@@ -44,7 +44,7 @@ impl GcEpochHandle {
         if new_min > self.parent.past.get() {
             match self.parent.task.borrow_mut().take() {
                 Some(t) => t.unpark(),
-                None => ()
+                None => (),
             }
         }
     }
@@ -55,14 +55,14 @@ impl GcEpoch {
         GcEpoch {
             state: Rc::new(RefCell::new(vec![])),
             task: Rc::new(RefCell::new(None)),
-            past: Rc::new(Cell::new(0))
+            past: Rc::new(Cell::new(0)),
         }
     }
     fn handle(&self) -> GcEpochHandle {
         self.state.borrow_mut().push(0);
         GcEpochHandle {
             parent: self.clone(),
-            index: self.state.borrow().len() - 1
+            index: self.state.borrow().len() - 1,
         }
     }
     fn await(&self, task: Task) {
@@ -163,7 +163,7 @@ impl Stream for GcEpoch {
         trace!("Checking for GC wakeup");
         let new_min = match self.state.borrow().iter().min() {
             Some(epoch) => *epoch,
-            None => 0
+            None => 0,
         };
         if new_min > self.past.get() {
             trace!("All rules have moved past epoch {}, waking GC", new_min);
@@ -245,17 +245,18 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
     use self::types::MatchExpr::*;
     Fact {
         pred_name: clause.pred_name.clone(),
-        args: clause.args
+        args: clause
+            .args
             .iter()
             .enumerate()
             .map(|(idx, &(ref proj, ref slot))| {
-                assert_eq!(proj, &Projection::Slot(idx));
-                match *slot {
-                    Unbound => panic!("Unbound is not allowed in substituted facts"),
-                    Var(ref n) => ans[*n as usize].clone(),
-                    Const(ref v) => v.clone(),
-                }
-            })
+                     assert_eq!(proj, &Projection::Slot(idx));
+                     match *slot {
+                         Unbound => panic!("Unbound is not allowed in substituted facts"),
+                         Var(ref n) => ans[*n as usize].clone(),
+                         Const(ref v) => v.clone(),
+                     }
+                 })
             .collect(),
     }
 }
@@ -273,10 +274,13 @@ impl Engine {
         };
         let gc_future = {
             let fdb = engine.fact_db.clone();
-            engine.gc_epoch.clone().for_each(move |epoch| {
-                fdb.purge_pending(epoch).unwrap();
-                Ok(())
-            })
+            engine
+                .gc_epoch
+                .clone()
+                .for_each(move |epoch| {
+                              fdb.purge_pending(epoch).unwrap();
+                              Ok(())
+                          })
         };
         engine.event_loop.spawn(gc_future);
         engine
@@ -328,7 +332,10 @@ impl Engine {
     }
 
     fn get_dep_rules(&mut self, pred: &String) -> Rc<RefCell<Vec<Signal>>> {
-        self.rules.entry(pred.to_string()).or_insert(Rc::new(RefCell::new(Vec::new()))).clone()
+        self.rules
+            .entry(pred.to_string())
+            .or_insert(Rc::new(RefCell::new(Vec::new())))
+            .clone()
     }
 
     /// Adds a new fact to the database
@@ -341,9 +348,9 @@ impl Engine {
             Some(ref pred) => {
                 if (fact.args.len() != pred.fields.len()) ||
                    (!fact.args
-                    .iter()
-                    .zip(pred.fields.iter())
-                    .all(|(val, field)| val.type_() == field.type_.clone())) {
+                         .iter()
+                         .zip(pred.fields.iter())
+                         .all(|(val, field)| val.type_() == field.type_.clone())) {
                     bail!(ErrorKind::Type(format!("Fact ({:?}) does not \
                                                    match predicate ({:?})",
                                                   fact,
@@ -355,8 +362,7 @@ impl Engine {
         {
             let conn = self.fact_db.conn()?;
             let trans = conn.transaction()?;
-            if self.fact_db
-                .insert_fact(&fact, &trans)?.is_some() {
+            if self.fact_db.insert_fact(&fact, &trans)?.is_some() {
                 let signals = self.get_dep_rules(&fact.pred_name);
                 for signal in signals.borrow().iter() {
                     signal.signal();
@@ -388,14 +394,16 @@ impl Engine {
     pub fn render(&self, pred_name: &String) -> Result<String> {
         let pred = self.get_predicate(pred_name)?
             .ok_or(ErrorKind::Invalid("Predicate absent".to_string()))?;
-        let data = self.derive(&vec![Clause {
-                              pred_name: pred_name.to_string(),
-                              args: pred.fields
-                                  .iter()
-                                  .enumerate()
-                                  .map(|(i, _)| (Projection::Slot(i), MatchExpr::Var(i)))
-                                  .collect(),
-                          }])?;
+        let data = self.derive(&vec![
+                Clause {
+                    pred_name: pred_name.to_string(),
+                    args: pred.fields
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _)| (Projection::Slot(i), MatchExpr::Var(i)))
+                        .collect(),
+                },
+            ])?;
         let descr = match pred.description {
             Some(descr) => format!("<h3>{}</h3><br />", descr),
             None => "".to_string(),
@@ -453,11 +461,12 @@ impl Engine {
                     epoch = Some(query.epoch() + 1);
                     let states_0 = query.run();
                     trace!("Query submitted");
-                    let mut states: Box<Iterator<Item = (Vec<FactId>, Vec<Value>)>> =
+                    let mut states: Box<Iterator<Item = (Vec<FactId>,
+                                                         Vec<Value>)>> =
                         Box::new(states_0.map(|state| {
-                            results += 1;
-                            state
-                        }));
+                                                  results += 1;
+                                                  state
+                                              }));
                     for where_clause in rule.wheres.iter() {
                         let wc = where_clause.clone();
                         let bf = &funcs;
@@ -473,7 +482,8 @@ impl Engine {
                     }
                     for state in states {
                         if fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
-                            .unwrap().is_some() {
+                               .unwrap()
+                               .is_some() {
                             productive += 1;
                         }
                     }

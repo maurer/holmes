@@ -2,7 +2,7 @@
 //!
 //! The types defined in this module are used to define the parts of the Holmes
 //! language itself, and are used for writing rules, facts, etc.
-use pg::dyn::{Value, Type};
+use pg::dyn::{Type, Value};
 
 /// A `Predicate` is a name combined with a list of typed slots, e.g.
 ///

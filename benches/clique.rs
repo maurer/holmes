@@ -9,10 +9,11 @@ fn run_clique(size: u64) {
         predicate!(holmes, edge(uint64, uint64))?;
         predicate!(holmes, same_clique(uint64, uint64))?;
         for i in 0..(size - 1) {
-            holmes.new_fact(&Fact {
-                    pred_name: "edge".to_string(),
-                    args: vec![i.to_value(), (i + 1).to_value()],
-                })?;
+            holmes
+                .new_fact(&Fact {
+                               pred_name: "edge".to_string(),
+                               args: vec![i.to_value(), (i + 1).to_value()],
+                           })?;
         }
         fact!(holmes, edge((size - 1), 0))?;
         holmes_exec!(holmes, {

@@ -73,7 +73,10 @@ impl ValueT for BoolValue {
         }
     }
     fn inner_ord(&self, other: &ValueT) -> Option<::std::cmp::Ordering> {
-        other.inner().downcast_ref::<Self>().and_then(|x| self.partial_cmp(x))
+        other
+            .inner()
+            .downcast_ref::<Self>()
+            .and_then(|x| self.partial_cmp(x))
     }
 }
 
@@ -100,25 +103,29 @@ pub fn add_bool() {
 
 #[test]
 fn reboot() {
-    multi(&[&|holmes: &mut Engine, _| holmes.add_type(Arc::new(BoolType)),
-            &|_holmes: &mut Engine, _| Ok(())])
+    multi(&[
+        &|holmes: &mut Engine, _| holmes.add_type(Arc::new(BoolType)),
+        &|_holmes: &mut Engine, _| Ok(()),
+    ])
 }
 
 #[test]
 fn reboot_reuse() {
-    multi(&[&|holmes: &mut Engine, _| {
-                try!(holmes.add_type(Arc::new(BoolType)));
-                try!(predicate!(holmes, type_pred(uint64, bool2)));
-                fact!(holmes, type_pred(32, BoolValue::new(false)))
-            },
-            &|holmes: &mut Engine, _| {
-        try!(holmes.add_type(Arc::new(BoolType)));
-        try!(predicate!(holmes, type_pred(uint64, bool2)));
-        try!(fact!(holmes, type_pred(42, BoolValue::new(true))));
-        assert_eq!(try!(query!(holmes, type_pred((32), x))),
-                   vec![vec![BoolValue::new(false).to_value()]]);
-        assert_eq!(try!(query!(holmes, type_pred((42), x))),
-                   vec![vec![BoolValue::new(true).to_value()]]);
-        Ok(())
-    }])
+    multi(&[
+        &|holmes: &mut Engine, _| {
+             try!(holmes.add_type(Arc::new(BoolType)));
+             try!(predicate!(holmes, type_pred(uint64, bool2)));
+             fact!(holmes, type_pred(32, BoolValue::new(false)))
+         },
+        &|holmes: &mut Engine, _| {
+            try!(holmes.add_type(Arc::new(BoolType)));
+            try!(predicate!(holmes, type_pred(uint64, bool2)));
+            try!(fact!(holmes, type_pred(42, BoolValue::new(true))));
+            assert_eq!(try!(query!(holmes, type_pred((32), x))),
+                       vec![vec![BoolValue::new(false).to_value()]]);
+            assert_eq!(try!(query!(holmes, type_pred((42), x))),
+                       vec![vec![BoolValue::new(true).to_value()]]);
+            Ok(())
+        },
+    ])
 }
