@@ -162,8 +162,11 @@ pub struct Query<'trans, 'stmt> {
 impl<'trans, 'stmt> Query<'trans, 'stmt> {
     pub fn run(&self) -> QueryIter {
         let sql: Vec<_> = self.vals.iter().flat_map(|x| x.to_sql()).collect();
+        trace!("Starting incremental query");
+        let rows = self.stmt.lazy_query(self.trans, &sql, 16384).unwrap();
+        trace!("Incremental query returned");
         QueryIter {
-            rows: self.stmt.lazy_query(self.trans, &sql, 16384).unwrap(),
+            rows: rows,
             fact_ids: self.fact_ids,
             var_types: self.var_types.clone(),
         }
