@@ -10,6 +10,9 @@ addons:
       - libdw-dev
       - binutils-dev
       - postgresql-9.5
+      - cmake
+    sources:
+      - kalakris-cmake
 
 rust:
   - nightly
@@ -23,29 +26,25 @@ before_script:
   # Activate a clean postgres database with a holmes user
   - |
       export HOLMES_PG_SOCK_DIR=`tools/pg.bash holmes`
-  # Install travis-cargo
+  # Install travis-cargo for doc upload
   - |
       pip install 'travis-cargo<0.2' --user &&
       export PATH=$HOME/.local/bin:$PATH
-  # Install rustfmt
+  # Install cargo-travis and rustfmt
   - |
-      (cargo install rustfmt || true) &&
+      (cargo install cargo-travis || true) &&
       export PATH=$HOME/.cargo/bin:$PATH
 
-# Replace cargo with travis-cargo
 script:
-  - travis-cargo build
-  - travis-cargo test
-  - travis-cargo bench
+  - cargo build
+  - cargo test
+  - cargo bench
   - travis-cargo --only stable doc
-  - cargo fmt -- --write-mode diff
+  - test $TRAVIS_RUST_VERSION != "stable" || cargo fmt -- --write-mode diff
 
 after_success:
   - travis-cargo --only stable doc-upload
-  - travis-cargo coveralls --no-sudo # Doesn't actually work at the moment,
-                                     # but installs kcov
-  # Work around bad travis-cargo flags by invoking kcov correctly
-  - ./kcov/build/src/kcov --verify --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo,/out target/kcov target/debug/lib-*
+  - test $TRAVIS_RUST_VERSION != "stable" || cargo coveralls
 
 env:
   global:
