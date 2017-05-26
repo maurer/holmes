@@ -485,13 +485,18 @@ impl PgDB {
             .map(|(ord, _)| format!("arg{}", ord))
             .collect::<Vec<_>>()
             .join(", ");
+        let constrain = if col_str == "" {
+            format!("")
+        } else {
+            format!(", unique({})", col_str)
+        };
         self.conn_pool
             .get()?
             .execute(&format!("create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT \
-                               NULL primary key, {}, unique({}))",
+                               NULL primary key, {}{})",
                               name,
                               table_str,
-                              col_str),
+                              constrain),
                      &[])?;
         Ok(())
     }
