@@ -412,24 +412,6 @@ pub mod internal {
     ///   * `x` -> variable bind
     #[macro_export]
     macro_rules! clause_match {
-    ($vars:ident, $m:ident, $n:ident, {$start:tt, $end:tt, $v:ident}) => {{
-      use std::collections::hash_map::Entry::*;
-      match $vars.entry(stringify!($v).to_string()) {
-        Occupied(_) => (),
-        Vacant(entry) => {
-          $n = $n + 1;
-          entry.insert($n - 1);
-        }
-      }
-      $m = $m + 1;
-      let col = ::holmes::engine::types::Projection::Slot($m - 1);
-      (::holmes::engine::types::Projection::SubStr {
-          buf: Box::new(col),
-          start_idx: Box::new(db_expr!($vars, $start)),
-          end_idx: Box::new(db_expr!($vars, $end))},
-          ::holmes::engine::types::MatchExpr::Var(
-             *$vars.get(stringify!($v)).unwrap()))
-    }};
     ($vars:ident, $m:ident, $n:ident, [_]) => {{
         $m = $m + 1;
         let col = ::holmes::engine::types::Projection::Slot($m - 1);

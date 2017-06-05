@@ -184,15 +184,6 @@ pub enum Projection {
     Var(Var),
     /// An integer literal
     U64(u64),
-    /// A substring of a database-side value
-    SubStr {
-        /// String to take the substring of
-        buf: Box<Projection>,
-        /// Initial index (0-based)
-        start_idx: Box<Projection>,
-        /// Final index (0-based)
-        end_idx: Box<Projection>,
-    },
 }
 
 /// `Expr` represents the right hand side of the where clause sublanguage of

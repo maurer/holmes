@@ -102,20 +102,6 @@ fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &Stri
                 .map(|k: usize| format!("{}.arg{}", table, k))
                 .collect::<Vec<_>>()
         }
-        Projection::SubStr {
-            ref buf,
-            ref start_idx,
-            ref end_idx,
-        } => {
-            vec![
-                format!("substring({} from CAST({} as INT) + 1 for CAST({} as INT) - CAST({} AS \
-                     INT) + 1)",
-                        db_expr(buf, types, names, table).join(", "),
-                        db_expr(start_idx, types, names, table).join(", "),
-                        db_expr(end_idx, types, names, table).join(", "),
-                        db_expr(start_idx, types, names, table).join(", ")),
-            ]
-        }
     }
 }
 
@@ -124,35 +110,6 @@ fn db_type(e: &Projection, fields: &Vec<Field>, var_types: &Vec<Type>) -> Result
         Projection::U64(_) => Ok(Arc::new(types::UInt64)),
         Projection::Var(v) => Ok(var_types[v].clone()),
         Projection::Slot(n) => Ok(fields[n].type_.clone()),
-        Projection::SubStr {
-            ref buf,
-            ref start_idx,
-            ref end_idx,
-        } => {
-            let buf_type = db_type(&buf, fields, var_types)?;
-            if buf_type != Arc::new(types::String) && buf_type != Arc::new(types::Bytes) &&
-               buf_type != Arc::new(types::LargeBytes) {
-                bail!(ErrorKind::Type(format!("Tried to take substring of non-string or bytes \
-                                               type: {:?} : {:?}",
-                                              buf,
-                                              buf_type)))
-            }
-            let start_type = db_type(&start_idx, fields, var_types)?;
-            let end_type = db_type(&start_idx, fields, var_types)?;
-            if start_type != Arc::new(types::UInt64) {
-                bail!(ErrorKind::Type(format!("Tried to index starting with non-numeric type: \
-                                               {:?} : {:?}",
-                                              start_idx,
-                                              start_type)))
-            }
-            if end_type != Arc::new(types::UInt64) {
-                bail!(ErrorKind::Type(format!("Tried to index ending with non-numeric type: \
-                                               {:?} : {:?}",
-                                              end_idx,
-                                              end_type)))
-            }
-            Ok(buf_type)
-        }
     }
 }
 
