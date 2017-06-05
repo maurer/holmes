@@ -4,6 +4,9 @@
 //! together.
 //!
 #![warn(missing_docs)]
+#![feature(drop_types_in_const)]
+#[macro_use]
+extern crate lazy_static;
 extern crate sha2;
 extern crate postgres;
 extern crate fallible_iterator;

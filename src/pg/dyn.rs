@@ -822,17 +822,30 @@ pub mod values {
                      })
         }
         pub fn from_hash(hash: &str) -> Arc<Self> {
-            let mut path = ::std::env::home_dir().unwrap();
-            path.push(".holmes");
-            path.push(hash);
-            println!("{:?}", path);
-            //TODO cache this
-            let file = File::open(path.clone()).unwrap();
+            let file = cached_open(hash);
             Arc::new(LargeBytes {
                          fd: file,
                          hash: hash.to_owned(),
                      })
         }
     }
-
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+    lazy_static! {
+        static ref FILE_CACHE: Mutex<HashMap<::std::string::String, File>> = Mutex::new(HashMap::new());
+    }
+    fn cached_open(hash: &str) -> File {
+        FILE_CACHE
+            .lock()
+            .unwrap()
+            .entry(hash.to_owned())
+            .or_insert_with(|| {
+                                let mut path = ::std::env::home_dir().unwrap();
+                                path.push(".holmes");
+                                path.push(hash);
+                                File::open(path).unwrap()
+                            })
+            .try_clone()
+            .unwrap()
+    }
 }
