@@ -357,10 +357,11 @@ pub mod types {
             Some("largebytes")
         }
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
-            rows.next().map(|v| values::Bytes::new(v) as Value)
+            rows.next()
+                .map(|v: ::std::string::String| values::LargeBytes::from_hash(&v) as Value)
         }
         fn repr(&self) -> Vec<::std::string::String> {
-            vec!["bytea".to_string()]
+            vec!["char(64)".to_string()]
         }
     }
 
@@ -752,9 +753,28 @@ pub mod values {
     }
 
     /// Holds large raw data
-    #[derive(Debug,PartialEq,PartialOrd,Hash)]
+    use std::path::PathBuf;
+    use std::fs::File;
+    #[derive(Debug)]
     pub struct LargeBytes {
-        val: Vec<u8>,
+        hash: ::std::string::String,
+        fd: File,
+    }
+
+    impl PartialEq for LargeBytes {
+        fn eq(&self, rhs: &Self) -> bool {
+            self.hash.eq(&rhs.hash)
+        }
+    }
+    impl PartialOrd for LargeBytes {
+        fn partial_cmp(&self, rhs: &Self) -> Option<::std::cmp::Ordering> {
+            self.hash.partial_cmp(&rhs.hash)
+        }
+    }
+    impl Hash for LargeBytes {
+        fn hash<T: ::std::hash::Hasher>(&self, h: &mut T) {
+            self.hash.hash(h)
+        }
     }
 
     impl ValueT for LargeBytes {
@@ -762,10 +782,10 @@ pub mod values {
             Arc::new(types::LargeBytes)
         }
         fn get(&self) -> &Any {
-            &self.val as &Any
+            &self.fd as &Any
         }
         fn to_sql(&self) -> Vec<&ToSql> {
-            vec![&self.val as &ToSql]
+            vec![&self.hash as &ToSql]
         }
         valuet_boiler!();
     }
@@ -779,7 +799,39 @@ pub mod values {
     impl LargeBytes {
         /// Creates a new Holmes value holding raw data.
         pub fn new(val: Vec<u8>) -> Arc<Self> {
-            Arc::new(LargeBytes { val: val })
+            use sha2::*;
+            use std::path::Path;
+            use std::fs::File;
+            use std::io::Write;
+            use rustc_serialize::hex::ToHex;
+            let mut path = ::std::env::home_dir().unwrap();
+            path.push(".holmes");
+            let mut hasher = Sha256::default();
+            hasher.input(&val);
+            let fname = hasher.result().to_hex();
+            path.push(fname.clone());
+            {
+                let mut file = File::create(path.clone()).unwrap();
+                file.write_all(&val).unwrap();
+            }
+            let file = File::open(path.clone()).unwrap();
+            let path_string = path.to_str().unwrap().to_owned();
+            Arc::new(LargeBytes {
+                         fd: file,
+                         hash: fname,
+                     })
+        }
+        pub fn from_hash(hash: &str) -> Arc<Self> {
+            let mut path = ::std::env::home_dir().unwrap();
+            path.push(".holmes");
+            path.push(hash);
+            println!("{:?}", path);
+            //TODO cache this
+            let file = File::open(path.clone()).unwrap();
+            Arc::new(LargeBytes {
+                         fd: file,
+                         hash: hash.to_owned(),
+                     })
         }
     }
 

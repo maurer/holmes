@@ -4,6 +4,7 @@
 //! together.
 //!
 #![warn(missing_docs)]
+extern crate sha2;
 extern crate postgres;
 extern crate fallible_iterator;
 extern crate r2d2;

@@ -21,7 +21,7 @@ pub fn roundtrip() {
             fact!(test_pred(3, LargeBWrap { inner: vec![3u8, 3u8] }))
         }));
         assert_eq!(query!(holmes, test_pred((3), x)).unwrap(),
-                   vec![vec![vec![3u8, 3u8].to_value()]]);
+                   vec![vec![LargeBWrap { inner: vec![3u8, 3u8] }.to_value()]]);
         Ok(())
     })
 }

@@ -19,6 +19,7 @@ url = "1.2"
 tokio-core = "0.1"
 futures = "0.1"
 env_logger = "0.4"
+sha2 = "0.4"
 
 [[bench]]
 harness = false
