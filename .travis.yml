@@ -34,6 +34,8 @@ before_script:
   - |
       (cargo install cargo-travis || true) &&
       export PATH=$HOME/.cargo/bin:$PATH
+  # Create the holmes storage directory
+  - mkdir -p $HOME/.holmes
 
 script:
   - cargo build
