@@ -42,7 +42,7 @@ script:
   - cargo test
   - cargo bench
   - travis-cargo --only stable doc
-  - test $TRAVIS_RUST_VERSION != "stable" || cargo fmt -- --write-mode diff
+#  - test $TRAVIS_RUST_VERSION != "stable" || cargo fmt -- --write-mode diff
 
 after_success:
   - travis-cargo --only stable doc-upload
