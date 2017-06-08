@@ -259,6 +259,8 @@ impl PgDB {
         try!(conn.execute("create table if not exists pending_facts (fact_id int8 primary key, \
                            epoch int8)",
                           &[]));
+        try!(conn.execute("create index if not exists pf_epoch on pending_facts(epoch)",
+                          &[]));
 
         // Create incremental PgDB object
         let db = PgDB {
@@ -585,16 +587,6 @@ impl PgDB {
                             epoch: Option<Epoch>,
                             trans: &'a Transaction<'a>)
                             -> Result<Query<'a, 'a>> {
-        let cache_clause = epoch.map(|epoch| {
-            format!("(epoch >= {}) AND ({})",
-                    epoch,
-                    query
-                        .iter()
-                        .enumerate()
-                        .map(|(n, _)| format!("fact_id = t{}.id", n))
-                        .collect::<Vec<_>>()
-                        .join(" OR "))
-        });
         // Check there is at least one clause
         if query.len() == 0 {
             bail!(ErrorKind::Arg("Empty search query".to_string()));
@@ -716,10 +708,23 @@ impl PgDB {
         merge_vars.extend(var_names.into_iter());
 
         let vars = format!("{}", merge_vars.join(", "));
+        let cache_clause = epoch.map(|epoch| {
+            (format!("(epoch >= ${}) AND ({})",
+                     param_num,
+                     query
+                         .iter()
+                         .enumerate()
+                         .map(|(n, _)| format!("fact_id = t{}.id", n))
+                         .collect::<Vec<_>>()
+                         .join(" OR ")),
+             epoch)
+        });
         match cache_clause {
-            Some(clause) => {
+            Some((clause, epoch)) => {
+                use pg::dyn::values::ToValue;
                 restricts.push(clause);
                 tables.push(format!("pending_facts"));
+                vals.push((epoch as u64).to_value())
             }
             _ => (),
         }

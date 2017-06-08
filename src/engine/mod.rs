@@ -26,11 +26,13 @@ enum RuleState {
 
 #[derive(Clone,Debug)]
 struct GcEpoch {
-    state: Rc<RefCell<Vec<Epoch>>>,
+    state: Rc<RefCell<Vec<Option<Epoch>>>>,
+    pending: Rc<RefCell<Vec<bool>>>,
     task: Rc<RefCell<Option<Task>>>,
     past: Rc<Cell<Epoch>>,
 }
 
+#[derive(Clone)]
 struct GcEpochHandle {
     parent: GcEpoch,
     index: usize,
@@ -39,8 +41,9 @@ struct GcEpochHandle {
 impl GcEpochHandle {
     fn update(&self, epoch: Epoch) {
         let mut state = self.parent.state.borrow_mut();
-        state[self.index] = epoch;
-        let new_min: Epoch = *state.iter().min().unwrap();
+        state[self.index] = Some(epoch);
+        self.parent.pending.borrow_mut()[self.index] = false;
+        let new_min: Epoch = state.iter().filter_map(|x| *x).min().unwrap();
         if new_min > self.parent.past.get() {
             match self.parent.task.borrow_mut().take() {
                 Some(t) => t.unpark(),
@@ -48,18 +51,27 @@ impl GcEpochHandle {
             }
         }
     }
+    fn active(&self) {
+        let mut state = self.parent.state.borrow_mut();
+        if state[self.index].is_none() {
+            state[self.index] = Some(self.parent.past.get());
+        }
+        self.parent.pending.borrow_mut()[self.index] = true;
+    }
 }
 
 impl GcEpoch {
     fn new() -> Self {
         GcEpoch {
             state: Rc::new(RefCell::new(vec![])),
+            pending: Rc::new(RefCell::new(vec![])),
             task: Rc::new(RefCell::new(None)),
             past: Rc::new(Cell::new(0)),
         }
     }
     fn handle(&self) -> GcEpochHandle {
-        self.state.borrow_mut().push(0);
+        self.state.borrow_mut().push(Some(0));
+        self.pending.borrow_mut().push(false);
         GcEpochHandle {
             parent: self.clone(),
             index: self.state.borrow().len() - 1,
@@ -161,13 +173,20 @@ impl Stream for GcEpoch {
     type Error = ();
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         trace!("Checking for GC wakeup");
-        let new_min = match self.state.borrow().iter().min() {
-            Some(epoch) => *epoch,
+        let new_min = match self.state.borrow().iter().filter_map(|x| *x).min() {
+            Some(epoch) => epoch,
             None => 0,
         };
         if new_min > self.past.get() {
             trace!("All rules have moved past epoch {}, waking GC", new_min);
             self.past.set(new_min);
+            let mut state = self.state.borrow_mut();
+            let pending = self.pending.borrow();
+            for idx in 0..state.len() {
+                if !pending[idx] {
+                    state[idx] = None
+                }
+            }
             Ok(Async::Ready(Some(new_min)))
         } else {
             self.await(park());
@@ -207,7 +226,7 @@ impl Future for Quiescence {
 pub struct Engine {
     fact_db: Rc<PgDB>,
     funcs: HashMap<String, Rc<Func>>,
-    rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
+    rules: HashMap<String, Rc<RefCell<(Vec<Signal>, Vec<GcEpochHandle>)>>>,
     signals: Vec<Signal>,
     gc_epoch: GcEpoch,
     event_loop: Handle,
@@ -331,10 +350,10 @@ impl Engine {
         Ok(self.fact_db.get_predicate(name))
     }
 
-    fn get_dep_rules(&mut self, pred: &String) -> Rc<RefCell<Vec<Signal>>> {
+    fn get_dep_rules(&mut self, pred: &String) -> Rc<RefCell<(Vec<Signal>, Vec<GcEpochHandle>)>> {
         self.rules
             .entry(pred.to_string())
-            .or_insert(Rc::new(RefCell::new(Vec::new())))
+            .or_insert(Rc::new(RefCell::new((Vec::new(), Vec::new()))))
             .clone()
     }
 
@@ -363,9 +382,12 @@ impl Engine {
             let conn = self.fact_db.conn()?;
             let trans = conn.transaction()?;
             if self.fact_db.insert_fact(&fact, &trans)?.is_some() {
-                let signals = self.get_dep_rules(&fact.pred_name);
-                for signal in signals.borrow().iter() {
+                let deps = self.get_dep_rules(&fact.pred_name);
+                for signal in deps.borrow().0.iter() {
                     signal.signal();
+                }
+                for gc in deps.borrow().1.iter() {
+                    gc.active();
                 }
                 trans.commit()?;
             }
@@ -440,7 +462,8 @@ impl Engine {
         let gc_handle = self.gc_epoch.handle();
         for pred in &rule.body {
             let dep_rules = self.get_dep_rules(&pred.pred_name);
-            dep_rules.borrow_mut().push(signal.clone());
+            dep_rules.borrow_mut().0.push(signal.clone());
+            dep_rules.borrow_mut().1.push(gc_handle.clone());
         }
 
         let rule_future = {
@@ -480,6 +503,7 @@ impl Engine {
                         });
                         states = Box::new(next_states);
                     }
+                    trace!("Insertions beginning");
                     for state in states {
                         if fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
                                .unwrap()
@@ -487,15 +511,21 @@ impl Engine {
                             productive += 1;
                         }
                     }
+                    trace!("Insertions done");
                 }
+                trace!("Committing transaction");
                 trans.commit().unwrap();
+                trace!("Transaction committed");
                 trace!("Generated {} results, turned into {} facts.",
                        results,
                        productive);
 
                 if productive > 0 {
-                    for buddy in buddies.borrow().iter() {
+                    for buddy in buddies.borrow().0.iter() {
                         buddy.signal();
+                    }
+                    for gc in buddies.borrow().1.iter() {
+                        gc.active();
                     }
                 }
 

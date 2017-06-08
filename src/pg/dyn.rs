@@ -835,6 +835,15 @@ pub mod values {
         static ref FILE_CACHE: Mutex<HashMap<::std::string::String, File>> = Mutex::new(HashMap::new());
     }
     fn cached_open(hash: &str) -> File {
+        {
+            use std::ops::DerefMut;
+            let mut cache = FILE_CACHE.lock().unwrap();
+            if cache.len() > 100 {
+                // We're thrashing on file descriptors, drop the cache
+                trace!("FILE_CACHE THRASHING");
+                *cache.deref_mut() = HashMap::new()
+            }
+        }
         FILE_CACHE
             .lock()
             .unwrap()
