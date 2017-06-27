@@ -844,7 +844,7 @@ pub mod values {
                 *cache.deref_mut() = HashMap::new()
             }
         }
-        FILE_CACHE
+        let mut file = FILE_CACHE
             .lock()
             .unwrap()
             .entry(hash.to_owned())
@@ -855,6 +855,9 @@ pub mod values {
                                 File::open(path).unwrap()
                             })
             .try_clone()
-            .unwrap()
+            .unwrap();
+        use std::io::{Seek, SeekFrom};
+        file.seek(SeekFrom::Start(0)).unwrap();
+        file
     }
 }
