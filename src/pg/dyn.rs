@@ -100,8 +100,8 @@ pub mod types {
       () => {
           typet_inner!();
           typet_inner_eq!();
-          fn large_unique(&self) -> bool {
-              false
+          fn large(&self) -> Vec<usize> {
+              vec![]
           }
       }
   }
@@ -138,11 +138,9 @@ pub mod types {
         /// Similar to `inner`, `inner_eq` exports a `PartialEq` instance from
         /// the underlying type.
         fn inner_eq(&self, other: &TypeT) -> bool;
-        /// Should this type be considered when checking for uniqueness of a fact?
-        /// This should only be set to true for large fields which have a more
-        /// compact representation of the field elsewhere in the tuple, e.g. the
-        /// contents of a file and its hash.
-        fn large_unique(&self) -> bool;
+        /// List of subindexes to be ignored when checking uniqueness.
+        /// Intended to be used to ignore large payloads in favor of hashes
+        fn large(&self) -> Vec<usize>;
     }
 
     impl Hash for TypeT {
@@ -348,8 +346,8 @@ pub mod types {
     impl TypeT for LargeBytes {
         typet_inner!();
         typet_inner_eq!();
-        fn large_unique(&self) -> bool {
-            true
+        fn large(&self) -> Vec<usize> {
+            vec![0]
         }
         fn name(&self) -> Option<&'static str> {
             Some("largebytes")

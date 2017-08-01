@@ -31,8 +31,8 @@ impl TypeT for BoolType {
             _ => false,
         }
     }
-    fn large_unique(&self) -> bool {
-        false
+    fn large(&self) -> Vec<usize> {
+        vec![]
     }
 }
 
