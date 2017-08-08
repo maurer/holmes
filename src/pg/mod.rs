@@ -152,10 +152,10 @@ impl<'trans, 'stmt> Query<'trans, 'stmt> {
     /// Gives the max epoch that this query can see
     pub fn epoch(&self) -> Epoch {
         match self.trans
-                  .query("select max(epoch) from pending_facts", &[])
-                  .unwrap()
-                  .get(0)
-                  .get(0) {
+            .query("select max(epoch) from pending_facts", &[])
+            .unwrap()
+            .get(0)
+            .get(0) {
             Some(epoch) => epoch,
             _ => 0,
         }
@@ -205,7 +205,8 @@ impl<'a> RowIter<'a> {
     /// Gets the next item in the row, using a `FromSql` instance to read it.
     /// If there is not a next item, returns `None`
     pub fn next<T>(&mut self) -> Option<T>
-        where T: FromSql
+    where
+        T: FromSql,
     {
         let idx = self.index;
         self.index += 1;
@@ -270,41 +271,49 @@ impl PgDB {
         try!(conn.execute("create schema if not exists facts", &[]));
 
         // Create Tables
-        try!(conn.execute("create table if not exists predicates (id serial primary key, \
+        try!(conn.execute(
+            "create table if not exists predicates (id serial primary key, \
                            name varchar not null, \
                            description varchar)",
-                          &[]));
-        try!(conn.execute("create table if not exists fields (\
+            &[],
+        ));
+        try!(conn.execute(
+            "create table if not exists fields (\
                            pred_id serial references predicates(id), \
                            ordinal int4 not null, \
                            type varchar not null, \
                            name varchar, \
                            description varchar)",
-                          &[]));
+            &[],
+        ));
         try!(conn.execute("create sequence if not exists fact_id", &[]));
-        try!(conn.execute("create sequence if not exists fact_epoch", &[]));
-        try!(conn.execute("create table if not exists pending_facts (fact_id int8 primary key, \
+        try!(conn.execute(
+            "create sequence if not exists fact_epoch",
+            &[],
+        ));
+        try!(conn.execute(
+            "create table if not exists pending_facts (fact_id int8 primary key, \
                            epoch int8)",
-                          &[]));
-        try!(conn.execute("create index if not exists pf_epoch on pending_facts(epoch)",
-                          &[]));
+            &[],
+        ));
+        try!(conn.execute(
+            "create index if not exists pf_epoch on pending_facts(epoch)",
+            &[],
+        ));
 
         // Create incremental PgDB object
         let db = PgDB {
             conn_pool: pool,
             pred_by_name: RefCell::new(HashMap::new()),
             insert_by_name: RefCell::new(HashMap::new()),
-            named_types: RefCell::new(types::default_types()
-                                          .iter()
-                                          .filter_map(|type_| {
-                                                          type_
-                                                              .name()
-                                                              .map(|name| {
-                                                                       (name.to_owned(),
-                                                                        type_.clone())
-                                                                   })
-                                                      })
-                                          .collect()),
+            named_types: RefCell::new(
+                types::default_types()
+                    .iter()
+                    .filter_map(|type_| {
+                        type_.name().map(|name| (name.to_owned(), type_.clone()))
+                    })
+                    .collect(),
+            ),
         };
 
         try!(db.rebuild_predicate_cache());
@@ -314,8 +323,10 @@ impl PgDB {
 
     /// Delete from the pending facts table facts older than the provided epoch
     pub fn purge_pending(&self, epoch: Epoch) -> Result<()> {
-        self.conn()?
-            .execute("delete from pending_facts where epoch < $1", &[&epoch])?;
+        self.conn()?.execute(
+            "delete from pending_facts where epoch < $1",
+            &[&epoch],
+        )?;
         Ok(())
     }
 
@@ -359,13 +370,15 @@ impl PgDB {
         {
             let conn = self.conn_pool.get()?;
             // Scoped borrow of connection
-            let pred_stmt = conn.prepare("select predicates.name,
+            let pred_stmt = conn.prepare(
+                "select predicates.name,
                               predicates.description, \
                               fields.name, \
                               fields.description, \
                               fields.type from predicates JOIN fields ON \
                               predicates.id = fields.pred_id ORDER BY predicates.id, \
-                              fields.ordinal")?;
+                              fields.ordinal",
+            )?;
             let pred_types = try!(pred_stmt.query(&[]));
             for type_entry in pred_types.iter() {
                 let mut row = RowIter::new(&type_entry);
@@ -387,10 +400,10 @@ impl PgDB {
                 match self.pred_by_name.borrow_mut().entry(name.clone()) {
                     Vacant(entry) => {
                         entry.insert(Predicate {
-                                         name: name.clone(),
-                                         description: pred_descr,
-                                         fields: vec![field],
-                                     });
+                            name: name.clone(),
+                            description: pred_descr,
+                            fields: vec![field],
+                        });
                     }
                     Occupied(mut entry) => {
                         entry.get_mut().fields.push(field);
@@ -418,13 +431,16 @@ impl PgDB {
             .enumerate()
             .map(|(k, _)| format!("${}", k + 1))
             .collect();
-        let stmt = format!("insert into facts.{} values (DEFAULT, {}) ON \
+        let stmt = format!(
+            "insert into facts.{} values (DEFAULT, {}) ON \
                             CONFLICT DO NOTHING RETURNING id",
-                           pred.name,
-                           args.join(", "));
-        self.insert_by_name
-            .borrow_mut()
-            .insert(pred.name.clone(), stmt);
+            pred.name,
+            args.join(", ")
+        );
+        self.insert_by_name.borrow_mut().insert(
+            pred.name.clone(),
+            stmt,
+        );
     }
 
     // Persist a predicate into the database
@@ -432,28 +448,29 @@ impl PgDB {
     // _only_ puts record of the predicate into the database.
     fn insert_predicate(&self, pred: &Predicate) -> Result<()> {
         let &Predicate {
-                 ref name,
-                 ref description,
-                 ref fields,
-             } = pred;
+            ref name,
+            ref description,
+            ref fields,
+        } = pred;
         let conn = self.conn_pool.get()?;
-        let stmt = conn
-            .prepare("insert into predicates (name, description) values ($1, $2) returning id")?;
+        let stmt = conn.prepare(
+            "insert into predicates (name, description) values ($1, $2) returning id",
+        )?;
         let pred_id: i32 = stmt.query(&[name, description])?.get(0).get(0);
         for (ordinal, field) in fields.iter().enumerate() {
-            try!(conn.execute("insert into fields (pred_id, name, description, type, ordinal) \
+            try!(conn.execute(
+                "insert into fields (pred_id, name, description, type, ordinal) \
                           values ($1, $2, $3, $4, $5)",
-                              &[
-                &pred_id,
-                &field.name,
-                &field.description,
-                &field
-                     .type_
-                     .name()
-                     .ok_or(ErrorKind::Arg("Field type had no name"
-                                               .to_string()))?,
-                &(ordinal as i32),
-            ]));
+                &[
+                    &pred_id,
+                    &field.name,
+                    &field.description,
+                    &field.type_.name().ok_or(ErrorKind::Arg(
+                        "Field type had no name".to_string(),
+                    ))?,
+                    &(ordinal as i32),
+                ],
+            ));
         }
         let table_str = fields
             .iter()
@@ -465,13 +482,13 @@ impl PgDB {
         let col_str = fields
             .iter()
             .flat_map(|field| {
-                          field
-                              .type_
-                              .repr()
-                              .iter()
-                              .map(|_| field.type_.large_unique())
-                              .collect::<Vec<_>>()
-                      })
+                field
+                    .type_
+                    .repr()
+                    .iter()
+                    .map(|_| field.type_.large_unique())
+                    .collect::<Vec<_>>()
+            })
             .enumerate()
             .filter(|&(_, x)| !x)
             .map(|(ord, _)| format!("arg{}", ord))
@@ -482,54 +499,58 @@ impl PgDB {
         } else {
             format!(", unique({})", col_str)
         };
-        self.conn_pool
-            .get()?
-            .execute(&format!("create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT \
+        self.conn_pool.get()?.execute(
+            &format!(
+                "create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT \
                                NULL primary key, {}{})",
-                              name,
-                              table_str,
-                              constrain),
-                     &[])?;
+                name,
+                table_str,
+                constrain
+            ),
+            &[],
+        )?;
         Ok(())
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
     pub fn insert_fact(&self, fact: &Fact, trans: &Transaction) -> Result<Option<FactId>> {
-        let stmt_str = try!(self.insert_by_name
-                                .borrow()
-                                .get(&fact.pred_name)
-                                .ok_or_else(|| {
-                                                ErrorKind::Internal("Insert Statement Missing"
-                                                                        .to_string())
-                                            }))
-                .clone();
+        let stmt_str = try!(
+            self.insert_by_name
+                .borrow()
+                .get(&fact.pred_name)
+                .ok_or_else(|| {
+                    ErrorKind::Internal("Insert Statement Missing".to_string())
+                })
+        ).clone();
         let stmt = trans.prepare(&stmt_str)?;
 
 
-        let out = try!(stmt.query(&fact.args
-                                       .iter()
-                                       .flat_map(|x| x.to_sql().into_iter())
-                                       .collect::<Vec<_>>()));
+        let out = try!(
+            stmt.query(&fact.args
+                .iter()
+                .flat_map(|x| x.to_sql().into_iter())
+                .collect::<Vec<_>>())
+        );
         if out.len() > 0 {
 
             // TODO this is not async or threadsafe
             let epoch_stmt = trans.prepare("select nextval('fact_epoch')")?;
             let epoch: Epoch = epoch_stmt.query(&[])?.iter().next().unwrap().get(0);
 
-            let pending_stmt = trans
-                .prepare(&format!("insert into pending_facts VALUES {}",
-                                  (0..out.len())
-                                      .map(|i| format!("(${}, ${})", i * 2 + 1, i * 2 + 2))
-                                      .collect::<Vec<_>>()
-                                      .join(", ")))?;
+            let pending_stmt = trans.prepare(&format!(
+                "insert into pending_facts VALUES {}",
+                (0..out.len())
+                    .map(|i| format!("(${}, ${})", i * 2 + 1, i * 2 + 2))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ))?;
             let out_vec: Vec<Box<ToSql>> = out.iter()
                 .flat_map(|x| {
-                              vec![
+                    vec![
                         Box::new(x.get::<_, FactId>(0)) as Box<ToSql>,
                         Box::new(epoch) as Box<ToSql>,
-                    ]
-                                      .into_iter()
-                          })
+                    ].into_iter()
+                })
                 .collect();
             let out_sql: Vec<&ToSql> = out_vec.iter().map(|x| x.as_ref()).collect::<Vec<_>>();
             pending_stmt.query(out_sql.as_slice())?;
@@ -543,13 +564,14 @@ impl PgDB {
     /// of the database object in order to allow reconnecting to an existing
     /// database.
     pub fn add_type(&self, type_: Type) -> Result<()> {
-        let name = type_
-            .name()
-            .ok_or(ErrorKind::Arg("Tried to add a type with no name".to_string()))?;
+        let name = type_.name().ok_or(ErrorKind::Arg(
+            "Tried to add a type with no name".to_string(),
+        ))?;
         if !self.named_types.borrow().contains_key(name) {
-            self.named_types
-                .borrow_mut()
-                .insert(name.to_owned(), type_.clone());
+            self.named_types.borrow_mut().insert(
+                name.to_owned(),
+                type_.clone(),
+            );
             self.rebuild_predicate_cache()
         } else {
             bail!(ErrorKind::Type(format!("{} already registered", name)))
@@ -561,10 +583,7 @@ impl PgDB {
     /// queries, since it allows you to use names of types when declaring
     /// functions rather than type objects.
     pub fn get_type(&self, type_str: &str) -> Option<Type> {
-        self.named_types
-            .borrow()
-            .get(type_str)
-            .map(|x| x.clone())
+        self.named_types.borrow().get(type_str).map(|x| x.clone())
     }
 
     /// Fetches a predicate by name
@@ -584,19 +603,23 @@ impl PgDB {
     pub fn new_predicate(&self, pred: &Predicate) -> Result<()> {
         // The predicate name is used as a table name, check it for legality
         if !valid_name(&pred.name) {
-            bail!(ErrorKind::Arg("Invalid name: Use lowercase and \
+            bail!(ErrorKind::Arg(
+                "Invalid name: Use lowercase and \
                                  underscores only"
-                                         .to_string()));
+                    .to_string(),
+            ));
         }
         // If this predicate was already registered, check for a match
         match self.pred_by_name.borrow().get(&pred.name) {
             Some(existing) => {
                 if existing != pred {
-                    bail!(ErrorKind::Arg(format!("Predicate {} already registered at a \
+                    bail!(ErrorKind::Arg(format!(
+                        "Predicate {} already registered at a \
                                                   different type.\nExisting: {:?}\nNew: {:?}",
-                                                 &pred.name,
-                                                 existing,
-                                                 pred)));
+                        &pred.name,
+                        existing,
+                        pred
+                    )));
                 } else {
                     return Ok(());
                 }
@@ -606,20 +629,22 @@ impl PgDB {
 
         try!(self.insert_predicate(&pred));
         self.gen_insert_stmt(&pred);
-        self.pred_by_name
-            .borrow_mut()
-            .insert(pred.name.clone(), pred.clone());
+        self.pred_by_name.borrow_mut().insert(
+            pred.name.clone(),
+            pred.clone(),
+        );
         Ok(())
     }
 
     /// Attempt to match the right hand side of a datalog rule against the
     /// database, returning a list of solution assignments to the bound
     /// variables.
-    pub fn search_facts<'a>(&self,
-                            query: &Vec<Clause>,
-                            epoch: Option<Epoch>,
-                            trans: &'a Transaction<'a>)
-                            -> Result<Query<'a, 'a>> {
+    pub fn search_facts<'a>(
+        &self,
+        query: &Vec<Clause>,
+        epoch: Option<Epoch>,
+        trans: &'a Transaction<'a>,
+    ) -> Result<Query<'a, 'a>> {
         // Check there is at least one clause
         if query.len() == 0 {
             bail!(ErrorKind::Arg("Empty search query".to_string()));
@@ -632,14 +657,13 @@ impl PgDB {
         {
             let mut var_type: Vec<Type> = Vec::new();
             for clause in query.iter() {
-                let pred = match self.pred_by_name
-                          .borrow()
-                          .get(&clause.pred_name)
-                          .cloned() {
+                let pred = match self.pred_by_name.borrow().get(&clause.pred_name).cloned() {
                     Some(pred) => pred,
                     None => {
-                        bail!(ErrorKind::Arg(format!("{} is not a registered predicate.",
-                                                     clause.pred_name)))
+                        bail!(ErrorKind::Arg(format!(
+                            "{} is not a registered predicate.",
+                            clause.pred_name
+                        )))
                     }
                 };
                 for &(ref proj, ref binding) in clause.args.iter() {
@@ -652,16 +676,20 @@ impl PgDB {
                             if v == var_type.len() {
                                 var_type.push(type_)
                             } else if v > var_type.len() {
-                                bail!(ErrorKind::Arg(format!("Hole between {} and {} in \
+                                bail!(ErrorKind::Arg(format!(
+                                    "Hole between {} and {} in \
                                                               variable numbering.",
-                                                             var_type.len() - 1,
-                                                             v)));
+                                    var_type.len() - 1,
+                                    v
+                                )));
                             } else if &var_type[v] != &type_ {
-                                bail!(ErrorKind::Arg(format!("Variable {} attempt to unify \
+                                bail!(ErrorKind::Arg(format!(
+                                    "Variable {} attempt to unify \
                                                               incompatible types {:?} and {:?}",
-                                                             v,
-                                                             var_type[v],
-                                                             type_)));
+                                    v,
+                                    var_type[v],
+                                    type_
+                                )));
                             }
                         }
                     }
@@ -742,15 +770,19 @@ impl PgDB {
 
         let vars = format!("{}", merge_vars.join(", "));
         let cache_clause = epoch.map(|epoch| {
-            (format!("(epoch >= ${}) AND ({})",
-                     param_num,
-                     query
-                         .iter()
-                         .enumerate()
-                         .map(|(n, _)| format!("fact_id = t{}.id", n))
-                         .collect::<Vec<_>>()
-                         .join(" OR ")),
-             epoch)
+            (
+                format!(
+                    "(epoch >= ${}) AND ({})",
+                    param_num,
+                    query
+                        .iter()
+                        .enumerate()
+                        .map(|(n, _)| format!("fact_id = t{}.id", n))
+                        .collect::<Vec<_>>()
+                        .join(" OR ")
+                ),
+                epoch,
+            )
         });
         match cache_clause {
             Some((clause, epoch)) => {
@@ -763,36 +795,36 @@ impl PgDB {
         }
         tables.reverse();
         restricts.reverse();
-        let main_table =
-            tables
-                .pop()
-                .ok_or(ErrorKind::Internal(format!("Match clause accesses no tables")))?;
+        let main_table = tables.pop().ok_or(ErrorKind::Internal(
+            format!("Match clause accesses no tables"),
+        ))?;
         let join_query = tables
             .iter()
             .map(|table| format!("JOIN {} ON true", table))
             .collect::<Vec<_>>()
             .join(" ");
         let where_clause = format!("WHERE {}", restricts.join(" AND "));
-        let raw_stmt = format!("SELECT {} FROM {} {} {}",
-                               vars,
-                               main_table,
-                               join_query,
-                               where_clause);
+        let raw_stmt = format!(
+            "SELECT {} FROM {} {} {}",
+            vars,
+            main_table,
+            join_query,
+            where_clause
+        );
         trace!("search_facts: {}", raw_stmt);
         Ok(Query {
-               stmt: trans.prepare_cached(&raw_stmt)?,
-               trans: trans,
-               fact_ids: fact_ids.len(),
-               vals: vals,
-               var_types: var_types,
-           })
+            stmt: trans.prepare_cached(&raw_stmt)?,
+            trans: trans,
+            fact_ids: fact_ids.len(),
+            vals: vals,
+            var_types: var_types,
+        })
     }
 }
 
 fn valid_name(name: &String) -> bool {
-    name.chars()
-        .all(|ch| match ch {
-                 'a'...'z' | '_' => true,
-                 _ => false,
-             })
+    name.chars().all(|ch| match ch {
+        'a'...'z' | '_' => true,
+        _ => false,
+    })
 }

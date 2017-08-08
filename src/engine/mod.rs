@@ -16,7 +16,7 @@ use std::rc::Rc;
 use futures::{Async, BoxFuture, Future, Poll, Stream, done};
 use futures::task::{Task, current};
 
-#[derive(Clone,Copy,PartialEq,Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum RuleState {
     Idle,
     Running,
@@ -24,7 +24,7 @@ enum RuleState {
     ShutDown,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 struct GcEpoch {
     state: Rc<RefCell<Vec<Option<Epoch>>>>,
     pending: Rc<RefCell<Vec<bool>>>,
@@ -83,7 +83,7 @@ impl GcEpoch {
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 struct Signal {
     state: Rc<Cell<RuleState>>,
     referents: Rc<RefCell<Vec<Task>>>,
@@ -269,13 +269,13 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
             .iter()
             .enumerate()
             .map(|(idx, &(ref proj, ref slot))| {
-                     assert_eq!(proj, &Projection::Slot(idx));
-                     match *slot {
-                         Unbound => panic!("Unbound is not allowed in substituted facts"),
-                         Var(ref n) => ans[*n as usize].clone(),
-                         Const(ref v) => v.clone(),
-                     }
-                 })
+                assert_eq!(proj, &Projection::Slot(idx));
+                match *slot {
+                    Unbound => panic!("Unbound is not allowed in substituted facts"),
+                    Var(ref n) => ans[*n as usize].clone(),
+                    Const(ref v) => v.clone(),
+                }
+            })
             .collect(),
     }
 }
@@ -293,13 +293,10 @@ impl Engine {
         };
         let gc_future = {
             let fdb = engine.fact_db.clone();
-            engine
-                .gc_epoch
-                .clone()
-                .for_each(move |epoch| {
-                              fdb.purge_pending(epoch).unwrap();
-                              Ok(())
-                          })
+            engine.gc_epoch.clone().for_each(move |epoch| {
+                fdb.purge_pending(epoch).unwrap();
+                Ok(())
+            })
         };
         engine.event_loop.spawn(gc_future);
         engine
@@ -325,7 +322,9 @@ impl Engine {
 
         // Verify we have at least one argument
         if pred.fields.len() == 0 {
-            bail!(ErrorKind::Invalid("Predicates must have at least one argument.".to_string()));
+            bail!(ErrorKind::Invalid(
+                "Predicates must have at least one argument.".to_string(),
+            ));
         }
 
         // Check for existing predicates/type issues
@@ -335,7 +334,9 @@ impl Engine {
                     // TODO should this be return ()
                     ()
                 } else {
-                    bail!(ErrorKind::Type(format!("{:?} != {:?}", pred.fields, p.fields)));
+                    bail!(ErrorKind::Type(
+                        format!("{:?} != {:?}", pred.fields, p.fields),
+                    ));
                 }
             }
             None => (),
@@ -366,14 +367,18 @@ impl Engine {
         match self.fact_db.get_predicate(&fact.pred_name) {
             Some(ref pred) => {
                 if (fact.args.len() != pred.fields.len()) ||
-                   (!fact.args
-                         .iter()
-                         .zip(pred.fields.iter())
-                         .all(|(val, field)| val.type_() == field.type_.clone())) {
-                    bail!(ErrorKind::Type(format!("Fact ({:?}) does not \
+                    (!fact.args.iter().zip(pred.fields.iter()).all(
+                        |(val, field)| {
+                            val.type_() == field.type_.clone()
+                        },
+                    ))
+                {
+                    bail!(ErrorKind::Type(format!(
+                        "Fact ({:?}) does not \
                                                    match predicate ({:?})",
-                                                  fact,
-                                                  pred.fields)));
+                        fact,
+                        pred.fields
+                    )));
                 }
             }
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),
@@ -414,18 +419,19 @@ impl Engine {
 
     /// Render a predicate as an html table
     pub fn render(&self, pred_name: &String) -> Result<String> {
-        let pred = self.get_predicate(pred_name)?
-            .ok_or(ErrorKind::Invalid("Predicate absent".to_string()))?;
+        let pred = self.get_predicate(pred_name)?.ok_or(ErrorKind::Invalid(
+            "Predicate absent".to_string(),
+        ))?;
         let data = self.derive(&vec![
-                Clause {
-                    pred_name: pred_name.to_string(),
-                    args: pred.fields
-                        .iter()
-                        .enumerate()
-                        .map(|(i, _)| (Projection::Slot(i), MatchExpr::Var(i)))
-                        .collect(),
-                },
-            ])?;
+            Clause {
+                pred_name: pred_name.to_string(),
+                args: pred.fields
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| (Projection::Slot(i), MatchExpr::Var(i)))
+                    .collect(),
+            },
+        ])?;
         let descr = match pred.description {
             Some(descr) => format!("<h3>{}</h3><br />", descr),
             None => "".to_string(),
@@ -484,12 +490,15 @@ impl Engine {
                     epoch = Some(query.epoch() + 1);
                     let states_0 = query.run();
                     trace!("Query submitted");
-                    let mut states: Box<Iterator<Item = (Vec<FactId>,
-                                                         Vec<Value>)>> =
-                        Box::new(states_0.map(|state| {
-                                                  results += 1;
-                                                  state
-                                              }));
+                    let mut states: Box<
+                        Iterator<
+                            Item = (Vec<FactId>,
+                                    Vec<Value>),
+                        >,
+                    > = Box::new(states_0.map(|state| {
+                        results += 1;
+                        state
+                    }));
                     for where_clause in rule.wheres.iter() {
                         let wc = where_clause.clone();
                         let bf = &funcs;
@@ -506,8 +515,9 @@ impl Engine {
                     trace!("Insertions beginning");
                     for state in states {
                         if fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
-                               .unwrap()
-                               .is_some() {
+                            .unwrap()
+                            .is_some()
+                        {
                             productive += 1;
                         }
                     }
@@ -516,9 +526,11 @@ impl Engine {
                 trace!("Committing transaction");
                 trans.commit().unwrap();
                 trace!("Transaction committed");
-                trace!("Generated {} results, turned into {} facts.",
-                       results,
-                       productive);
+                trace!(
+                    "Generated {} results, turned into {} facts.",
+                    results,
+                    productive
+                );
 
                 if productive > 0 {
                     for buddy in buddies.borrow().0.iter() {
@@ -577,12 +589,12 @@ fn bind(lhs: &BindExpr, rhs: Value, state: &Vec<Value>) -> Vec<Vec<Value>> {
                 } else {
                     vec![]
                 }
-                // If the variable is to be defined, define it
+            // If the variable is to be defined, define it
             } else if v == state.len() {
                 let mut next = state.clone();
                 next.push(rhs.clone());
                 vec![next]
-                // Otherwise it is a malformed binding
+            // Otherwise it is a malformed binding
             } else {
                 panic!("Variable out of range")
             }

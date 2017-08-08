@@ -167,7 +167,7 @@ pub mod types {
     /// The Trap type is used to represent types not yet present in the program,
     /// but present in the database. Most forms of interaction with a trap type
     /// will take down the program.
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct Trap;
     impl TypeT for Trap {
         typet_boiler!();
@@ -190,7 +190,7 @@ pub mod types {
 
     /// A tuple of other `Type`s
     /// This type is anonymous.
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct Tuple {
         elements: Vec<Type>,
     }
@@ -218,16 +218,13 @@ pub mod types {
             Some(values::Tuple::new(out))
         }
         fn repr(&self) -> Vec<::std::string::String> {
-            self.elements
-                .iter()
-                .flat_map(|elem| elem.repr())
-                .collect()
+            self.elements.iter().flat_map(|elem| elem.repr()).collect()
         }
     }
 
     /// A list of another `Type`
     /// This type is anonymous.
-    #[derive(Debug,Clone,Hash)]
+    #[derive(Debug, Clone, Hash)]
     pub struct List {
         elem: Type,
     }
@@ -272,7 +269,7 @@ pub mod types {
     }
 
     /// Boolean type
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct Bool;
     impl TypeT for Bool {
         typet_boiler!();
@@ -288,7 +285,7 @@ pub mod types {
     }
 
     /// Unsigned 64-bit int type
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct UInt64;
 
     impl TypeT for UInt64 {
@@ -297,8 +294,9 @@ pub mod types {
             Some("uint64")
         }
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
-            rows.next()
-                .map(|x: i64| values::UInt64::new(x as u64) as Value)
+            rows.next().map(
+                |x: i64| values::UInt64::new(x as u64) as Value,
+            )
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["int8".to_string()]
@@ -307,7 +305,7 @@ pub mod types {
 
     /// `String` type
     /// Use this for text. If you want to store a buffer, use `Bytes` instead.
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct String;
 
     impl TypeT for String {
@@ -325,7 +323,7 @@ pub mod types {
 
     /// `Bytes` is for storing raw data
     /// If you want to store text, use the `String` type.
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct Bytes;
 
     impl TypeT for Bytes {
@@ -344,7 +342,7 @@ pub mod types {
     /// `LargeBytes` is for storing raw data which should not be considered
     /// in uniqueness checks
     /// If you want to store text, use the `String` type.
-    #[derive(Debug,Clone,Hash,PartialEq)]
+    #[derive(Debug, Clone, Hash, PartialEq)]
     pub struct LargeBytes;
 
     impl TypeT for LargeBytes {
@@ -357,8 +355,9 @@ pub mod types {
             Some("largebytes")
         }
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
-            rows.next()
-                .map(|v: ::std::string::String| values::LargeBytes::from_hash(&v) as Value)
+            rows.next().map(|v: ::std::string::String| {
+                values::LargeBytes::from_hash(&v) as Value
+            })
         }
         fn repr(&self) -> Vec<::std::string::String> {
             vec!["char(64)".to_string()]
@@ -466,7 +465,7 @@ pub mod values {
     }
 
     /// A list of samely typed values.
-    #[derive(Debug,Clone,PartialEq,Hash,PartialOrd,Eq)]
+    #[derive(Debug, Clone, PartialEq, Hash, PartialOrd, Eq)]
     pub struct List {
         elements: Vec<Value>,
     }
@@ -512,7 +511,7 @@ pub mod values {
 
 
     /// A tuple of potentially differently typed values.
-    #[derive(Debug,Clone,PartialEq,PartialOrd,Hash)]
+    #[derive(Debug, Clone, PartialEq, PartialOrd, Hash)]
     pub struct Tuple {
         elements: Vec<Value>,
     }
@@ -541,10 +540,7 @@ pub mod values {
             &self.elements as &Any
         }
         fn to_sql(&self) -> Vec<&ToSql> {
-            self.elements
-                .iter()
-                .flat_map(|val| val.to_sql())
-                .collect()
+            self.elements.iter().flat_map(|val| val.to_sql()).collect()
         }
         valuet_boiler!();
     }
@@ -557,7 +553,7 @@ pub mod values {
     }
 
     /// Holds a boolean
-    #[derive(Debug,PartialEq,PartialOrd,Hash)]
+    #[derive(Debug, PartialEq, PartialOrd, Hash)]
     pub struct Bool {
         val: bool,
     }
@@ -653,7 +649,7 @@ pub mod values {
     }
 
     /// Holds an unsigned 64-bit int
-    #[derive(Debug,PartialEq,PartialOrd,Hash)]
+    #[derive(Debug, PartialEq, PartialOrd, Hash)]
     pub struct UInt64 {
         val: u64,
         sql: i64,
@@ -682,14 +678,14 @@ pub mod values {
         /// Creates Holmes value holding an unsigned 64-bit integer
         pub fn new(val: u64) -> Arc<Self> {
             Arc::new(UInt64 {
-                         val: val,
-                         sql: val as i64,
-                     })
+                val: val,
+                sql: val as i64,
+            })
         }
     }
 
     /// Holds text
-    #[derive(Debug,PartialEq,PartialOrd,Hash)]
+    #[derive(Debug, PartialEq, PartialOrd, Hash)]
     pub struct String {
         val: ::std::string::String,
     }
@@ -721,7 +717,7 @@ pub mod values {
     }
 
     /// Holds raw data
-    #[derive(Debug,PartialEq,PartialOrd,Hash)]
+    #[derive(Debug, PartialEq, PartialOrd, Hash)]
     pub struct Bytes {
         val: Vec<u8>,
     }
@@ -815,9 +811,9 @@ pub mod values {
             }
             let file = File::open(path.clone()).unwrap();
             Arc::new(LargeBytes {
-                         fd: file,
-                         hash: fname,
-                     })
+                fd: file,
+                hash: fname,
+            })
         }
         /// Generate a `LargeBytes` value from its hash if already stored.
         /// This function does not have any error handling, so it should only be used if the user
@@ -825,15 +821,16 @@ pub mod values {
         pub fn from_hash(hash: &str) -> Arc<Self> {
             let file = cached_open(hash);
             Arc::new(LargeBytes {
-                         fd: file,
-                         hash: hash.to_owned(),
-                     })
+                fd: file,
+                hash: hash.to_owned(),
+            })
         }
     }
     use std::collections::HashMap;
     use std::sync::Mutex;
     lazy_static! {
-        static ref FILE_CACHE: Mutex<HashMap<::std::string::String, File>> = Mutex::new(HashMap::new());
+        static ref FILE_CACHE: Mutex<HashMap<::std::string::String, File>> =
+            Mutex::new(HashMap::new());
     }
     fn cached_open(hash: &str) -> File {
         {
@@ -850,11 +847,11 @@ pub mod values {
             .unwrap()
             .entry(hash.to_owned())
             .or_insert_with(|| {
-                                let mut path = ::std::env::home_dir().unwrap();
-                                path.push(".holmes");
-                                path.push(hash);
-                                File::open(path).unwrap()
-                            })
+                let mut path = ::std::env::home_dir().unwrap();
+                path.push(".holmes");
+                path.push(hash);
+                File::open(path).unwrap()
+            })
             .try_clone()
             .unwrap();
         use std::io::{Seek, SeekFrom};

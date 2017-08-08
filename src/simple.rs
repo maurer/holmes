@@ -30,14 +30,18 @@ fn url_encode(input: &[u8]) -> String {
 fn get_db_addr(db_num: isize) -> String {
     match env::var("HOLMES_PG_SOCK_DIR") {
         Ok(dir) => {
-            format!("postgresql://holmes@{}/holmes_test{}",
-                    url_encode(&dir.into_bytes()),
-                    db_num)
+            format!(
+                "postgresql://holmes@{}/holmes_test{}",
+                url_encode(&dir.into_bytes()),
+                db_num
+            )
         }
         _ => {
-            panic!("Testing requires HOLMES_PG_SOCK_DIR to be set to \
+            panic!(
+                "Testing requires HOLMES_PG_SOCK_DIR to be set to \
                      indicate the directory where it can find the postgres \
-                     database socket.")
+                     database socket."
+            )
         }
     }
 }
@@ -68,12 +72,13 @@ pub fn single<A>(test: &Fn(&mut Engine, &mut Core) -> Result<A>) {
 
 /// Panics on success, and suppresses an error
 pub fn should_fail<A, F>(f: F) -> Box<Fn(&mut Engine) -> Result<()>>
-    where F: 'static + Fn(&mut Engine) -> Result<A>
+where
+    F: 'static + Fn(&mut Engine) -> Result<A>,
 {
     Box::new(move |holmes: &mut Engine| {
-                 match f(holmes) {
-                     Ok(_) => panic!("should_fail"), //TODO put something more reasonable here?
-                     Err(_) => Ok(()),
-                 }
-             })
+        match f(holmes) {
+            Ok(_) => panic!("should_fail"), //TODO put something more reasonable here?
+            Err(_) => Ok(()),
+        }
+    })
 }

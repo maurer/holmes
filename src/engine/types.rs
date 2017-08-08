@@ -30,7 +30,7 @@ use pg::dyn::{Type, Value};
 ///     }]
 /// };
 /// ```
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub struct Predicate {
     /// Predicate Name
     pub name: String,
@@ -47,7 +47,7 @@ pub struct Predicate {
 /// results.
 /// The `Type` is the only required component of a field, as it defines how to
 /// actually interact with the field.
-#[derive(Clone,Debug,Hash,Eq)]
+#[derive(Clone, Debug, Hash, Eq)]
 pub struct Field {
     /// Name of field, for use in matching and instantiating predicates
     pub name: Option<String>,
@@ -63,7 +63,7 @@ pub struct Field {
 impl PartialEq for Field {
     fn eq(&self, other: &Self) -> bool {
         (self.name == other.name) && (self.description == other.description) &&
-        (self.type_.eq(&other.type_))
+            (self.type_.eq(&other.type_))
     }
 }
 
@@ -86,7 +86,7 @@ impl PartialEq for Field {
 ///   args : vec![3.to_value(), "argblarg".to_value()]
 /// };
 /// ```
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub struct Fact {
     /// Predicate name
     pub pred_name: String,
@@ -103,7 +103,7 @@ pub type Var = usize;
 
 /// A `MatchExpr` represents the possible things that could show up in a slot
 /// in the body of a rule
-#[derive(Clone,Debug,Hash,Eq)]
+#[derive(Clone, Debug, Hash, Eq)]
 pub enum MatchExpr {
     /// We do not care about the contents of the slot
     Unbound,
@@ -132,7 +132,7 @@ impl PartialEq for MatchExpr {
 /// Holmes rule where clause.
 /// It describes how to extend or limit the answer set based on the value
 /// on the right side.
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub enum BindExpr {
     /// Use the same filtering/binding rules as in a match expression
     Normal(MatchExpr),
@@ -165,7 +165,7 @@ pub enum BindExpr {
 ///               (Projection::Slot(1), MatchExpr::Var(0))]
 /// };
 /// ```
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub struct Clause {
     /// Name of the predicate to match against
     pub pred_name: String,
@@ -175,7 +175,7 @@ pub struct Clause {
 
 /// A projection is a `FactDB`-side computed value which
 /// can then be matched against.
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub enum Projection {
     /// The nth slot in the predicate being projected
     Slot(usize),
@@ -188,7 +188,7 @@ pub enum Projection {
 
 /// `Expr` represents the right hand side of the where clause sublanguage of
 /// Holmes.
-#[derive(Clone,Debug,Hash,Eq)]
+#[derive(Clone, Debug, Hash, Eq)]
 pub enum Expr {
     /// Evaluates to whatever the inner variable is defined to.
     Var(Var),
@@ -217,7 +217,7 @@ impl PartialEq for Expr {
 /// If the `body` clauses match, the `wheres` clauses are run on the answer
 /// set, producing a new answer set, and the `head` clause is instantiated
 /// at that answer set and inserted into the database.
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub struct Rule {
     /// Template for the facts this rule will output
     pub head: Clause,
@@ -230,7 +230,7 @@ pub struct Rule {
 /// A `WhereClause` is a single assignment in the Holmes sublanguage.
 /// The right hand side is evaluated, and bound to the left hand side,
 /// producing a new answer set.
-#[derive(PartialEq,Clone,Debug,Hash,Eq)]
+#[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub struct WhereClause {
     /// Instructions on how to assign the evaluated rhs
     pub lhs: BindExpr,
