@@ -1,10 +1,10 @@
 { nixpkgs ? import <nixpkgs> {}}:
 nixpkgs.callPackage (
-{ stdenv, rust, openssl, postgresql, vim_configurable }:
+{ stdenv, rust, postgresql, openssl, vim_configurable }:
 
 # Vim with rust + git support
 let vim = vim_configurable.customize {
-  name = "vim-holmes";
+  name = "vim";
   vimrcConfig.customRC = ''
     set backspace=indent,eol,start
 
@@ -26,11 +26,8 @@ let vim = vim_configurable.customize {
   ];}];
 }; in
 
-with rust;
 stdenv.mkDerivation rec {
-  name = "holmes";
-  buildInputs = [ cargo rustc
-                  openssl postgresql
-                  vim ];
+  name = "bap-rust";
+  buildInputs = [ rust postgresql openssl vim ];
 }
-) {rust = nixpkgs.rustNightly; }
+) {rust = nixpkgs.rustChannels.nightly.rust; }
