@@ -39,6 +39,7 @@ use postgres::rows::LazyRows;
 use postgres::stmt::Statement;
 use postgres::transaction::Transaction;
 use postgres::params::IntoConnectParams;
+use postgres::params;
 use postgres::types::{FromSql, ToSql};
 
 use engine::types::{Clause, Fact, Field, MatchExpr, Predicate, Projection};
@@ -70,7 +71,6 @@ mod errors {
                 }
             }
             foreign_links {
-                Connect(pg::error::ConnectError);
                 Db(pg::error::Error);
                 R2D2Init(r2d2::InitializationError);
                 R2D2Get(r2d2::GetTimeout);
@@ -213,6 +213,17 @@ impl<'a> RowIter<'a> {
     }
 }
 
+fn param_into_builder(params: &params::ConnectParams) -> params::Builder {
+    let user = params.user().unwrap();
+    let mut builder = params::ConnectParams::builder();
+    builder.port(params.port()).user(
+        user.name(),
+        user.password(),
+    );
+    params.database().map(|db| builder.database(db));
+    builder
+}
+
 /// Object representing a postgres-backed fact database instance
 pub struct PgDB {
     conn_pool: r2d2::Pool<PostgresConnectionManager>,
@@ -223,27 +234,33 @@ pub struct PgDB {
 
 impl PgDB {
     /// Create a new PgDB object by passing in a Postgres connection string
-    // TODO Add type parameters to call?
     // At the moment, persistence with custom types will result in failures
     // on a reconnect, so use a fresh database every time.
     // There's not a good way to persist custom types, so that fix will likely
     // come with optional parameters to seed types in at db startup.
-    // TODO Should we be passing in a Connection object rather than a string?
     pub fn new(uri: &str) -> Result<PgDB> {
         // Create database if it doesn't already exist and we can
-        // TODO do this only on connection failure?
-        let mut params = try!(uri.into_connect_params()
-                                  .map_err(|_| ErrorKind::UriParse));
-        match params.database.clone() {
-            Some(db) => {
-                params.database = Some("postgres".to_owned());
-                let conn = try!(Connection::connect(params, ::postgres::TlsMode::None));
-                let create_query = format!("CREATE DATABASE {}", &db);
-                // TODO only suppress db exists error
-                let _ = conn.execute(&create_query, &[]);
+        let params = try!(uri.into_connect_params().map_err(|_| ErrorKind::UriParse));
+        match Connection::connect(params.clone(), ::postgres::TlsMode::None) {
+            // Database not found
+            Err(ref db_error)
+                if db_error.code() == Some(&::postgres::error::UNDEFINED_DATABASE) &&
+                       params.database().is_some() => {
+                let pg_params = param_into_builder(&params).database("postgres").build(
+                    params
+                        .host()
+                        .clone(),
+                );
+                let create_query = format!("CREATE DATABASE {}", params.database().unwrap());
+                let conn = Connection::connect(pg_params, ::postgres::TlsMode::None)?;
+                conn.execute(&create_query, &[])?;
             }
-            None => (),
+            // If it's not a database not found error, we don't know how to recover, rethrow
+            Err(db_error) => Err(db_error)?,
+            // The test connection succeeded
+            Ok(_) => (),
         }
+
         // Establish the pool
         let manager = PostgresConnectionManager::new(uri, TlsMode::None)?;
         let pool = r2d2::Pool::new(r2d2::Config::default(), manager)?;
@@ -309,18 +326,22 @@ impl PgDB {
 
     /// Kick everyone off the database and destroy the data at the provided URI
     pub fn destroy(uri: &str) -> Result<()> {
-        let mut params = try!(uri.into_connect_params()
-                                  .map_err(|_| ErrorKind::UriParse));
-        let old_db = try!(params.database
-            .ok_or_else(||
-                    ErrorKind::Arg(format!(
-                            "No database specified to destroy in {}.", uri))));
-        params.database = Some("postgres".to_owned());
-        let conn = try!(Connection::connect(params, postgres::TlsMode::None));
-        let disco_query = format!("SELECT pg_terminate_backend(pg_stat_activity.pid) FROM \
+        let params = try!(uri.into_connect_params().map_err(|_| ErrorKind::UriParse));
+        let old_db = try!(params.database().ok_or_else(|| {
+            ErrorKind::Arg(format!("No database specified to destroy in {}.", uri))
+        }));
+        let pg_params = param_into_builder(&params).database("postgres").build(
+            params
+                .host()
+                .clone(),
+        );
+        let conn = Connection::connect(pg_params, postgres::TlsMode::None)?;
+        let disco_query = format!(
+            "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM \
                                    pg_stat_activity WHERE pg_stat_activity.datname = '{}' AND \
                                    pid <> pg_backend_pid()",
-                                  &old_db);
+            &old_db
+        );
         try!(conn.execute(&disco_query, &[]));
         let drop_query = format!("DROP DATABASE {}", &old_db);
         try!(conn.execute(&drop_query, &[]));

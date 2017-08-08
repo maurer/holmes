@@ -8,9 +8,9 @@ description = "Holmes Inference System"
 repository = "https://github.com/maurer/holmes"
 
 [dependencies]
-postgres = "0.13"
+postgres = "0.15"
 r2d2 = "0.7"
-r2d2_postgres = "0.11"
+r2d2_postgres = "0.13"
 fallible-iterator = "0.1"
 rustc-serialize = "0.3"
 log = "0.3"
@@ -20,7 +20,7 @@ tokio-core = "0.1"
 futures = "0.1"
 env_logger = "0.4"
 sha2 = "0.4"
-lazy_static = "*"
+lazy_static = "0.2"
 
 [[bench]]
 harness = false
