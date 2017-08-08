@@ -14,7 +14,7 @@ use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use futures::{Async, BoxFuture, Future, Poll, Stream, done};
-use futures::task::{Task, park};
+use futures::task::{Task, current};
 
 #[derive(Clone,Copy,PartialEq,Debug)]
 enum RuleState {
@@ -46,7 +46,7 @@ impl GcEpochHandle {
         let new_min: Epoch = state.iter().filter_map(|x| *x).min().unwrap();
         if new_min > self.parent.past.get() {
             match self.parent.task.borrow_mut().take() {
-                Some(t) => t.unpark(),
+                Some(t) => t.notify(),
                 None => (),
             }
         }
@@ -116,7 +116,7 @@ impl Signal {
             self.state.set(RuleState::Queued);
             // If the target of this signal is blocked, unblock it
             match self.task.borrow_mut().take() {
-                Some(t) => t.unpark(),
+                Some(t) => t.notify(),
                 None => (),
             }
         }
@@ -130,10 +130,10 @@ impl Signal {
 
             // We went idle, let anyone waiting for this know
             for task in self.referents.borrow().iter() {
-                task.unpark();
+                task.notify();
             }
 
-            // They'll wake up from the unpark, and so can let us
+            // They'll wake up from the notify, and so can let us
             // know if they need to be woken up again.
             self.referents.borrow_mut().truncate(0);
         }
@@ -154,7 +154,7 @@ impl Stream for Signal {
         match self.state.get() {
             Idle => {
                 trace!("None yet");
-                self.await(park());
+                self.await(current());
                 Ok(Async::NotReady)
             }
             Running => panic!("Tried to ask for more work while still running"),
@@ -189,7 +189,7 @@ impl Stream for GcEpoch {
             }
             Ok(Async::Ready(Some(new_min)))
         } else {
-            self.await(park());
+            self.await(current());
             Ok(Async::NotReady)
         }
     }
@@ -214,7 +214,7 @@ impl Future for Quiescence {
         trace!("Checking quiescence");
         for signal in self.signals.iter() {
             if !signal.dormant() {
-                signal.refer(park());
+                signal.refer(current());
                 return Ok(Async::NotReady);
             }
         }

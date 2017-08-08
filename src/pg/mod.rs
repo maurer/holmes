@@ -43,7 +43,6 @@ use postgres::types::{FromSql, ToSql};
 
 use engine::types::{Clause, Fact, Field, MatchExpr, Predicate, Projection};
 use std::cell::RefCell;
-use std::time::Instant;
 use std::sync::Arc;
 
 pub mod dyn;
@@ -84,7 +83,13 @@ pub use self::errors::*;
 use self::dyn::types;
 use self::dyn::{Type, Value};
 
+/// FactId is intended as a database-wide identifier for a fact - they are unique across tables and
+/// are intended for caching already run rules and recording providence.
 pub type FactId = i64;
+
+/// The Epoch is a measure of forward time in the database. The purpose is to gc the "live facts"
+/// table when all rules have seen facts from an epoch after some fact in the table. Roughly the
+/// epoch counter matches the number of insert queries that have been done on the fact table.
 pub type Epoch = i64;
 
 fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &String) -> Vec<String> {
@@ -121,6 +126,8 @@ pub struct RowIter<'a> {
     index: usize,
 }
 
+/// A prepared query within a transaction.
+/// This abstraction is primarily to satisfy lifetime bounds during a lazy query.
 pub struct Query<'trans, 'stmt> {
     stmt: Statement<'stmt>,
     trans: &'trans Transaction<'trans>,
@@ -128,9 +135,9 @@ pub struct Query<'trans, 'stmt> {
     fact_ids: usize,
     var_types: Vec<Type>,
 }
-// -> Result<QueryIter<'rows>>
 
 impl<'trans, 'stmt> Query<'trans, 'stmt> {
+    /// Actually runs the query stored inside, transforming it into a lazy query iterator
     pub fn run(&self) -> QueryIter {
         let sql: Vec<_> = self.vals.iter().flat_map(|x| x.to_sql()).collect();
         trace!("Starting incremental query");
@@ -142,6 +149,7 @@ impl<'trans, 'stmt> Query<'trans, 'stmt> {
             var_types: self.var_types.clone(),
         }
     }
+    /// Gives the max epoch that this query can see
     pub fn epoch(&self) -> Epoch {
         match self.trans
                   .query("select max(epoch) from pending_facts", &[])
@@ -154,6 +162,8 @@ impl<'trans, 'stmt> Query<'trans, 'stmt> {
     }
 }
 
+/// A lazy query in the process of running. This iterator yields the result rows, one at a time, as
+/// vectors of values labeled with fact IDs used as a source for them.
 pub struct QueryIter<'trans, 'stmt> {
     rows: LazyRows<'trans, 'stmt>,
     fact_ids: usize,
@@ -285,12 +295,14 @@ impl PgDB {
         Ok(db)
     }
 
+    /// Delete from the pending facts table facts older than the provided epoch
     pub fn purge_pending(&self, epoch: Epoch) -> Result<()> {
         self.conn()?
             .execute("delete from pending_facts where epoch < $1", &[&epoch])?;
         Ok(())
     }
 
+    /// Take a connection from the pool, if available
     pub fn conn(&self) -> Result<r2d2::PooledConnection<PostgresConnectionManager>> {
         Ok(self.conn_pool.get()?)
     }

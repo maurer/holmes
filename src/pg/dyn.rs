@@ -752,10 +752,10 @@ pub mod values {
         }
     }
 
-    /// Holds large raw data
-    use std::path::PathBuf;
     use std::fs::File;
     #[derive(Debug)]
+    /// Holds large raw data - if your buffer is larger than 256 bytes, you probably want to use
+    /// this rather than `Bytes`
     pub struct LargeBytes {
         hash: ::std::string::String,
         fd: File,
@@ -800,7 +800,6 @@ pub mod values {
         /// Creates a new Holmes value holding raw data.
         pub fn new(val: Vec<u8>) -> Arc<Self> {
             use sha2::*;
-            use std::path::Path;
             use std::fs::File;
             use std::io::Write;
             use rustc_serialize::hex::ToHex;
@@ -815,12 +814,14 @@ pub mod values {
                 file.write_all(&val).unwrap();
             }
             let file = File::open(path.clone()).unwrap();
-            let path_string = path.to_str().unwrap().to_owned();
             Arc::new(LargeBytes {
                          fd: file,
                          hash: fname,
                      })
         }
+        /// Generate a `LargeBytes` value from its hash if already stored.
+        /// This function does not have any error handling, so it should only be used if the user
+        /// is certain the value has already been stored.
         pub fn from_hash(hash: &str) -> Arc<Self> {
             let file = cached_open(hash);
             Arc::new(LargeBytes {
