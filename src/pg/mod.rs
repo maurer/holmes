@@ -40,7 +40,7 @@ use postgres::stmt::Statement;
 use postgres::transaction::Transaction;
 use postgres::params::IntoConnectParams;
 use postgres::params;
-use postgres::types::{FromSql, ToSql};
+use postgres::types::FromSql;
 
 use engine::types::{Clause, Fact, Field, MatchExpr, Predicate, Projection};
 use std::cell::RefCell;
@@ -86,11 +86,6 @@ use self::dyn::{Type, Value};
 /// FactId is intended as a database-wide identifier for a fact - they are unique across tables and
 /// are intended for caching already run rules and recording providence.
 pub type FactId = i64;
-
-/// The Epoch is a measure of forward time in the database. The purpose is to gc the "live facts"
-/// table when all rules have seen facts from an epoch after some fact in the table. Roughly the
-/// epoch counter matches the number of insert queries that have been done on the fact table.
-pub type Epoch = i64;
 
 fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &String) -> Vec<String> {
     match *e {
@@ -149,14 +144,18 @@ impl<'trans, 'stmt> Query<'trans, 'stmt> {
             var_types: self.var_types.clone(),
         }
     }
-    /// Gives the max epoch that this query can see
-    pub fn epoch(&self) -> Epoch {
+    /// Gives the max Fact ID that this query can see
+    pub fn fact_id(&self) -> FactId {
+        // This is super incorrect in a threaded world - another transaction could
+        // advance the 'fact_id' sequence while we don't have their facts in the read snapshot.
+        // Luckily, we're async, not threaded atm, so this should be safe, just leave some holes in
+        // the fact_id sequence, which I'm not terribly choked up about.
         match self.trans
-            .query("select max(epoch) from pending_facts", &[])
+            .query("select nextval('fact_id')", &[])
             .unwrap()
             .get(0)
             .get(0) {
-            Some(epoch) => epoch,
+            Some(fact_id) => fact_id,
             _ => 0,
         }
     }
@@ -287,19 +286,6 @@ impl PgDB {
             &[],
         ));
         try!(conn.execute("create sequence if not exists fact_id", &[]));
-        try!(conn.execute(
-            "create sequence if not exists fact_epoch",
-            &[],
-        ));
-        try!(conn.execute(
-            "create table if not exists pending_facts (fact_id int8 primary key, \
-                           epoch int8)",
-            &[],
-        ));
-        try!(conn.execute(
-            "create index if not exists pf_epoch on pending_facts(epoch)",
-            &[],
-        ));
 
         // Create incremental PgDB object
         let db = PgDB {
@@ -319,15 +305,6 @@ impl PgDB {
         try!(db.rebuild_predicate_cache());
 
         Ok(db)
-    }
-
-    /// Delete from the pending facts table facts older than the provided epoch
-    pub fn purge_pending(&self, epoch: Epoch) -> Result<()> {
-        self.conn()?.execute(
-            "delete from pending_facts where epoch < $1",
-            &[&epoch],
-        )?;
-        Ok(())
     }
 
     /// Take a connection from the pool, if available
@@ -531,30 +508,6 @@ impl PgDB {
                 .flat_map(|x| x.to_sql().into_iter())
                 .collect::<Vec<_>>())
         );
-        if out.len() > 0 {
-
-            // TODO this is not async or threadsafe
-            let epoch_stmt = trans.prepare("select nextval('fact_epoch')")?;
-            let epoch: Epoch = epoch_stmt.query(&[])?.iter().next().unwrap().get(0);
-
-            let pending_stmt = trans.prepare(&format!(
-                "insert into pending_facts VALUES {}",
-                (0..out.len())
-                    .map(|i| format!("(${}, ${})", i * 2 + 1, i * 2 + 2))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ))?;
-            let out_vec: Vec<Box<ToSql>> = out.iter()
-                .flat_map(|x| {
-                    vec![
-                        Box::new(x.get::<_, FactId>(0)) as Box<ToSql>,
-                        Box::new(epoch) as Box<ToSql>,
-                    ].into_iter()
-                })
-                .collect();
-            let out_sql: Vec<&ToSql> = out_vec.iter().map(|x| x.as_ref()).collect::<Vec<_>>();
-            pending_stmt.query(out_sql.as_slice())?;
-        }
 
         Ok(out.iter().next().map(|x| x.get(0)))
     }
@@ -642,7 +595,7 @@ impl PgDB {
     pub fn search_facts<'a>(
         &self,
         query: &Vec<Clause>,
-        epoch: Option<Epoch>,
+        min_fact_id: Option<FactId>,
         trans: &'a Transaction<'a>,
     ) -> Result<Query<'a, 'a>> {
         // Check there is at least one clause
@@ -769,27 +722,25 @@ impl PgDB {
         merge_vars.extend(var_names.into_iter());
 
         let vars = format!("{}", merge_vars.join(", "));
-        let cache_clause = epoch.map(|epoch| {
+        let cache_clause = min_fact_id.map(|fid| {
             (
                 format!(
-                    "(epoch >= ${}) AND ({})",
-                    param_num,
+                    "({})",
                     query
                         .iter()
                         .enumerate()
-                        .map(|(n, _)| format!("fact_id = t{}.id", n))
+                        .map(|(n, _)| format!("${} <= t{}.id", param_num, n))
                         .collect::<Vec<_>>()
                         .join(" OR ")
                 ),
-                epoch,
+                fid,
             )
         });
         match cache_clause {
-            Some((clause, epoch)) => {
+            Some((clause, fid)) => {
                 use pg::dyn::values::ToValue;
                 restricts.push(clause);
-                tables.push(format!("pending_facts"));
-                vals.push((epoch as u64).to_value())
+                vals.push((fid as u64).to_value())
             }
             _ => (),
         }
