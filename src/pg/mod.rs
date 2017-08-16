@@ -462,14 +462,17 @@ impl PgDB {
                     .collect::<Vec<_>>()
             })
             .enumerate()
-            .filter(|&(_, (x, _))| !x)
-            .map(|(ord, (_, is_array))| if is_array {
-                     format!("md5(array_to_string(arg{}, ','))", ord)
+            .map(|(ord, (large, is_array))| if large {
+                     if is_array {
+                         format!("md5(array_to_string(arg{}, ','))", ord)
+                     } else {
+                         format!("md5(arg{}::text)", ord)
+                     }
                  } else {
-                     format!("md5(arg{}::text)", ord)
+                     format!("arg{}", ord)
                  })
             .collect::<Vec<_>>()
-            .join(" || ");
+            .join(", ");
         self.conn_pool
             .get()?
             .execute(&format!("create table facts.{} (id INT8 DEFAULT nextval('fact_id') NOT \
@@ -480,7 +483,7 @@ impl PgDB {
         if col_str != "" {
             self.conn_pool
                 .get()?
-                .execute(&format!("create unique index on facts.{} (md5({}))", name, col_str),
+                .execute(&format!("create unique index on facts.{} ({})", name, col_str),
                          &[])?;
         }
         Ok(())
