@@ -11,7 +11,7 @@ pub use std::sync::Arc;
 pub use super::pg::dyn::values::ToValue;
 pub use super::pg::dyn::{Type, Value};
 pub use super::pg::dyn::values;
-pub use super::engine::types::{Clause, Fact, MatchExpr, Projection, Rule};
+pub use super::engine::types::{Clause, Fact, MatchExpr, Rule};
 
 use super::PgDB;
 

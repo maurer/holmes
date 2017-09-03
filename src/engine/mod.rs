@@ -8,7 +8,7 @@ pub mod types;
 use std::collections::hash_map::HashMap;
 use pg::dyn::{Type, Value};
 use pg::dyn::values;
-use self::types::{BindExpr, Clause, Expr, Fact, Func, MatchExpr, Predicate, Projection, Rule};
+use self::types::{BindExpr, Clause, Expr, Fact, Func, MatchExpr, Predicate, Rule};
 use pg::{FactId, PgDB};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
@@ -180,14 +180,10 @@ fn substitute(clause: &Clause, ans: &Vec<Value>) -> Fact {
         args: clause
             .args
             .iter()
-            .enumerate()
-            .map(|(idx, &(ref proj, ref slot))| {
-                assert_eq!(proj, &Projection::Slot(idx));
-                match *slot {
-                    Unbound => panic!("Unbound is not allowed in substituted facts"),
-                    Var(ref n) => ans[*n as usize].clone(),
-                    Const(ref v) => v.clone(),
-                }
+            .map(|m_expr| match *m_expr {
+                Unbound => panic!("Unbound is not allowed in substituted facts"),
+                Var(ref n) => ans[*n as usize].clone(),
+                Const(ref v) => v.clone(),
             })
             .collect(),
     }
@@ -328,7 +324,7 @@ impl Engine {
                 args: pred.fields
                     .iter()
                     .enumerate()
-                    .map(|(i, _)| (Projection::Slot(i), MatchExpr::Var(i)))
+                    .map(|(i, _)| MatchExpr::Var(i))
                     .collect(),
             },
         ])?;

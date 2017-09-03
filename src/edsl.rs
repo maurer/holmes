@@ -151,13 +151,12 @@ macro_rules! clause {
           $(matches.insert(stringify!($field).to_string(), clause_match!($vars, b, $next, $m)));*
         };
         let args: Vec<_> = pred.fields.iter().enumerate().map(|(idx, field)| {
-            let slot = ::holmes::engine::types::Projection::Slot(idx);
             match field.name {
                 Some(ref name) => match matches.remove(name) {
-                    Some(cm) => (slot, cm.1),
-                    None => (slot, ::holmes::engine::types::MatchExpr::Unbound)
+                    Some(cm) => cm,
+                    None => ::holmes::engine::types::MatchExpr::Unbound
                 },
-                None => (slot, ::holmes::engine::types::MatchExpr::Unbound),
+                None => ::holmes::engine::types::MatchExpr::Unbound,
             }
         }).collect();
         ::holmes::engine::types::Clause {
@@ -344,7 +343,7 @@ pub mod internal {
         ($vars:ident, $n:ident, $cm:tt) => {{
             let mut b = 0;
             ::holmes::engine::types::BindExpr::Normal(
-                clause_match!($vars, b, $n, $cm).1)
+                clause_match!($vars, b, $n, $cm))
         }};
     }
 
@@ -366,7 +365,7 @@ pub mod internal {
     macro_rules! hexpr {
     ($vars:ident, $n:ident, [$hexpr_name:ident]) => {{
       let mut b = 0;
-      match clause_match!($vars, b, $n, $hexpr_name).1 {
+      match clause_match!($vars, b, $n, $hexpr_name) {
         ::holmes::engine::types::MatchExpr::Var(var_no) =>
             ::holmes::engine::types::Expr::Var(var_no),
         _ => panic!("clause_match! returned non-var for var input")
@@ -381,19 +380,6 @@ pub mod internal {
           stringify!($hexpr_func).to_string(),
           vec![$(hexpr!($vars, $n, $hexpr_arg)),*])
     };
-  }
-
-    #[macro_export]
-    macro_rules! db_expr {
-    ($vars:ident, ($v:expr)) => {{
-       ::holmes::engine::types::Projection::U64($v)
-    }};
-    ($vars:ident, [$n:ident]) => {{
-       match $vars.get(stringify!($n)) {
-         Some(varnum) => ::holmes::engine::types::Projection::Var(*varnum),
-         None => panic!("Referenced undefined variable in substring clause")
-       }
-    }};
   }
 
     /// Generates a `MatchExpr` from a representation
@@ -414,28 +400,25 @@ pub mod internal {
     macro_rules! clause_match {
     ($vars:ident, $m:ident, $n:ident, [_]) => {{
         $m = $m + 1;
-        let col = ::holmes::engine::types::Projection::Slot($m - 1);
-        (col, ::holmes::engine::types::MatchExpr::Unbound)
+        ::holmes::engine::types::MatchExpr::Unbound
     }};
     ($vars:ident, $m:ident, $n:ident, ($v:expr)) => {{
         $m = $m + 1;
-        let col = ::holmes::engine::types::Projection::Slot($m - 1);
-        (col, ::holmes::engine::types::MatchExpr::Const(
-            ::holmes::pg::dyn::values::ToValue::to_value($v)))
+        ::holmes::engine::types::MatchExpr::Const(
+            ::holmes::pg::dyn::values::ToValue::to_value($v))
     }};
     ($vars:ident, $b:ident, $n:ident, $m:ident) => {{
       use std::collections::hash_map::Entry::*;
       use ::holmes::engine::types::MatchExpr::*;
       $b = $b + 1;
-      let col = ::holmes::engine::types::Projection::Slot($b - 1);
-      (col, match $vars.entry(stringify!($m).to_string()) {
+      match $vars.entry(stringify!($m).to_string()) {
         Occupied(entry) => Var(*entry.get()),
         Vacant(entry) => {
           $n = $n + 1;
           entry.insert($n - 1);
           Var($n - 1)
         }
-      })
+      }
     }};
   }
 }

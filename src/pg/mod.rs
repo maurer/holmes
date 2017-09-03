@@ -42,9 +42,8 @@ use postgres::params::IntoConnectParams;
 use postgres::params;
 use postgres::types::FromSql;
 
-use engine::types::{Clause, Fact, Field, MatchExpr, Predicate, Projection};
+use engine::types::{Clause, Fact, Field, MatchExpr, Predicate};
 use std::cell::RefCell;
-use std::sync::Arc;
 
 pub mod dyn;
 
@@ -87,30 +86,16 @@ use self::dyn::{Type, Value};
 /// are intended for caching already run rules and recording providence.
 pub type FactId = i64;
 
-fn db_expr(e: &Projection, types: &Vec<Field>, names: &Vec<String>, table: &String) -> Vec<String> {
-    match *e {
-        Projection::U64(v) => vec![format!("{}", v)],
-        Projection::Var(v) => vec![format!("{}", names[v])],
-        Projection::Slot(n) => {
-            let base = types
-                .iter()
-                .take(n)
-                .map(|field| field.type_.repr().len())
-                .sum();
-            let len = types[n].type_.repr().len();
-            (base..(base + len))
-                .map(|k: usize| format!("{}.arg{}", table, k))
-                .collect::<Vec<_>>()
-        }
-    }
-}
-
-fn db_type(e: &Projection, fields: &Vec<Field>, var_types: &Vec<Type>) -> Result<Type> {
-    match *e {
-        Projection::U64(_) => Ok(Arc::new(types::UInt64)),
-        Projection::Var(v) => Ok(var_types[v].clone()),
-        Projection::Slot(n) => Ok(fields[n].type_.clone()),
-    }
+fn db_col_expr(n: usize, types: &Vec<Field>, table: &String) -> Vec<String> {
+    let base = types
+        .iter()
+        .take(n)
+        .map(|field| field.type_.repr().len())
+        .sum();
+    let len = types[n].type_.repr().len();
+    (base..(base + len))
+        .map(|k: usize| format!("{}.arg{}", table, k))
+        .collect::<Vec<_>>()
 }
 
 /// An iterator over a `postgres::rows::Row`.
@@ -640,13 +625,13 @@ impl PgDB {
                         )))
                     }
                 };
-                for &(ref proj, ref binding) in clause.args.iter() {
+                for (n, binding) in clause.args.iter().enumerate() {
                     match *binding {
                         MatchExpr::Unbound |
                         MatchExpr::Const(_) => (),
                         MatchExpr::Var(v) => {
                             let v = v as usize;
-                            let type_ = db_type(proj, &pred.fields, &var_type)?;
+                            let type_ = pred.fields[n].type_.clone();
                             if v == var_type.len() {
                                 var_type.push(type_)
                             } else if v > var_type.len() {
@@ -697,8 +682,8 @@ impl PgDB {
                 .clone();
             fact_ids.push(format!("{}.id", alias_name));
             let mut clause_elements = Vec::new();
-            for &(ref proj, ref arg) in clause.args.iter() {
-                let proj_str = db_expr(&proj, &pred.fields, &var_names, &alias_name);
+            for (n, arg) in clause.args.iter().enumerate() {
+                let proj_str = db_col_expr(n, &pred.fields, &alias_name);
                 match *arg {
                     MatchExpr::Unbound => (),
                     MatchExpr::Var(var) => {
@@ -707,7 +692,7 @@ impl PgDB {
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
                             var_names.push(proj_str.join(", "));
-                            let type_ = db_type(proj, &pred.fields, &var_types)?;
+                            let type_ = pred.fields[n].type_.clone();
                             var_types.push(type_);
                         } else {
                             // The variable has occurred correctly, so we add it being equal

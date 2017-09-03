@@ -158,11 +158,10 @@ pub enum BindExpr {
 /// (match all `foo`s, bind the second slot to x) would be constructed as
 ///
 /// ```
-/// use holmes::engine::types::{Clause,MatchExpr,Projection};
+/// use holmes::engine::types::{Clause,MatchExpr};
 /// Clause {
 ///   pred_name : "foo".to_string(),
-///   args : vec![(Projection::Slot(0), MatchExpr::Unbound),
-///               (Projection::Slot(1), MatchExpr::Var(0))]
+///   args : vec![MatchExpr::Unbound, MatchExpr::Var(0)]
 /// };
 /// ```
 #[derive(PartialEq, Clone, Debug, Hash, Eq)]
@@ -170,20 +169,7 @@ pub struct Clause {
     /// Name of the predicate to match against
     pub pred_name: String,
     /// List of how to restrict or bind each slot
-    pub args: Vec<(Projection, MatchExpr)>,
-}
-
-/// A projection is a `FactDB`-side computed value which
-/// can then be matched against.
-#[derive(PartialEq, Clone, Debug, Hash, Eq)]
-pub enum Projection {
-    /// The nth slot in the predicate being projected
-    Slot(usize),
-    /// A variable in the match, which must be
-    /// defined elsewhere.
-    Var(Var),
-    /// An integer literal
-    U64(u64),
+    pub args: Vec<MatchExpr>,
 }
 
 /// `Expr` represents the right hand side of the where clause sublanguage of
