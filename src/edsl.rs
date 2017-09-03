@@ -135,10 +135,9 @@ macro_rules! fact {
 #[macro_export]
 macro_rules! clause {
     ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident($($m:tt),*)) => {{
-        let mut b = 0;
         ::holmes::engine::types::Clause {
             pred_name: stringify!($pred_name).to_string(),
-            args: vec![$(clause_match!($vars, b, $next, $m)),*]
+            args: vec![$(clause_match!($vars, $next, $m)),*]
         }
     }};
     ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident{$($field:ident = $m:tt),*}) => {{
@@ -146,11 +145,10 @@ macro_rules! clause {
         let pred_name = stringify!($pred_name).to_string();
         let pred = $holmes.get_predicate(&pred_name)?.unwrap();
         let mut matches = HashMap::new();
-        let mut b = 0;
         let _ = {
-          $(matches.insert(stringify!($field).to_string(), clause_match!($vars, b, $next, $m)));*
+          $(matches.insert(stringify!($field).to_string(), clause_match!($vars, $next, $m)));*
         };
-        let args: Vec<_> = pred.fields.iter().enumerate().map(|(idx, field)| {
+        let args: Vec<_> = pred.fields.iter().map(|field| {
             match field.name {
                 Some(ref name) => match matches.remove(name) {
                     Some(cm) => cm,
@@ -180,9 +178,9 @@ macro_rules! clause {
 macro_rules! query {
   ($holmes:ident, $($pred_name:ident $inner:tt)&*) => {{
     use std::collections::HashMap;
-    let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
-    let mut n : ::holmes::engine::types::Var = 0;
-    let query = vec![$(clause!($holmes, vars, n, $pred_name $inner)),*];
+    let mut _vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
+    let mut _n : ::holmes::engine::types::Var = 0;
+    let query = vec![$(clause!($holmes, _vars, _n, $pred_name $inner)),*];
     $holmes.derive(&query)
   }}
 }
@@ -219,14 +217,14 @@ macro_rules! rule {
   ($holmes:ident, $head_name:ident $head_inner:tt <= $($body_name:ident $body_inner:tt)&*,
    {$(let $bind:tt = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
-    let mut vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
-    let mut n : ::holmes::engine::types::Var = 0;
-    let body = vec![$(clause!($holmes, vars, n, $body_name $body_inner)),*];
+    let mut _vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
+    let mut _n : ::holmes::engine::types::Var = 0;
+    let body = vec![$(clause!($holmes, _vars, _n, $body_name $body_inner)),*];
     let wheres = vec![$(::holmes::engine::types::WhereClause {
-        lhs: bind_match!(vars, n, $bind),
-        rhs: hexpr!(vars, n, $hexpr)
+        lhs: bind_match!(_vars, _n, $bind),
+        rhs: hexpr!(_vars, _n, $hexpr)
     }),*];
-    let head = clause!($holmes, vars, n, $head_name $head_inner);
+    let head = clause!($holmes, _vars, _n, $head_name $head_inner);
     $holmes.new_rule(&::holmes::engine::types::Rule {
       body: body,
       head: head,
@@ -341,9 +339,8 @@ pub mod internal {
                 vec![$(bind_match!($vars, $n, $bm)),*])
         };
         ($vars:ident, $n:ident, $cm:tt) => {{
-            let mut b = 0;
             ::holmes::engine::types::BindExpr::Normal(
-                clause_match!($vars, b, $n, $cm))
+                clause_match!($vars, $n, $cm))
         }};
     }
 
@@ -364,8 +361,7 @@ pub mod internal {
     #[macro_export]
     macro_rules! hexpr {
     ($vars:ident, $n:ident, [$hexpr_name:ident]) => {{
-      let mut b = 0;
-      match clause_match!($vars, b, $n, $hexpr_name) {
+      match clause_match!($vars, $n, $hexpr_name) {
         ::holmes::engine::types::MatchExpr::Var(var_no) =>
             ::holmes::engine::types::Expr::Var(var_no),
         _ => panic!("clause_match! returned non-var for var input")
@@ -398,19 +394,16 @@ pub mod internal {
     ///   * `x` -> variable bind
     #[macro_export]
     macro_rules! clause_match {
-    ($vars:ident, $m:ident, $n:ident, [_]) => {{
-        $m = $m + 1;
+    ($vars:ident, $n:ident, [_]) => {{
         ::holmes::engine::types::MatchExpr::Unbound
     }};
-    ($vars:ident, $m:ident, $n:ident, ($v:expr)) => {{
-        $m = $m + 1;
+    ($vars:ident, $n:ident, ($v:expr)) => {{
         ::holmes::engine::types::MatchExpr::Const(
             ::holmes::pg::dyn::values::ToValue::to_value($v))
     }};
-    ($vars:ident, $b:ident, $n:ident, $m:ident) => {{
+    ($vars:ident, $n:ident, $m:ident) => {{
       use std::collections::hash_map::Entry::*;
       use ::holmes::engine::types::MatchExpr::*;
-      $b = $b + 1;
       match $vars.entry(stringify!($m).to_string()) {
         Occupied(entry) => Var(*entry.get()),
         Vacant(entry) => {
