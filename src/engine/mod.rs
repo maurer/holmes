@@ -13,7 +13,8 @@ use pg::{FactId, PgDB};
 use tokio_core::reactor::Handle;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use futures::{Async, BoxFuture, Future, Poll, Stream, done};
+use futures::{Async, Future, Poll, Stream};
+use futures::future::{FutureResult, result};
 use futures::task::{Task, current};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -63,7 +64,7 @@ impl Signal {
         }
     }
 
-    fn done(&self) -> BoxFuture<(), ()> {
+    fn done(&self) -> FutureResult<(), ()> {
         trace!("Done with work loop");
         if self.state.get() == RuleState::Running {
             trace!("And no new work arrived, going idle");
@@ -78,7 +79,7 @@ impl Signal {
             // know if they need to be woken up again.
             self.referents.borrow_mut().truncate(0);
         }
-        done(Ok(())).boxed()
+        result(Ok(()))
     }
 
     fn dormant(&self) -> bool {
