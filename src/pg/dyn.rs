@@ -100,8 +100,8 @@ pub mod types {
       () => {
           typet_inner!();
           typet_inner_eq!();
-          fn large(&self) -> Vec<usize> {
-              vec![]
+          fn large(&self) -> bool {
+              false
           }
       }
   }
@@ -118,14 +118,8 @@ pub mod types {
         /// Takes in an iterator over the row, then attempts to read a value of the
         /// type specified.
         fn extract(&self, &mut RowIter) -> Option<Value>;
-        /// Generates the database representation of the fields required. For
-        /// example,
-        /// for a bitvector this would be
-        /// ```
-        /// vec!["bytea".to_string(), "int64".to_string()]
-        /// ```
-        /// or similar, depending on how you chose to construct the size.
-        fn repr(&self) -> Vec<::std::string::String>;
+        /// Generates the database representation of the field required.
+        fn repr(&self) -> &'static str;
         /// Returns a dynamic representation of the trait object.
         ///
         /// Trait objects cannot be cast to other trait objects, even if they
@@ -140,7 +134,7 @@ pub mod types {
         fn inner_eq(&self, other: &TypeT) -> bool;
         /// List of subindexes to be ignored when checking uniqueness.
         /// Intended to be used to ignore large payloads in favor of hashes
-        fn large(&self) -> Vec<usize>;
+        fn large(&self) -> bool;
     }
 
     impl Hash for TypeT {
@@ -175,8 +169,8 @@ pub mod types {
         fn extract(&self, _rows: &mut RowIter) -> Option<Value> {
             panic!("Tried to extract from a trap")
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            vec![]
+        fn repr(&self) -> &'static str {
+            "void"
         }
     }
     impl Trap {
@@ -205,18 +199,11 @@ pub mod types {
         fn name(&self) -> Option<&'static str> {
             None
         }
-        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
-            let mut out = Vec::new();
-            for elem in self.elements.iter() {
-                match elem.extract(rows) {
-                    Some(v) => out.push(v),
-                    None => return None,
-                }
-            }
-            Some(values::Tuple::new(out))
+        fn extract(&self, _rows: &mut RowIter) -> Option<Value> {
+            panic!("Tuples cannot be extracted")
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            self.elements.iter().flat_map(|elem| elem.repr()).collect()
+        fn repr(&self) -> &'static str {
+            panic!("Tuples cannot be represented")
         }
     }
 
@@ -247,10 +234,10 @@ pub mod types {
             None
         }
         fn extract(&self, _rows: &mut RowIter) -> Option<Value> {
-            panic!("List support disabled, will be re-enabled via arrays maybe")
+            panic!("Cannot extract a list")
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            panic!("List support disabled, will be re-enabled via arrays maybe")
+        fn repr(&self) -> &'static str {
+            panic!("Cannot represent a list")
         }
     }
 
@@ -277,8 +264,8 @@ pub mod types {
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
             rows.next().map(|b| values::Bool::new(b) as Value)
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            vec!["bool".to_string()]
+        fn repr(&self) -> &'static str {
+            "bool"
         }
     }
 
@@ -296,8 +283,8 @@ pub mod types {
                 |x: i64| values::UInt64::new(x as u64) as Value,
             )
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            vec!["int8".to_string()]
+        fn repr(&self) -> &'static str {
+            "int8"
         }
     }
 
@@ -314,8 +301,8 @@ pub mod types {
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
             rows.next().map(|s| values::String::new(s) as Value)
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            vec!["varchar".to_string()]
+        fn repr(&self) -> &'static str {
+            "varchar"
         }
     }
 
@@ -332,8 +319,8 @@ pub mod types {
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
             rows.next().map(|b| values::Bytes::new(b) as Value)
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            vec!["bytea".to_string()]
+        fn repr(&self) -> &'static str {
+            "bytea"
         }
     }
 
@@ -344,11 +331,7 @@ pub mod types {
     pub struct LargeBytes;
 
     impl TypeT for LargeBytes {
-        typet_inner!();
-        typet_inner_eq!();
-        fn large(&self) -> Vec<usize> {
-            vec![0]
-        }
+        typet_boiler!();
         fn name(&self) -> Option<&'static str> {
             Some("largebytes")
         }
@@ -357,8 +340,8 @@ pub mod types {
                 values::LargeBytes::from_hash(&v) as Value
             })
         }
-        fn repr(&self) -> Vec<::std::string::String> {
-            vec!["char(64)".to_string()]
+        fn repr(&self) -> &'static str {
+            "char(64)"
         }
     }
 
@@ -453,6 +436,12 @@ pub mod values {
     impl PartialEq for ValueT {
         fn eq(&self, other: &ValueT) -> bool {
             self.inner_eq(other)
+        }
+    }
+
+    impl Ord for ValueT {
+        fn cmp(&self, other: &ValueT) -> Ordering {
+            self.inner_ord(other).unwrap()
         }
     }
 

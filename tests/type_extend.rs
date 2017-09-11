@@ -19,8 +19,8 @@ impl TypeT for BoolType {
     fn extract(&self, rows: &mut RowIter) -> Option<Value> {
         rows.next().map(|b| Arc::new(BoolValue::new(b)) as Value)
     }
-    fn repr(&self) -> Vec<String> {
-        vec!["bool".to_string()]
+    fn repr(&self) -> &'static str {
+        "bool"
     }
     fn inner(&self) -> &Any {
         self as &Any
@@ -31,8 +31,8 @@ impl TypeT for BoolType {
             _ => false,
         }
     }
-    fn large(&self) -> Vec<usize> {
-        vec![]
+    fn large(&self) -> bool {
+        false
     }
 }
 

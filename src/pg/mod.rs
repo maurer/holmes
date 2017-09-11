@@ -86,18 +86,6 @@ use self::dyn::{Type, Value};
 /// are intended for caching already run rules and recording providence.
 pub type FactId = i64;
 
-fn db_col_expr(n: usize, types: &Vec<Field>, table: &String) -> Vec<String> {
-    let base = types
-        .iter()
-        .take(n)
-        .map(|field| field.type_.repr().len())
-        .sum();
-    let len = types[n].type_.repr().len();
-    (base..(base + len))
-        .map(|k: usize| format!("{}.arg{}", table, k))
-        .collect::<Vec<_>>()
-}
-
 /// An iterator over a `postgres::rows::Row`.
 /// It does not implement the normal iter interface because it does not have
 /// a set item type, but it implements a similar interface for ease of use.
@@ -397,7 +385,6 @@ impl PgDB {
     fn gen_insert_stmt(&self, pred: &Predicate) {
         let args: Vec<String> = pred.fields
             .iter()
-            .flat_map(|x| x.type_.repr())
             .enumerate()
             .map(|(k, _)| format!("${}", k + 1))
             .collect();
@@ -444,22 +431,15 @@ impl PgDB {
         }
         let table_str = fields
             .iter()
-            .flat_map(|field| field.type_.repr())
+            .map(|field| field.type_.repr())
             .enumerate()
             .map(|(ord, repr)| format!("arg{} {}", ord, repr))
             .collect::<Vec<_>>()
             .join(", ");
         let col_str = fields
             .iter()
-            .flat_map(|field| {
-                let larges = field.type_.large();
-                field
-                    .type_
-                    .repr()
-                    .iter()
-                    .enumerate()
-                    .map(|(i, r)| (larges.contains(&i), r.contains("[]")))
-                    .collect::<Vec<_>>()
+            .map(|field| {
+                (field.type_.large(), field.type_.repr().contains("[]"))
             })
             .enumerate()
             .map(|(ord, (large, is_array))| if large {
@@ -683,7 +663,7 @@ impl PgDB {
             fact_ids.push(format!("{}.id", alias_name));
             let mut clause_elements = Vec::new();
             for (n, arg) in clause.args.iter().enumerate() {
-                let proj_str = db_col_expr(n, &pred.fields, &alias_name);
+                let proj_str = format!("{}.arg{}", alias_name, n);
                 match *arg {
                     MatchExpr::Unbound => (),
                     MatchExpr::Var(var) => {
@@ -691,13 +671,13 @@ impl PgDB {
                             // This situation means it's the first occurrence of the variable
                             // We record this definition as the canonical definition for use
                             // in the select, and store the type to know how to extract it.
-                            var_names.push(proj_str.join(", "));
+                            var_names.push(proj_str);
                             let type_ = pred.fields[n].type_.clone();
                             var_types.push(type_);
                         } else {
                             // The variable has occurred correctly, so we add it being equal
                             // to the canonical definition to the join clause for this table
-                            let piece = format!("({}) = ({})", proj_str.join(", "), var_names[var]);
+                            let piece = format!("{} = {}", proj_str, var_names[var]);
                             clause_elements.push(piece);
                         }
                     }
@@ -708,10 +688,8 @@ impl PgDB {
                         // statement, and put the index into the buffer into the where
                         // clause chunk.
                         vals.push(val.clone());
-                        for part in proj_str {
-                            restricts.push(format!("{} = ${}", part, param_num));
-                            param_num += 1;
-                        }
+                        restricts.push(format!("{} = ${}", proj_str, param_num));
+                        param_num += 1;
                     }
                 }
             }
