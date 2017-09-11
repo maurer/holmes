@@ -10,41 +10,8 @@ fn run_induction(size: u64) {
             predicate!(q(uint64))
         })?;
         for i in 0..(size - 1) {
-            holmes.new_rule(&Rule {
-                head: Clause {
-                    pred_name: "p".to_string(),
-                    args: vec![(Projection::Slot(0), MatchExpr::Const((i + 1).to_value()))],
-                },
-                body: vec![
-                    Clause {
-                        pred_name: "p".to_string(),
-                        args: vec![(Projection::Slot(0), MatchExpr::Const(i.to_value()))],
-                    },
-                    Clause {
-                        pred_name: "q".to_string(),
-                        args: vec![(Projection::Slot(0), MatchExpr::Const((i + 1).to_value()))],
-                    },
-                ],
-                wheres: vec![],
-            })?;
-            holmes.new_rule(&Rule {
-                head: Clause {
-                    pred_name: "q".to_string(),
-                    args: vec![(Projection::Slot(0), MatchExpr::Const((i + 1).to_value()))],
-                },
-                body: vec![
-                    Clause {
-                        pred_name: "p".to_string(),
-                        args: vec![(Projection::Slot(0), MatchExpr::Const(i.to_value()))],
-                    },
-                    Clause {
-                        pred_name: "q".to_string(),
-                        args: vec![(Projection::Slot(0), MatchExpr::Const(i.to_value()))],
-                    },
-                ],
-                wheres: vec![],
-            })?;
-
+            rule!(holmes, p((i + 1)) <= p((i)) & p((i + 1)))?;
+            rule!(holmes, q((i + 1)) <= q((i)) & p((i)))?;
         }
         holmes.new_fact(&Fact {
             pred_name: "p".to_string(),
