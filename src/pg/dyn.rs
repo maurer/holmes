@@ -840,8 +840,15 @@ pub mod values {
             .unwrap()
             .entry(hash.to_owned())
             .or_insert_with(|| {
-                let mut path = ::std::env::home_dir().unwrap();
-                path.push(".holmes");
+                let mut path = match ::std::env::var("HOLMES_STORAGE") {
+                    Ok(dir) => ::std::path::PathBuf::from(dir),
+                    _ => {
+                        let mut path = ::std::env::home_dir().unwrap();
+                        path.push(".holmes");
+                        path
+                    }
+                };
+
                 path.push(hash);
                 File::open(path).unwrap()
             })
