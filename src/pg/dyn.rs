@@ -786,8 +786,14 @@ pub mod values {
             use std::fs::File;
             use std::io::Write;
             use rustc_serialize::hex::ToHex;
-            let mut path = ::std::env::home_dir().unwrap();
-            path.push(".holmes");
+            let mut path = match ::std::env::var("HOLMES_STORAGE") {
+                Ok(dir) => ::std::path::PathBuf::from(dir),
+                _ => {
+                    let mut path = ::std::env::home_dir().unwrap();
+                    path.push(".holmes");
+                    path
+                }
+            };
             let mut hasher = Sha256::default();
             hasher.input(&val);
             let fname = hasher.result().to_hex();
