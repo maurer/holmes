@@ -476,7 +476,7 @@ impl PgDB {
     }
     /// Adds a new fact to the database, returning false if the fact was already
     /// present in the database, and true if it was inserted.
-    pub fn insert_fact(&self, fact: &Fact, trans: &Transaction) -> Result<Option<FactId>> {
+    pub fn insert_fact(&self, fact: &Fact) -> Result<Option<FactId>> {
         let stmt_str = try!(
             self.insert_by_name
                 .borrow()
@@ -485,7 +485,8 @@ impl PgDB {
                     ErrorKind::Internal("Insert Statement Missing".to_string())
                 })
         ).clone();
-        let stmt = trans.prepare(&stmt_str)?;
+        let conn = self.conn()?;
+        let stmt = conn.prepare_cached(&stmt_str)?;
 
 
         let out = try!(
@@ -582,8 +583,7 @@ impl PgDB {
         &self,
         query: &Vec<Clause>,
         min_fact_id: Option<FactId>,
-        trans: &'a Transaction<'a>,
-    ) -> Result<Query<'a, 'a>> {
+    ) -> Result<Vec<(Vec<FactId>, Vec<Value>)>> {
         // Check there is at least one clause
         if query.len() == 0 {
             bail!(ErrorKind::Arg("Empty search query".to_string()));
@@ -615,6 +615,10 @@ impl PgDB {
                             if v == var_type.len() {
                                 var_type.push(type_)
                             } else if v > var_type.len() {
+                                if var_type.len() == 0 {
+                                    bail!(ErrorKind::Arg(format!(
+                                                "First variable not Var(0), got Var({})", v)));
+                                }
                                 bail!(ErrorKind::Arg(format!(
                                     "Hole between {} and {} in \
                                                               variable numbering.",
@@ -747,13 +751,30 @@ impl PgDB {
             where_clause
         );
         trace!("search_facts: {}", raw_stmt);
-        Ok(Query {
-            stmt: trans.prepare_cached(&raw_stmt)?,
-            trans: trans,
-            fact_ids: fact_ids.len(),
-            vals: vals,
-            var_types: var_types,
-        })
+        let conn = self.conn()?;
+        let stmt = conn.prepare_cached(&raw_stmt)?;
+        let sql_vals: Vec<_> = vals.iter().flat_map(|x| x.to_sql()).collect();
+        let rows = stmt.query(&sql_vals)?;
+        let mut out = Vec::new();
+        for row in rows.iter() {
+          let mut row_iter = RowIter::new(&row);
+          let mut ids = Vec::new();
+          for _ in 0..fact_ids.len() {
+              match row_iter.next() {
+                  Some(e) => ids.push(e),
+                  None => panic!("Failure loading fact ids from row"),
+              }
+          }
+          let mut vars = Vec::new();
+          for var_type in var_types.iter() {
+              match var_type.extract(&mut row_iter) {
+                  Some(e) => vars.push(e),
+                  None => panic!("Failure loading var from row"),
+              }
+          }
+          out.push((ids, vars));
+        }
+        Ok(out)
     }
 }
 

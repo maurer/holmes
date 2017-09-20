@@ -7,7 +7,7 @@ pub fn register_where_rule() {
     single(&|holmes: &mut Engine, core: &mut Core| {
         holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
-      rule!(test_pred(("bar"), (vec![2u8,2u8]), x) <= test_pred(("foo"), [_], x), {
+      rule!(where_rule: test_pred(("bar"), (vec![2u8,2u8]), x) <= test_pred(("foo"), [_], x), {
         let (42) = (42)})
     })?;
         core.run(holmes.quiesce()).unwrap();
@@ -20,7 +20,7 @@ pub fn where_const() {
     single(&|holmes: &mut Engine, core: &mut Core| {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
-      rule!(test_pred(("bar"), (vec![2u8,2u8]), x) <= test_pred(("foo"), [_], [_]), {
+      rule!(where_const: test_pred(("bar"), (vec![2u8,2u8]), x) <= test_pred(("foo"), [_], [_]), {
           let x = (42)
       });
       fact!(test_pred("foo", vec![0u8,1u8], 16))
@@ -38,7 +38,7 @@ pub fn where_plus_two() {
         try!(holmes_exec!(holmes, {
       predicate!(test_pred(string, bytes, uint64));
       func!(let plus_two : uint64 -> uint64 = |v : &u64| {v + 2});
-      rule!(test_pred(("bar"), (vec![2u8,2u8]), y) <= test_pred(("foo"), [_], x), {
+      rule!(test_plus_two: test_pred(("bar"), (vec![2u8,2u8]), y) <= test_pred(("foo"), [_], x), {
         let y = {plus_two([x])}
       });
       fact!(test_pred("foo", vec![0u8,1u8], 16))
@@ -59,7 +59,7 @@ pub fn where_destructure() {
       func!(let succs : uint64 -> (uint64, uint64) = |n : &u64| {
         (n + 1, n + 2)
       });
-      rule!(test_pred(y, (vec![2u8,2u8]), z) <= test_pred((3), [_], x), {
+      rule!(test_succs: test_pred(y, (vec![2u8,2u8]), z) <= test_pred((3), [_], x), {
         let {y, z} = {succs([x])}
       });
       fact!(test_pred(3, vec![0u8,1u8], 16))
@@ -79,7 +79,7 @@ pub fn where_iter() {
       func!(let succs : uint64 -> [uint64] = |n : &u64| {
         vec![n + 1, n + 2]
       });
-      rule!(test_pred((4), (vec![2u8,2u8]), y) <= test_pred((3), [_], x), {
+      rule!(test_succ_iter: test_pred((4), (vec![2u8,2u8]), y) <= test_pred((3), [_], x), {
         let [y] = {succs([x])}
       });
       fact!(test_pred(3, vec![0u8,1u8], 16))

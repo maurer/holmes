@@ -214,7 +214,7 @@ macro_rules! query {
 /// and `bind_match!` macro docs.
 #[macro_export]
 macro_rules! rule {
-  ($holmes:ident, $head_name:ident $head_inner:tt <= $($body_name:ident $body_inner:tt)&*,
+  ($holmes:ident, $rule_name:ident : $head_name:ident $head_inner:tt <= $($body_name:ident $body_inner:tt)&*,
    {$(let $bind:tt = $hexpr:tt);*}) => {{
     use std::collections::HashMap;
     let mut _vars : HashMap<String, ::holmes::engine::types::Var> = HashMap::new();
@@ -226,23 +226,24 @@ macro_rules! rule {
     }),*];
     let head = clause!($holmes, _vars, _n, $head_name $head_inner);
     $holmes.new_rule(&::holmes::engine::types::Rule {
+      name: stringify!($rule_name).to_string(),
       body: body,
       head: head,
       wheres: wheres,
     })
   }};
-  ($holmes:ident, $($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
-      rule!($holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})
+  ($holmes:ident, $rule_name:ident : $($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
+      rule!($holmes, $rule_name : $($head_name $head_inner),* <= $($body_name $inner)&*, {})
   };
-  ($($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
+  ($rule_name:ident : $($head_name:ident $head_inner:tt),* <= $($body_name:ident $inner:tt)&*) => {
     |holmes: &mut ::holmes::Engine| {
-      rule!(holmes, $($head_name $head_inner),* <= $($body_name $inner)&*, {})
+      rule!(holmes, $rule_name : $($head_name $head_inner),* <= $($body_name $inner)&*, {})
     }
   };
-  ($($head_name:ident $head_inner:tt),* <=
+  ($rule_name:ident : $($head_name:ident $head_inner:tt),* <=
    $($body_name:ident $inner:tt)&*, {$(let $bind:tt = $hexpr:tt);*}) => {
     |holmes: &mut ::holmes::Engine| {
-      rule!(holmes, $($head_name $head_inner),* <=
+      rule!(holmes, $rule_name : $($head_name $head_inner),* <=
                     $($body_name $inner)&*, {$(let $bind = $hexpr);*})
     }
   };

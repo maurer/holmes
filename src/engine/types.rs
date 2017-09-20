@@ -205,6 +205,8 @@ impl PartialEq for Expr {
 /// at that answer set and inserted into the database.
 #[derive(PartialEq, Clone, Debug, Hash, Eq)]
 pub struct Rule {
+    /// Identifier for the rule
+    pub name: String,
     /// Template for the facts this rule will output
     pub head: Clause,
     /// Datalog body to search the database with

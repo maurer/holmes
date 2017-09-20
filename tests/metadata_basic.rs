@@ -55,7 +55,7 @@ pub fn named_field_rule() {
                                  uint64,
                                  [bar string]));
             predicate!(out_pred(string));
-            rule!(out_pred(x) <= test_pred {bar = x, foo = ("woo")});
+            rule!(test_to_out: out_pred(x) <= test_pred {bar = x, foo = ("woo")});
             fact!(test_pred("woo", 3, "Right"));
             fact!(test_pred("wow", 4, "Wrong"))
         })?;

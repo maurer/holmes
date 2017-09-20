@@ -16,6 +16,7 @@ use std::rc::Rc;
 use futures::{Async, Future, Poll, Stream};
 use futures::future::{FutureResult, result};
 use futures::task::{Task, current};
+use std::time::{Instant, Duration};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum RuleState {
@@ -137,11 +138,71 @@ impl Future for Quiescence {
     }
 }
 
+#[derive(Debug, Clone)]
+/// RuleProfile contains execution information about a single rule
+pub struct RuleProfile {
+    /// Name of the rule under profile
+    pub name: String,
+    /// Total time spent performing SQL fetch operations
+    pub select_time: Duration,
+    /// Total time spent pushing results to the database
+    pub insert_time: Duration,
+    /// Total amount of time spent inside the rule's code.
+    /// If this is not close to compute_time+sql_time,
+    /// something is missing from the profile.
+    pub rule_time: Duration,
+    /// Total amount of time spent evaluating where clauses
+    pub compute_time: Duration,
+    /// Worst case SQL fetch
+    pub max_select_time: Duration,
+    /// Worst case SQL insert
+    pub max_insert_time: Duration,
+    /// Worst case where clause
+    pub max_compute_time: Duration,
+}
+
+impl RuleProfile {
+    pub fn new(name: String) -> Self {
+        RuleProfile {
+            name: name,
+            select_time: Duration::new(0, 0),
+            insert_time: Duration::new(0, 0),
+            rule_time: Duration::new(0, 0),
+            compute_time: Duration::new(0, 0),
+            max_select_time: Duration::new(0, 0),
+            max_insert_time: Duration::new(0, 0),
+            max_compute_time: Duration::new(0, 0),
+        }
+    }
+    pub fn add_insert_time(&mut self, d: Duration) {
+        self.insert_time += d;
+        if d > self.max_insert_time {
+            self.max_insert_time = d;
+        }
+    }
+    pub fn add_select_time(&mut self, d: Duration) {
+        self.select_time += d;
+        if d > self.max_select_time {
+            self.max_select_time = d;
+        }
+    }
+    pub fn add_compute_time(&mut self, d: Duration) {
+        self.compute_time += d;
+        if d > self.max_compute_time {
+            self.max_compute_time = d;
+        }
+    }
+    pub fn add_rule_time(&mut self, d: Duration) {
+        self.rule_time += d;
+    }
+}
+
 /// The `Engine` type contains the context necessary to run a Holmes program
 pub struct Engine {
     fact_db: Rc<PgDB>,
     funcs: HashMap<String, Rc<Func>>,
     rules: HashMap<String, Rc<RefCell<Vec<Signal>>>>,
+    rule_profiles: Vec<Rc<RefCell<RuleProfile>>>,
     signals: Vec<Signal>,
     event_loop: Handle,
 }
@@ -198,8 +259,14 @@ impl Engine {
             funcs: HashMap::new(),
             rules: HashMap::new(),
             signals: Vec::new(),
+            rule_profiles: Vec::new(),
             event_loop: handle,
         }
+    }
+
+    /// Dump profiling information for how much time was spent in each rule
+    pub fn dump_profile(&self) -> Vec<RuleProfile> {
+            self.rule_profiles.iter().map(|x| x.borrow().clone()).collect()
     }
 
     /// Seach the type registry for a named type
@@ -284,14 +351,11 @@ impl Engine {
             None => bail!(ErrorKind::Invalid("Predicate not registered".to_string())),
         }
         {
-            let conn = self.fact_db.conn()?;
-            let trans = conn.transaction()?;
-            if self.fact_db.insert_fact(&fact, &trans)?.is_some() {
+            if self.fact_db.insert_fact(&fact)?.is_some() {
                 let deps = self.get_dep_rules(&fact.pred_name);
                 for signal in deps.borrow().iter() {
                     signal.signal();
                 }
-                trans.commit()?;
             }
             Ok(())
         }
@@ -306,11 +370,8 @@ impl Engine {
     /// Given a query (similar to the rhs of a rule in Datalog), provide the set
     /// of satisfying answers in the database.
     pub fn derive(&self, query: &Vec<Clause>) -> Result<Vec<Vec<Value>>> {
-        let conn = self.fact_db.conn()?;
-        let trans = conn.transaction()?;
-        let query = self.fact_db.search_facts(query, None, &trans)?;
-        let query_iter = query.run();
-        let res = query_iter.map(|x| x.1).collect();
+        let outs = self.fact_db.search_facts(query, None)?;
+        let res = outs.into_iter().map(|x| x.1).collect();
         Ok(res)
     }
 
@@ -358,8 +419,11 @@ impl Engine {
 
     /// Register a new rule with the database
     pub fn new_rule(&mut self, rule: &Rule) -> Result<()> {
+        trace!("Registering rule: {:?}", rule);
         let signal = Signal::new();
         let trigger = signal.clone();
+        let profile = Rc::new(RefCell::new(RuleProfile::new(rule.name.clone())));
+        self.rule_profiles.push(profile.clone());
         self.signals.push(signal.clone());
 
         for pred in &rule.body {
@@ -375,25 +439,23 @@ impl Engine {
             let rule = rule.clone();
             let out_signal = signal.clone();
             signal.for_each(move |_| {
-                trace!("Activating rule: {:?}", rule);
-                let conn = fdb.conn().unwrap();
-                let trans = conn.transaction().unwrap();
+                let rule_start = Instant::now();
+                trace!("Activating rule: {:?}", rule.name);
                 let mut productive: usize = 0;
-                let mut results: usize = 0;
-                {
-                    let query = fdb.search_facts(&rule.body, next_fact_id, &trans).unwrap();
-                    next_fact_id = Some(query.fact_id() + 1);
-                    let states_0 = query.run();
+                    let pre_db = Instant::now();
+                    let states_0 = fdb.search_facts(&rule.body, next_fact_id).unwrap();
+                    let sql_time = pre_db.elapsed();
+                    profile.borrow_mut().add_select_time(sql_time);
+                    next_fact_id = states_0.iter().flat_map(|x| x.0.iter()).max().map(|x| x + 1).or(next_fact_id);
+                let results = states_0.len();
                     trace!("Query submitted");
                     let mut states: Box<
                         Iterator<
                             Item = (Vec<FactId>,
                                     Vec<Value>),
                         >,
-                    > = Box::new(states_0.map(|state| {
-                        results += 1;
-                        state
-                    }));
+                    > = Box::new(states_0.into_iter());
+                    let where_start = Instant::now();
                     for where_clause in rule.wheres.iter() {
                         let wc = where_clause.clone();
                         let bf = &funcs;
@@ -407,20 +469,22 @@ impl Engine {
                         });
                         states = Box::new(next_states);
                     }
+                    let facts: Vec<Fact> = states.map(|state| substitute(&rule.head, &state.1)).collect();
+                    let compute_time = where_start.elapsed();
+                    profile.borrow_mut().add_compute_time(compute_time);
                     trace!("Insertions beginning");
-                    for state in states {
-                        if fdb.insert_fact(&substitute(&rule.head, &state.1), &trans)
+                    let insert_start = Instant::now();
+                    for fact in facts {
+                        if fdb.insert_fact(&fact)
                             .unwrap()
                             .is_some()
                         {
                             productive += 1;
                         }
                     }
+                    let insert_time = insert_start.elapsed();
+                    profile.borrow_mut().add_insert_time(insert_time);
                     trace!("Insertions done");
-                }
-                trace!("Committing transaction");
-                trans.commit().unwrap();
-                trace!("Transaction committed");
                 trace!(
                     "Generated {} results, turned into {} facts.",
                     results,
@@ -433,6 +497,8 @@ impl Engine {
                     }
                 }
 
+                let rule_elapsed = rule_start.elapsed();
+                profile.borrow_mut().add_rule_time(rule_elapsed);
                 out_signal.done()
             })
         };

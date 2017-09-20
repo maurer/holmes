@@ -17,7 +17,7 @@ fn misordered_join() {
     predicate!(out(string, uint64, uint64));
     predicate!(assoc(string, uint64, uint64));
     predicate!(look(string, uint64, uint64, uint64));
-    rule!(out(name, addr, next) <=
+    rule!(out_step: out(name, addr, next) <=
              assoc(name, [_], tgt) &
              look(name, addr, [_], next) &
              out(name, addr, tgt))

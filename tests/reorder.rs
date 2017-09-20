@@ -8,9 +8,9 @@ pub fn reorder() {
     single(&|holmes: &mut Engine, core: &mut Core| {
         holmes_exec!(holmes, {
             predicate!(foo(uint64));
-            rule!(foo((2)) <= foo((1)));
-            rule!(foo((1)) <= foo((0)));
-            rule!(foo((3)) <= foo((2)));
+            rule!(f12: foo((2)) <= foo((1)));
+            rule!(f01: foo((1)) <= foo((0)));
+            rule!(f23: foo((3)) <= foo((2)));
             fact!(foo(0))
         })?;
 
