@@ -143,7 +143,7 @@ macro_rules! clause {
     ($holmes:ident, $vars:ident, $next:ident, $pred_name:ident{$($field:ident = $m:tt),*}) => {{
         use std::collections::HashMap;
         let pred_name = stringify!($pred_name).to_string();
-        let pred = $holmes.get_predicate(&pred_name)?.unwrap();
+        let pred = $holmes.get_predicate(&pred_name).unwrap().unwrap();
         let mut matches = HashMap::new();
         let _ = {
           $(matches.insert(stringify!($field).to_string(), clause_match!($vars, $next, $m)));*

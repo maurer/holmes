@@ -741,7 +741,7 @@ pub mod values {
     /// this rather than `Bytes`
     pub struct LargeBytes {
         hash: ::std::string::String,
-        fd: File,
+        fd: Arc<File>,
     }
 
     impl PartialEq for LargeBytes {
@@ -765,7 +765,9 @@ pub mod values {
             Arc::new(types::LargeBytes)
         }
         fn get(&self) -> &Any {
-            &self.fd as &Any
+            use std::borrow::Borrow;
+            let file_borrow: &File = self.fd.borrow();
+            file_borrow as &Any
         }
         fn to_sql(&self) -> Vec<&ToSql> {
             vec![&self.hash as &ToSql]
@@ -804,7 +806,7 @@ pub mod values {
             }
             let file = File::open(path.clone()).unwrap();
             Arc::new(LargeBytes {
-                fd: file,
+                fd: Arc::new(file),
                 hash: fname,
             })
         }
@@ -822,10 +824,10 @@ pub mod values {
     use std::collections::HashMap;
     use std::sync::Mutex;
     lazy_static! {
-        static ref FILE_CACHE: Mutex<HashMap<::std::string::String, File>> =
+        static ref FILE_CACHE: Mutex<HashMap<::std::string::String, Arc<File>>> =
             Mutex::new(HashMap::new());
     }
-    fn cached_open(hash: &str) -> File {
+    fn cached_open(hash: &str) -> Arc<File> {
         {
             use std::ops::DerefMut;
             let mut cache = FILE_CACHE.lock().unwrap();
@@ -835,7 +837,7 @@ pub mod values {
                 *cache.deref_mut() = HashMap::new()
             }
         }
-        let mut file = FILE_CACHE
+        let file = FILE_CACHE
             .lock()
             .unwrap()
             .entry(hash.to_owned())
@@ -850,12 +852,9 @@ pub mod values {
                 };
 
                 path.push(hash);
-                File::open(path).unwrap()
+                Arc::new(File::open(path).unwrap())
             })
-            .try_clone()
-            .unwrap();
-        use std::io::{Seek, SeekFrom};
-        file.seek(SeekFrom::Start(0)).unwrap();
+            .clone();
         file
     }
 }
