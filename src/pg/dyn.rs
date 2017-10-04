@@ -108,7 +108,7 @@ pub mod types {
 
     /// The TypeT trait defines the interface a new Holmes type must implement
     /// to be registered.
-    pub trait TypeT: Sync + Send + HashTO + Any {
+    pub trait TypeT: HashTO + Any {
         /// For a registered type, name() will provide the way to add it to a
         /// predicate, and the thing to pattern match against when loading from the
         /// db.
@@ -386,7 +386,7 @@ pub mod values {
 
     /// This trait defines the interface any value must implement in order to be
     /// used in the Holmes language.
-    pub trait ValueT: Sync + Send + HashTO + fmt::Debug + fmt::Display + Any {
+    pub trait ValueT: HashTO + fmt::Debug + fmt::Display + Any {
         /// Returns the type of the value
         /// This is needed if to do type checking, or tuple values
         fn type_(&self) -> Type;
@@ -741,7 +741,7 @@ pub mod values {
     /// this rather than `Bytes`
     pub struct LargeBytes {
         hash: ::std::string::String,
-        fd: Arc<File>,
+        fd: Rc<File>,
     }
 
     impl PartialEq for LargeBytes {
@@ -806,7 +806,7 @@ pub mod values {
             }
             let file = File::open(path.clone()).unwrap();
             Arc::new(LargeBytes {
-                fd: Arc::new(file),
+                fd: Rc::new(file),
                 hash: fname,
             })
         }
@@ -822,25 +822,25 @@ pub mod values {
         }
     }
     use std::collections::HashMap;
-    use std::sync::Mutex;
-    lazy_static! {
-        static ref FILE_CACHE: Mutex<HashMap<::std::string::String, Arc<File>>> =
-            Mutex::new(HashMap::new());
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    thread_local! {
+        pub static FILE_CACHE: RefCell<HashMap<::std::string::String, Rc<File>>> =
+            RefCell::new(HashMap::new());
     }
-    fn cached_open(hash: &str) -> Arc<File> {
+    fn cached_open(hash: &str) -> Rc<File> {
         {
             use std::ops::DerefMut;
-            let mut cache = FILE_CACHE.lock().unwrap();
-            if cache.len() > 100 {
+            FILE_CACHE.with(|cache|
+            if cache.borrow().len() > 100 {
                 // We're thrashing on file descriptors, drop the cache
                 trace!("FILE_CACHE THRASHING");
-                *cache.deref_mut() = HashMap::new()
+                *cache.borrow_mut() = HashMap::new()
             }
+            )
         }
-        let file = FILE_CACHE
-            .lock()
-            .unwrap()
-            .entry(hash.to_owned())
+        let file = FILE_CACHE.with(|cache|
+            cache.borrow_mut().entry(hash.to_owned())
             .or_insert_with(|| {
                 let mut path = match ::std::env::var("HOLMES_STORAGE") {
                     Ok(dir) => ::std::path::PathBuf::from(dir),
@@ -852,9 +852,9 @@ pub mod values {
                 };
 
                 path.push(hash);
-                Arc::new(File::open(path).unwrap())
+                Rc::new(File::open(path).unwrap())
             })
-            .clone();
+            .clone());
         file
     }
 }
