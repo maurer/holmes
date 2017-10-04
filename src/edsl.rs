@@ -271,7 +271,7 @@ macro_rules! func {
                      ::holmes::engine::types::Func {
                        input_type: src,
                        output_type: dst,
-                       run: Box::new(|v : ::holmes::pg::dyn::Value| {
+                       run: Box::new(move |v : ::holmes::pg::dyn::Value| {
                        ::holmes::pg::dyn::values::ToValue::to_value($body(typed_unpack!(v, $src)))
                      })})
   }};
