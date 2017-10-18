@@ -264,6 +264,15 @@ impl Engine {
         }
     }
 
+    pub fn run_sql(&self, path: &str) {
+        use std::io::Read;
+        let mut fd = ::std::fs::File::open(path).unwrap();
+        let mut sql = String::new();
+        fd.read_to_string(&mut sql);
+        let conn = self.fact_db.conn().unwrap();
+        conn.batch_execute(&sql).unwrap();
+    }
+
     /// Dump profiling information for how much time was spent in each rule
     pub fn dump_profile(&self) -> Vec<RuleProfile> {
             self.rule_profiles.iter().map(|x| x.borrow().clone()).collect()
