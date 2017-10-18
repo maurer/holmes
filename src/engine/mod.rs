@@ -478,7 +478,7 @@ impl Engine {
                 trace!("Activating rule: {:?}", rule.name);
                 let mut productive: usize = 0;
                     let pre_db = Instant::now();
-                    let states_0 = fdb.search_facts(&rule.body, next_fact_id).unwrap();
+                    let states_0 = fdb.search_facts(&rule.body, next_fact_id).chain_err(|| format!("Search from {}", rule.name)).unwrap();
                     let sql_time = pre_db.elapsed();
                     profile.borrow_mut().add_select_time(sql_time);
                     next_fact_id = states_0.iter().flat_map(|x| x.0.iter()).max().map(|x| x + 1).or(next_fact_id);
