@@ -65,21 +65,31 @@ impl Signal {
         }
     }
 
+    fn go_dormant(&self) {
+        // We went idle, let anyone waiting for this know
+        for task in self.referents.borrow().iter() {
+            task.notify();
+        }
+
+        // They'll wake up from the notify, and so can let us
+        // know if they need to be woken up again.
+        self.referents.borrow_mut().truncate(0);
+    }
+
     fn done(&self) -> FutureResult<(), ()> {
         trace!("Done with work loop");
         if self.state.get() == RuleState::Running {
             trace!("And no new work arrived, going idle");
             self.state.set(RuleState::Idle);
-
-            // We went idle, let anyone waiting for this know
-            for task in self.referents.borrow().iter() {
-                task.notify();
-            }
-
-            // They'll wake up from the notify, and so can let us
-            // know if they need to be woken up again.
-            self.referents.borrow_mut().truncate(0);
+            self.go_dormant();
         }
+        result(Ok(()))
+    }
+
+    fn stop(&self) -> FutureResult<(), ()> {
+        trace!("Work loop being terminated");
+        self.state.set(RuleState::ShutDown);
+        self.go_dormant();
         result(Ok(()))
     }
 
@@ -205,6 +215,8 @@ pub struct Engine {
     rule_profiles: Vec<Rc<RefCell<RuleProfile>>>,
     signals: Vec<Signal>,
     event_loop: Handle,
+    start_time: Instant,
+    limiter: Option<Duration>,
 }
 
 #[allow(missing_docs)]
@@ -261,6 +273,8 @@ impl Engine {
             signals: Vec::new(),
             rule_profiles: Vec::new(),
             event_loop: handle,
+            start_time: Instant::now(),
+            limiter: None,
         }
     }
 
@@ -271,6 +285,12 @@ impl Engine {
         fd.read_to_string(&mut sql);
         let conn = self.fact_db.conn().unwrap();
         conn.batch_execute(&sql).unwrap();
+    }
+
+    /// For correct operation, limit_time must be called before the installation of
+    /// any rules
+    pub fn limit_time(&mut self, limiter: Duration) {
+        self.limiter = Some(limiter)
     }
 
     /// Dump profiling information for how much time was spent in each rule
@@ -447,8 +467,14 @@ impl Engine {
             let buddies = self.get_dep_rules(&rule.head.pred_name);
             let rule = rule.clone();
             let out_signal = signal.clone();
+            let start_time = self.start_time.clone();
+            let limiter = self.limiter.clone();
             signal.for_each(move |_| {
                 let rule_start = Instant::now();
+                match (start_time.elapsed(), limiter) {
+                    (run_time, Some(limit_time)) if run_time > limit_time => return out_signal.stop(),
+                    _ => ()
+                }
                 trace!("Activating rule: {:?}", rule.name);
                 let mut productive: usize = 0;
                     let pre_db = Instant::now();
