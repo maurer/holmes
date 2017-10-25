@@ -30,4 +30,4 @@ stdenv.mkDerivation rec {
   name = "bap-rust";
   buildInputs = [ rust postgresql openssl vim ];
 }
-) {rust = nixpkgs.rustChannels.nightly.rust; }
+) {rust = nixpkgs.rustChannels.stable.rust; }
