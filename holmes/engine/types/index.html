@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `types` mod in crate `holmes`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, types">
+
+    <title>holmes::engine::types - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Module types</p><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'><a href='../../index.html'>holmes</a>::<wbr><a href='../index.html'>engine</a></p><script>window.sidebarCurrent = {name: 'types', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../../index.html'>holmes</a>::<wbr><a href='../index.html'>engine</a>::<wbr><a class="mod" href=''>types</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/holmes/engine/types.rs.html#1-238' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Holmes Language Types</p>
+
+<p>The types defined in this module are used to define the parts of the Holmes
+language itself, and are used for writing rules, facts, etc.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Clause.html"
+                                  title='struct holmes::engine::types::Clause'>Clause</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>Clause</code> to be matched against, as you would see in the body of a datalog
+rule.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Fact.html"
+                                  title='struct holmes::engine::types::Fact'>Fact</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>Fact</code> is a particular filling of a <code>Predicate</code>&#39;s slots such that it is
+considered true.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Field.html"
+                                  title='struct holmes::engine::types::Field'>Field</a></td>
+                           <td class='docblock-short'>
+                                <p>Field for use in a predicate
+The name is for use in selective matching or unordered definition,
+and the description is to improve readability of code and comprehension of
+results.
+The <code>Type</code> is the only required component of a field, as it defines how to
+actually interact with the field.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Func.html"
+                                  title='struct holmes::engine::types::Func'>Func</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>Func</code> is the wrapper around dynamically typed functions which may be
+registered with the engine to provide extralogical functionality.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Predicate.html"
+                                  title='struct holmes::engine::types::Predicate'>Predicate</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>Predicate</code> is a name combined with a list of typed slots, e.g.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Rule.html"
+                                  title='struct holmes::engine::types::Rule'>Rule</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>Rule</code> represents a complete inference technique in the Holmes system
+If the <code>body</code> clauses match, the <code>wheres</code> clauses are run on the answer
+set, producing a new answer set, and the <code>head</code> clause is instantiated
+at that answer set and inserted into the database.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.WhereClause.html"
+                                  title='struct holmes::engine::types::WhereClause'>WhereClause</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>WhereClause</code> is a single assignment in the Holmes sublanguage.
+The right hand side is evaluated, and bound to the left hand side,
+producing a new answer set.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.BindExpr.html"
+                                  title='enum holmes::engine::types::BindExpr'>BindExpr</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>BindExpr</code> is what appears on the left hand of the assignment in a
+Holmes rule where clause.
+It describes how to extend or limit the answer set based on the value
+on the right side.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Expr.html"
+                                  title='enum holmes::engine::types::Expr'>Expr</a></td>
+                           <td class='docblock-short'>
+                                <p><code>Expr</code> represents the right hand side of the where clause sublanguage of
+Holmes.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.MatchExpr.html"
+                                  title='enum holmes::engine::types::MatchExpr'>MatchExpr</a></td>
+                           <td class='docblock-short'>
+                                <p>A <code>MatchExpr</code> represents the possible things that could show up in a slot
+in the body of a rule</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.Var.html"
+                                  title='type holmes::engine::types::Var'>Var</a></td>
+                           <td class='docblock-short'>
+                                <p><code>Var</code> is placeholder type for the representation of a variable in the
+Holmes langauge. At the moment, it is just an index, and so is
+transparently an integer, but this behavior should not be relied upon, as
+it is likely that in the future it will carry other information (name,
+type, etc.) for improved debugging.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "holmes";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Connection` struct in crate `postgres`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Connection">
+
+    <title>postgres::Connection - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Struct Connection</p><div class="block items"><ul><li><a href="#methods">Methods</a></li><li><a href="#implementations">Trait Implementations</a></li></ul></div><p class='location'><a href='index.html'>postgres</a></p><script>window.sidebarCurrent = {name: 'Connection', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>postgres</a>::<wbr><a class="struct" href=''>Connection</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/postgres/lib.rs.html#1005' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Connection(_);</pre><div class='docblock'><p>A connection to a Postgres database.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../postgres/struct.Connection.html" title="struct postgres::Connection">Connection</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1021-1359' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.connect' class="method"><span id='connect.v' class='invisible'><code>fn <a href='#method.connect' class='fnname'>connect</a>&lt;T&gt;(params: T, tls: <a class="enum" href="../postgres/enum.TlsMode.html" title="enum postgres::TlsMode">TlsMode</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/struct.Connection.html" title="struct postgres::Connection">Connection</a>&gt; <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="../postgres/params/trait.IntoConnectParams.html" title="trait postgres::params::IntoConnectParams">IntoConnectParams</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1077-1082' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a new connection to a Postgres database.</p>
+
+<p>Most applications can use a URL string in the normal format:</p>
+
+<pre><code class="language-notrust">postgresql://user[:password]@host[:port][/database][?param1=val1[[&amp;param2=val2]...]]
+</code></pre>
+
+<p>The password may be omitted if not required. The default Postgres port
+(5432) is used if none is specified. The database name defaults to the
+username if not specified.</p>
+
+<p>To connect to the server via Unix sockets, <code>host</code> should be set to the
+absolute path of the directory containing the socket file.  Since <code>/</code> is
+a reserved character in URLs, the path should be URL encoded. If the
+path contains non-UTF 8 characters, a <code>ConnectParams</code> struct should be
+created manually and passed in. Note that Postgres does not support TLS
+over Unix sockets.</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<p>To connect over TCP:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">postgres</span>::{<span class="ident">Connection</span>, <span class="ident">TlsMode</span>};
+
+<span class="kw">let</span> <span class="ident">url</span> <span class="op">=</span> <span class="string">&quot;postgresql://postgres:hunter2@localhost:5433:2994/foodb&quot;</span>;
+<span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">Connection</span>::<span class="ident">connect</span>(<span class="ident">url</span>, <span class="ident">TlsMode</span>::<span class="prelude-val">None</span>).<span class="ident">unwrap</span>();</pre>
+
+<p>To connect over a Unix socket located in <code>/run/postgres</code>:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">postgres</span>::{<span class="ident">Connection</span>, <span class="ident">TlsMode</span>};
+
+<span class="kw">let</span> <span class="ident">url</span> <span class="op">=</span> <span class="string">&quot;postgresql://postgres@%2Frun%2Fpostgres&quot;</span>;
+<span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">Connection</span>::<span class="ident">connect</span>(<span class="ident">url</span>, <span class="ident">TlsMode</span>::<span class="prelude-val">None</span>).<span class="ident">unwrap</span>();</pre>
+
+<p>To connect with a manually constructed <code>ConnectParams</code>:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">postgres</span>::{<span class="ident">Connection</span>, <span class="ident">TlsMode</span>};
+<span class="kw">use</span> <span class="ident">postgres</span>::<span class="ident">params</span>::{<span class="ident">ConnectParams</span>, <span class="ident">Host</span>};
+
+<span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">ConnectParams</span>::<span class="ident">builder</span>()
+    .<span class="ident">user</span>(<span class="string">&quot;postgres&quot;</span>, <span class="prelude-val">None</span>)
+    .<span class="ident">build</span>(<span class="ident">Host</span>::<span class="ident">Unix</span>(<span class="ident">some_crazy_path</span>));
+<span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">Connection</span>::<span class="ident">connect</span>(<span class="ident">params</span>, <span class="ident">TlsMode</span>::<span class="prelude-val">None</span>).<span class="ident">unwrap</span>();</pre>
+</div><h4 id='method.execute' class="method"><span id='execute.v' class='invisible'><code>fn <a href='#method.execute' class='fnname'>execute</a>(&amp;self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1111-1120' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes a statement, returning the number of rows modified.</p>
+
+<p>A statement may contain parameters, specified by <code>$n</code> where <code>n</code> is the
+index of the parameter in the list provided, 1-indexed.</p>
+
+<p>If the statement does not modify any rows (e.g. SELECT), 0 is returned.</p>
+
+<p>If the same statement will be repeatedly executed (perhaps with
+different query parameters), consider using the <code>prepare</code> and
+<code>prepare_cached</code> methods.</p>
+
+<h1 id='panics' class='section-header'><a href='#panics'>Panics</a></h1>
+<p>Panics if the number of parameters provided does not match the number
+expected.</p>
+
+<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">rows_updated</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">execute</span>(<span class="string">&quot;UPDATE foo SET bar = $1 WHERE baz = $2&quot;</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">bar</span>, <span class="kw-2">&amp;</span><span class="ident">baz</span>])
+                       .<span class="ident">unwrap</span>();
+<span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{} rows updated&quot;</span>, <span class="ident">rows_updated</span>);</pre>
+</div><h4 id='method.query' class="method"><span id='query.v' class='invisible'><code>fn <a href='#method.query' class='fnname'>query</a>(&amp;self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/rows/struct.Rows.html" title="struct postgres::rows::Rows">Rows</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1147-1156' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes a statement, returning the resulting rows.</p>
+
+<p>A statement may contain parameters, specified by <code>$n</code> where <code>n</code> is the
+index of the parameter in the list provided, 1-indexed.</p>
+
+<p>If the same statement will be repeatedly executed (perhaps with
+different query parameters), consider using the <code>prepare</code> and
+<code>prepare_cached</code> methods.</p>
+
+<h1 id='panics-1' class='section-header'><a href='#panics-1'>Panics</a></h1>
+<p>Panics if the number of parameters provided does not match the number
+expected.</p>
+
+<h1 id='example-1' class='section-header'><a href='#example-1'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">conn</span>.<span class="ident">query</span>(<span class="string">&quot;SELECT foo FROM bar WHERE baz = $1&quot;</span>, <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">baz</span>]).<span class="ident">unwrap</span>() {
+    <span class="kw">let</span> <span class="ident">foo</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;foo&quot;</span>);
+    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;foo: {}&quot;</span>, <span class="ident">foo</span>);
+}</pre>
+</div><h4 id='method.transaction' class="method"><span id='transaction.v' class='invisible'><code>fn <a href='#method.transaction' class='fnname'>transaction</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/transaction/struct.Transaction.html" title="struct postgres::transaction::Transaction">Transaction</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1183-1185' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Begins a new transaction.</p>
+
+<p>Returns a <code>Transaction</code> object which should be used instead of
+the connection for the duration of the transaction. The transaction
+is active until the <code>Transaction</code> object falls out of scope.</p>
+
+<h1 id='note' class='section-header'><a href='#note'>Note</a></h1>
+<p>A transaction will roll back by default. The <code>set_commit</code>,
+<code>set_rollback</code>, and <code>commit</code> methods alter this behavior.</p>
+
+<h1 id='panics-2' class='section-header'><a href='#panics-2'>Panics</a></h1>
+<p>Panics if a transaction is already active.</p>
+
+<h1 id='example-2' class='section-header'><a href='#example-2'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">trans</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">transaction</span>().<span class="ident">unwrap</span>();
+<span class="ident">trans</span>.<span class="ident">execute</span>(<span class="string">&quot;UPDATE foo SET bar = 10&quot;</span>, <span class="kw-2">&amp;</span>[]).<span class="ident">unwrap</span>();
+<span class="comment">// ...</span>
+
+<span class="ident">trans</span>.<span class="ident">commit</span>().<span class="ident">unwrap</span>();</pre>
+</div><h4 id='method.transaction_with' class="method"><span id='transaction_with.v' class='invisible'><code>fn <a href='#method.transaction_with' class='fnname'>transaction_with</a>&lt;'a&gt;(&amp;'a self, config: &amp;<a class="struct" href="../postgres/transaction/struct.Config.html" title="struct postgres::transaction::Config">Config</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/transaction/struct.Transaction.html" title="struct postgres::transaction::Transaction">Transaction</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1188-1200' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Begins a new transaction with the specified configuration.</p>
+</div><h4 id='method.prepare' class="method"><span id='prepare.v' class='invisible'><code>fn <a href='#method.prepare' class='fnname'>prepare</a>&lt;'a&gt;(&amp;'a self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1223-1225' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a new prepared statement.</p>
+
+<p>If the same statement will be executed repeatedly, explicitly preparing
+it can improve performance.</p>
+
+<p>The statement is associated with the connection that created it and may
+not outlive that connection.</p>
+
+<h1 id='example-3' class='section-header'><a href='#example-3'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">stmt</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">prepare</span>(<span class="string">&quot;UPDATE foo SET bar = $1 WHERE baz = $2&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">for</span> (<span class="ident">bar</span>, <span class="ident">baz</span>) <span class="kw">in</span> <span class="ident">updates</span> {
+    <span class="ident">stmt</span>.<span class="ident">execute</span>(<span class="kw-2">&amp;</span>[<span class="ident">bar</span>, <span class="ident">baz</span>]).<span class="ident">unwrap</span>();
+}</pre>
+</div><h4 id='method.prepare_cached' class="method"><span id='prepare_cached.v' class='invisible'><code>fn <a href='#method.prepare_cached' class='fnname'>prepare_cached</a>&lt;'a&gt;(&amp;'a self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1247-1249' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a cached prepared statement.</p>
+
+<p>Like <code>prepare</code>, except that the statement is only prepared once over
+the lifetime of the connection and then cached. If the same statement
+is going to be prepared frequently, caching it can improve performance
+by reducing the number of round trips to the Postgres backend.</p>
+
+<h1 id='example-4' class='section-header'><a href='#example-4'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">stmt</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">prepare_cached</span>(<span class="string">&quot;UPDATE foo SET bar = $1 WHERE baz = $2&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">for</span> (<span class="ident">bar</span>, <span class="ident">baz</span>) <span class="kw">in</span> <span class="ident">updates</span> {
+    <span class="ident">stmt</span>.<span class="ident">execute</span>(<span class="kw-2">&amp;</span>[<span class="ident">bar</span>, <span class="ident">baz</span>]).<span class="ident">unwrap</span>();
+}</pre>
+</div><h4 id='method.transaction_isolation' class="method"><span id='transaction_isolation.v' class='invisible'><code>fn <a href='#method.transaction_isolation' class='fnname'>transaction_isolation</a>(&amp;self) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="enum" href="../postgres/transaction/enum.IsolationLevel.html" title="enum postgres::transaction::IsolationLevel">IsolationLevel</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1254-1259' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the isolation level which will be used for future transactions.</p>
+
+<p>This is a simple wrapper around <code>SHOW TRANSACTION ISOLATION LEVEL</code>.</p>
+</div><h4 id='method.set_transaction_config' class="method"><span id='set_transaction_config.v' class='invisible'><code>fn <a href='#method.set_transaction_config' class='fnname'>set_transaction_config</a>(&amp;self, config: &amp;<a class="struct" href="../postgres/transaction/struct.Config.html" title="struct postgres::transaction::Config">Config</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1262-1266' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Sets the configuration that will be used for future transactions.</p>
+</div><h4 id='method.batch_execute' class="method"><span id='batch_execute.v' class='invisible'><code>fn <a href='#method.batch_execute' class='fnname'>batch_execute</a>(&amp;self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1302-1304' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Execute a sequence of SQL statements.</p>
+
+<p>Statements should be separated by <code>;</code> characters. If an error occurs,
+execution of the sequence will stop at that point. This is intended for
+execution of batches of non-dynamic statements - for example, creation
+of a schema for a fresh database.</p>
+
+<h1 id='warning' class='section-header'><a href='#warning'>Warning</a></h1>
+<p>Prepared statements should be used for any SQL statement which contains
+user-specified data, as it provides functionality to safely embed that
+data in the statement. Do not form statements via string concatenation
+and feed them into this method.</p>
+
+<h1 id='example-5' class='section-header'><a href='#example-5'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="ident">conn</span>.<span class="ident">batch_execute</span>(<span class="string">&quot;
+    CREATE TABLE person (
+        id SERIAL PRIMARY KEY,
+        name NOT NULL
+    );
+
+    CREATE TABLE purchase (
+        id SERIAL PRIMARY KEY,
+        person INT NOT NULL REFERENCES person (id),
+        time TIMESTAMPTZ NOT NULL,
+    );
+
+    CREATE INDEX ON purchase (time);
+    &quot;</span>).<span class="ident">unwrap</span>();</pre>
+</div><h4 id='method.notifications' class="method"><span id='notifications.v' class='invisible'><code>fn <a href='#method.notifications' class='fnname'>notifications</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class="struct" href="../postgres/notification/struct.Notifications.html" title="struct postgres::notification::Notifications">Notifications</a>&lt;'a&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1309-1311' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a structure providing access to asynchronous notifications.</p>
+
+<p>Use the <code>LISTEN</code> command to register this connection for notifications.</p>
+</div><h4 id='method.cancel_data' class="method"><span id='cancel_data.v' class='invisible'><code>fn <a href='#method.cancel_data' class='fnname'>cancel_data</a>(&amp;self) -&gt; <a class="struct" href="../postgres/struct.CancelData.html" title="struct postgres::CancelData">CancelData</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1317-1319' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns information used to cancel pending queries.</p>
+
+<p>Used with the <code>cancel_query</code> function. The object returned can be used
+to cancel any query executed by the connection it was created from.</p>
+</div><h4 id='method.parameter' class="method"><span id='parameter.v' class='invisible'><code>fn <a href='#method.parameter' class='fnname'>parameter</a>(&amp;self, param: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1323-1325' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns the value of the specified Postgres backend parameter, such as
+<code>timezone</code> or <code>server_version</code>.</p>
+</div><h4 id='method.set_notice_handler' class="method"><span id='set_notice_handler.v' class='invisible'><code>fn <a href='#method.set_notice_handler' class='fnname'>set_notice_handler</a>(&amp;self, handler: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="../postgres/trait.HandleNotice.html" title="trait postgres::HandleNotice">HandleNotice</a>&gt;) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="../postgres/trait.HandleNotice.html" title="trait postgres::HandleNotice">HandleNotice</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1328-1330' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Sets the notice handler for the connection, returning the old handler.</p>
+</div><h4 id='method.is_desynchronized' class="method"><span id='is_desynchronized.v' class='invisible'><code>fn <a href='#method.is_desynchronized' class='fnname'>is_desynchronized</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1337-1339' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns whether or not the stream has been desynchronized due to an
+error in the communication channel with the server.</p>
+
+<p>If this has occurred, all further queries will immediately return an
+error.</p>
+</div><h4 id='method.is_active' class="method"><span id='is_active.v' class='invisible'><code>fn <a href='#method.is_active' class='fnname'>is_active</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1346-1348' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Determines if the <code>Connection</code> is currently &quot;active&quot;, that is, if there
+are no active transactions.</p>
+
+<p>The <code>transaction</code> method can only be called on the active <code>Connection</code>
+or <code>Transaction</code>.</p>
+</div><h4 id='method.finish' class="method"><span id='finish.v' class='invisible'><code>fn <a href='#method.finish' class='fnname'>finish</a>(self) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1354-1358' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Consumes the connection, closing it.</p>
+
+<p>Functionally equivalent to the <code>Drop</code> implementation for <code>Connection</code>
+except that it returns any error encountered to the caller.</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../postgres/struct.Connection.html" title="struct postgres::Connection">Connection</a></code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1007-1019' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, fmt: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1008-1018' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 id='impl-GenericConnection' class='impl'><span class='in-band'><code>impl <a class="trait" href="../postgres/trait.GenericConnection.html" title="trait postgres::GenericConnection">GenericConnection</a> for <a class="struct" href="../postgres/struct.Connection.html" title="struct postgres::Connection">Connection</a></code><a href='#impl-GenericConnection' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1385-1413' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.execute-1' class="method"><span id='execute.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.execute' class='fnname'>execute</a>(&amp;self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1386-1388' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::execute</code>.</p>
+</div><h4 id='method.query-1' class="method"><span id='query.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.query' class='fnname'>query</a>&lt;'a&gt;(&amp;'a self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/rows/struct.Rows.html" title="struct postgres::rows::Rows">Rows</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1390-1392' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::query</code>.</p>
+</div><h4 id='method.prepare-1' class="method"><span id='prepare.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.prepare' class='fnname'>prepare</a>&lt;'a&gt;(&amp;'a self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1394-1396' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::prepare</code>.</p>
+</div><h4 id='method.prepare_cached-1' class="method"><span id='prepare_cached.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.prepare_cached' class='fnname'>prepare_cached</a>&lt;'a&gt;(&amp;'a self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1398-1400' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::prepare_cached</code>.</p>
+</div><h4 id='method.transaction-1' class="method"><span id='transaction.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.transaction' class='fnname'>transaction</a>&lt;'a&gt;(&amp;'a self) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../postgres/transaction/struct.Transaction.html" title="struct postgres::transaction::Transaction">Transaction</a>&lt;'a&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1402-1404' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::transaction</code>.</p>
+</div><h4 id='method.batch_execute-1' class="method"><span id='batch_execute.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.batch_execute' class='fnname'>batch_execute</a>(&amp;self, query: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1406-1408' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::batch_execute</code>.</p>
+</div><h4 id='method.is_active-1' class="method"><span id='is_active.v-1' class='invisible'><code>fn <a href='../postgres/trait.GenericConnection.html#tymethod.is_active' class='fnname'>is_active</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/postgres/lib.rs.html#1410-1412' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Like <code>Connection::is_active</code>.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "postgres";
+    </script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

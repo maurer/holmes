@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `postgres` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, postgres">
+
+    <title>postgres - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Crate postgres</p><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#traits">Traits</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'postgres', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>postgres</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/postgres/lib.rs.html#1-1450' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>A pure-Rust frontend for the popular PostgreSQL database.</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">postgres</span>;
+
+<span class="kw">use</span> <span class="ident">postgres</span>::{<span class="ident">Connection</span>, <span class="ident">TlsMode</span>};
+
+<span class="kw">struct</span> <span class="ident">Person</span> {
+    <span class="ident">id</span>: <span class="ident">i32</span>,
+    <span class="ident">name</span>: <span class="ident">String</span>,
+    <span class="ident">data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;&gt;</span>
+}
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">Connection</span>::<span class="ident">connect</span>(<span class="string">&quot;postgresql://postgres@localhost:5433&quot;</span>, <span class="ident">TlsMode</span>::<span class="prelude-val">None</span>)
+            .<span class="ident">unwrap</span>();
+
+    <span class="ident">conn</span>.<span class="ident">execute</span>(<span class="string">&quot;CREATE TABLE person (
+                    id              SERIAL PRIMARY KEY,
+                    name            VARCHAR NOT NULL,
+                    data            BYTEA
+                  )&quot;</span>, <span class="kw-2">&amp;</span>[]).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">me</span> <span class="op">=</span> <span class="ident">Person</span> {
+        <span class="ident">id</span>: <span class="number">0</span>,
+        <span class="ident">name</span>: <span class="string">&quot;Steven&quot;</span>.<span class="ident">to_owned</span>(),
+        <span class="ident">data</span>: <span class="prelude-val">None</span>
+    };
+    <span class="ident">conn</span>.<span class="ident">execute</span>(<span class="string">&quot;INSERT INTO person (name, data) VALUES ($1, $2)&quot;</span>,
+                 <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">me</span>.<span class="ident">name</span>, <span class="kw-2">&amp;</span><span class="ident">me</span>.<span class="ident">data</span>]).<span class="ident">unwrap</span>();
+
+    <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">conn</span>.<span class="ident">query</span>(<span class="string">&quot;SELECT id, name, data FROM person&quot;</span>, <span class="kw-2">&amp;</span>[]).<span class="ident">unwrap</span>() {
+        <span class="kw">let</span> <span class="ident">person</span> <span class="op">=</span> <span class="ident">Person</span> {
+            <span class="ident">id</span>: <span class="ident">row</span>.<span class="ident">get</span>(<span class="number">0</span>),
+            <span class="ident">name</span>: <span class="ident">row</span>.<span class="ident">get</span>(<span class="number">1</span>),
+            <span class="ident">data</span>: <span class="ident">row</span>.<span class="ident">get</span>(<span class="number">2</span>)
+        };
+        <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Found person {}&quot;</span>, <span class="ident">person</span>.<span class="ident">name</span>);
+    }
+}</pre>
+
+<h1 id='ssltls' class='section-header'><a href='#ssltls'>SSL/TLS</a></h1>
+<p>This crate supports TLS secured connections. The <code>TlsMode</code> enum is passed to connection methods
+and indicates if the connection will not, may, or must be secured by TLS. The TLS implementation
+is pluggable through the <code>TlsHandshake</code> trait. Implementations for OpenSSL, Secure Transport,
+SChannel, and the <code>native-tls</code> crate are provided behind the <code>with-openssl</code>,
+<code>with-security-framework</code>, <code>with-schannel</code>, and <code>with-native-tls</code> feature flags respectively.</p>
+
+<h2 id='examples' class='section-header'><a href='#examples'>Examples</a></h2>
+<p>Connecting using <code>native-tls</code>:</p>
+
+<pre class="rust rust-example-rendered">
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">postgres</span>;
+
+<span class="kw">use</span> <span class="ident">postgres</span>::{<span class="ident">Connection</span>, <span class="ident">TlsMode</span>};
+<span class="kw">use</span> <span class="ident">postgres</span>::<span class="ident">tls</span>::<span class="ident">native_tls</span>::<span class="ident">NativeTls</span>;
+
+<span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="kw">let</span> <span class="ident">negotiator</span> <span class="op">=</span> <span class="ident">NativeTls</span>::<span class="ident">new</span>().<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">Connection</span>::<span class="ident">connect</span>(<span class="string">&quot;postgres://postgres@localhost:5433&quot;</span>, <span class="ident">TlsMode</span>::<span class="ident">Require</span>(<span class="kw-2">&amp;</span><span class="ident">negotiator</span>))
+        .<span class="ident">unwrap</span>();
+}</pre>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="error/index.html"
+                                  title='mod postgres::error'>error</a></td>
+                           <td class='docblock-short'>
+                                <p>Errors.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="notification/index.html"
+                                  title='mod postgres::notification'>notification</a></td>
+                           <td class='docblock-short'>
+                                <p>Asynchronous notifications.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="params/index.html"
+                                  title='mod postgres::params'>params</a></td>
+                           <td class='docblock-short'>
+                                <p>Connection parameters</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="rows/index.html"
+                                  title='mod postgres::rows'>rows</a></td>
+                           <td class='docblock-short'>
+                                <p>Query result rows.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="stmt/index.html"
+                                  title='mod postgres::stmt'>stmt</a></td>
+                           <td class='docblock-short'>
+                                <p>Prepared statements</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="tls/index.html"
+                                  title='mod postgres::tls'>tls</a></td>
+                           <td class='docblock-short'>
+                                <p>Types and traits for TLS support.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="transaction/index.html"
+                                  title='mod postgres::transaction'>transaction</a></td>
+                           <td class='docblock-short'>
+                                <p>Transactions</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="types/index.html"
+                                  title='mod postgres::types'>types</a></td>
+                           <td class='docblock-short'>
+                                <p>Types.</p>
+                           </td>
+                       </tr></table><h2 id='macros' class='section-header'><a href="#macros">Macros</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.accepts.html"
+                                  title='macro postgres::accepts'>accepts</a></td>
+                           <td class='docblock-short'>
+                                <p>Generates a simple implementation of <code>ToSql::accepts</code> which accepts the
+types passed to it.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.to_sql_checked.html"
+                                  title='macro postgres::to_sql_checked'>to_sql_checked</a></td>
+                           <td class='docblock-short'>
+                                <p>Generates an implementation of <code>ToSql::to_sql_checked</code>.</p>
+                           </td>
+                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CancelData.html"
+                                  title='struct postgres::CancelData'>CancelData</a></td>
+                           <td class='docblock-short'>
+                                <p>Contains information necessary to cancel queries for a session.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Connection.html"
+                                  title='struct postgres::Connection'>Connection</a></td>
+                           <td class='docblock-short'>
+                                <p>A connection to a Postgres database.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Error.html"
+                                  title='struct postgres::Error'>Error</a></td>
+                           <td class='docblock-short'>
+                                <p>An error communicating with the Postgres server.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.LoggingNoticeHandler.html"
+                                  title='struct postgres::LoggingNoticeHandler'>LoggingNoticeHandler</a></td>
+                           <td class='docblock-short'>
+                                <p>A notice handler which logs at the <code>info</code> level.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.TlsMode.html"
+                                  title='enum postgres::TlsMode'>TlsMode</a></td>
+                           <td class='docblock-short'>
+                                <p>Specifies the TLS support requested for a new connection.</p>
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.GenericConnection.html"
+                                  title='trait postgres::GenericConnection'>GenericConnection</a></td>
+                           <td class='docblock-short'>
+                                <p>A trait allowing abstraction over connections and transactions</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.HandleNotice.html"
+                                  title='trait postgres::HandleNotice'>HandleNotice</a></td>
+                           <td class='docblock-short'>
+                                <p>A trait implemented by types that can handle Postgres notice messages.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.cancel_query.html"
+                                  title='fn postgres::cancel_query'>cancel_query</a></td>
+                           <td class='docblock-short'>
+                                <p>Attempts to cancel an in-progress query.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.Result.html"
+                                  title='type postgres::Result'>Result</a></td>
+                           <td class='docblock-short'>
+                                <p>A type alias of the result returned by many methods.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "postgres";
+    </script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

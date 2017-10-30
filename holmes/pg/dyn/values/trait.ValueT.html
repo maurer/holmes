@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ValueT` trait in crate `holmes`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ValueT">
+
+    <title>holmes::pg::dyn::values::ValueT - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc trait">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Trait ValueT</p><div class="block items"><ul><li><a href="#required-methods">Required Methods</a></li><li><a href="#implementations">Trait Implementations</a></li><li><a href="#implementors">Implementors</a></li></ul></div><p class='location'><a href='../../../index.html'>holmes</a>::<wbr><a href='../../index.html'>pg</a>::<wbr><a href='../index.html'>dyn</a>::<wbr><a href='index.html'>values</a></p><script>window.sidebarCurrent = {name: 'ValueT', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../../../index.html'>holmes</a>::<wbr><a href='../../index.html'>pg</a>::<wbr><a href='../index.html'>dyn</a>::<wbr><a href='index.html'>values</a>::<wbr><a class="trait" href=''>ValueT</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#410-439' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait ValueT: <a class="trait" href="../../../../holmes/pg/dyn/trait.HashTO.html" title="trait holmes::pg::dyn::HashTO">HashTO</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/any/trait.Any.html" title="trait core::any::Any">Any</a> {
+    fn <a href='#tymethod.type_' class='fnname'>type_</a>(&amp;self) -&gt; <a class="type" href="../../../../holmes/pg/dyn/type.Type.html" title="type holmes::pg::dyn::Type">Type</a>;
+<div class='item-spacer'></div>    fn <a href='#tymethod.get' class='fnname'>get</a>(&amp;self) -&gt; &amp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/any/trait.Any.html" title="trait core::any::Any">Any</a>;
+<div class='item-spacer'></div>    fn <a href='#tymethod.to_sql' class='fnname'>to_sql</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="trait" href="../../../../postgres_shared/types/trait.ToSql.html" title="trait postgres_shared::types::ToSql">ToSql</a>&gt;;
+<div class='item-spacer'></div>    fn <a href='#tymethod.inner' class='fnname'>inner</a>(&amp;self) -&gt; &amp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/any/trait.Any.html" title="trait core::any::Any">Any</a>;
+<div class='item-spacer'></div>    fn <a href='#tymethod.inner_eq' class='fnname'>inner_eq</a>(&amp;self, other: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>;
+<div class='item-spacer'></div>    fn <a href='#tymethod.inner_ord' class='fnname'>inner_ord</a>(&amp;self, _: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/cmp/enum.Ordering.html" title="enum core::cmp::Ordering">Ordering</a>&gt;;
+}</pre><div class='docblock'><p>This trait defines the interface any value must implement in order to be
+used in the Holmes language.</p>
+</div>
+            <h2 id='required-methods' class='small-section-header'>
+              Required Methods<a href='#required-methods' class='anchor'></a>
+            </h2>
+            <div class='methods'>
+        <h3 id='tymethod.type_' class='method'><span id='type_.v' class='invisible'><code>fn <a href='#tymethod.type_' class='fnname'>type_</a>(&amp;self) -&gt; <a class="type" href="../../../../holmes/pg/dyn/type.Type.html" title="type holmes::pg::dyn::Type">Type</a></code></span></h3><div class='docblock'><p>Returns the type of the value
+This is needed if to do type checking, or tuple values</p>
+</div><h3 id='tymethod.get' class='method'><span id='get.v' class='invisible'><code>fn <a href='#tymethod.get' class='fnname'>get</a>(&amp;self) -&gt; &amp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/any/trait.Any.html" title="trait core::any::Any">Any</a></code></span></h3><div class='docblock'><p>Get a rust dynamic type version of the value contained.</p>
+
+<p>Since Holmes is a typed language, the user of this function should
+know what to expect and be able to cast from Any into it.</p>
+</div><h3 id='tymethod.to_sql' class='method'><span id='to_sql.v' class='invisible'><code>fn <a href='#tymethod.to_sql' class='fnname'>to_sql</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;&amp;<a class="trait" href="../../../../postgres_shared/types/trait.ToSql.html" title="trait postgres_shared::types::ToSql">ToSql</a>&gt;</code></span></h3><div class='docblock'><p>Converts the value into a list of ToSql trait objects to allow for
+insertion into the database via a prepared query</p>
+</div><h3 id='tymethod.inner' class='method'><span id='inner.v' class='invisible'><code>fn <a href='#tymethod.inner' class='fnname'>inner</a>(&amp;self) -&gt; &amp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/any/trait.Any.html" title="trait core::any::Any">Any</a></code></span></h3><div class='docblock'><p>Returns a dynamic representation of the trait object.</p>
+
+<p>Trait objects cannot be cast to other trait objects, even if they
+implement the other trait necessarily. In order to access functions
+under the <code>Any</code> trait, I have the non-trait-object implementation
+provide access to its &amp;Any representation.</p>
+</div><h3 id='tymethod.inner_eq' class='method'><span id='inner_eq.v' class='invisible'><code>fn <a href='#tymethod.inner_eq' class='fnname'>inner_eq</a>(&amp;self, other: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h3><div class='docblock'><p>Check equality</p>
+
+<p>Similar to <code>inner</code>, <code>inner_eq</code> exports a <code>PartialEq</code> instance from
+the underlying type.</p>
+</div><h3 id='tymethod.inner_ord' class='method'><span id='inner_ord.v' class='invisible'><code>fn <a href='#tymethod.inner_ord' class='fnname'>inner_ord</a>(&amp;self, _: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/cmp/enum.Ordering.html" title="enum core::cmp::Ordering">Ordering</a>&gt;</code></span></h3><div class='docblock'><p>Check order</p>
+
+<p>Similar to <code>inner</code>, <code>inner_ord</code> exports an <code>Ord</code> instance form
+the underlying type</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Hash' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html" title="trait core::hash::Hash">Hash</a> for <a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a></code><a href='#impl-Hash' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#441-445' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.hash' class="method"><span id='hash.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash' class='fnname'>hash</a>&lt;H:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a>&gt;(&amp;self, hasher: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>H)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#442-444' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Feeds this value into the given [<code>Hasher</code>]. <a href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#tymethod.hash">Read more</a></p>
+</div><h4 id='method.hash_slice' class="method"><span id='hash_slice.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice' class='fnname'>hash_slice</a>&lt;H&gt;(data: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[Self]</a>, state: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>H) <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;H: <a class="trait" href="https://doc.rust-lang.org/nightly/core/hash/trait.Hasher.html" title="trait core::hash::Hasher">Hasher</a>,&nbsp;</span></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.3.0'>1.3.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/hash/mod.rs.html#202-208' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Feeds a slice of this type into the given [<code>Hasher</code>]. <a href="https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html#method.hash_slice">Read more</a></p>
+</div></div><h3 id='impl-Eq' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html" title="trait core::cmp::Eq">Eq</a> for <a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a></code><a href='#impl-Eq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#456' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'></div><h3 id='impl-PartialEq' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html" title="trait core::cmp::PartialEq">PartialEq</a> for <a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a></code><a href='#impl-PartialEq' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#457-461' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.eq' class="method"><span id='eq.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq' class='fnname'>eq</a>(&amp;self, other: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#458-460' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>self</code> and <code>other</code> values to be equal, and is used by <code>==</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#tymethod.eq">Read more</a></p>
+</div><h4 id='method.ne' class="method"><span id='ne.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#121' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests for <code>!=</code>.</p>
+</div></div><h3 id='impl-Ord' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html" title="trait core::cmp::Ord">Ord</a> for <a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a></code><a href='#impl-Ord' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#463-467' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.cmp' class="method"><span id='cmp.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html#tymethod.cmp' class='fnname'>cmp</a>(&amp;self, other: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/cmp/enum.Ordering.html" title="enum core::cmp::Ordering">Ordering</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#464-466' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method returns an <code>Ordering</code> between <code>self</code> and <code>other</code>. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html#tymethod.cmp">Read more</a></p>
+</div><h4 id='method.max' class="method"><span id='max.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html#method.max' class='fnname'>max</a>(self, other: Self) -&gt; Self</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.21.0'>1.21.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#460-463' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Compares and returns the maximum of two values. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html#method.max">Read more</a></p>
+</div><h4 id='method.min' class="method"><span id='min.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html#method.min' class='fnname'>min</a>(self, other: Self) -&gt; Self</code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.21.0'>1.21.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#476-479' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Compares and returns the minimum of two values. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html#method.min">Read more</a></p>
+</div></div><h3 id='impl-PartialOrd' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html" title="trait core::cmp::PartialOrd">PartialOrd</a> for <a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a></code><a href='#impl-PartialOrd' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#469-473' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.partial_cmp' class="method"><span id='partial_cmp.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#tymethod.partial_cmp' class='fnname'>partial_cmp</a>(&amp;self, other: &amp;<a class="trait" href="../../../../holmes/pg/dyn/values/trait.ValueT.html" title="trait holmes::pg::dyn::values::ValueT">ValueT</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/cmp/enum.Ordering.html" title="enum core::cmp::Ordering">Ordering</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../../src/holmes/pg/dyn.rs.html#470-472' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method returns an ordering between <code>self</code> and <code>other</code> values if one exists. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#tymethod.partial_cmp">Read more</a></p>
+</div><h4 id='method.lt' class="method"><span id='lt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.lt' class='fnname'>lt</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#644-649' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests less than (for <code>self</code> and <code>other</code>) and is used by the <code>&lt;</code> operator. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.lt">Read more</a></p>
+</div><h4 id='method.le' class="method"><span id='le.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.le' class='fnname'>le</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#666-671' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests less than or equal to (for <code>self</code> and <code>other</code>) and is used by the <code>&lt;=</code> operator. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.le">Read more</a></p>
+</div><h4 id='method.gt' class="method"><span id='gt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.gt' class='fnname'>gt</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#687-692' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests greater than (for <code>self</code> and <code>other</code>) and is used by the <code>&gt;</code> operator. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.gt">Read more</a></p>
+</div><h4 id='method.ge' class="method"><span id='ge.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.ge' class='fnname'>ge</a>(&amp;self, other: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>Rhs) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span><span class='out-of-band'><div class='ghost'></div><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/cmp.rs.html#709-714' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>This method tests greater than or equal to (for <code>self</code> and <code>other</code>) and is used by the <code>&gt;=</code> operator. <a href="https://doc.rust-lang.org/nightly/core/cmp/trait.PartialOrd.html#method.ge">Read more</a></p>
+</div></div>
+        <h2 id='implementors' class='small-section-header'>
+          Implementors<a href='#implementors' class='anchor'></a>
+        </h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.List.html" title="struct holmes::pg::dyn::values::List">List</a></code></li>
+<li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.Tuple.html" title="struct holmes::pg::dyn::values::Tuple">Tuple</a></code></li>
+<li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.Bool.html" title="struct holmes::pg::dyn::values::Bool">Bool</a></code></li>
+<li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.UInt64.html" title="struct holmes::pg::dyn::values::UInt64">UInt64</a></code></li>
+<li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.String.html" title="struct holmes::pg::dyn::values::String">String</a></code></li>
+<li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.Bytes.html" title="struct holmes::pg::dyn::values::Bytes">Bytes</a></code></li>
+<li><code>impl ValueT for <a class="struct" href="../../../../holmes/pg/dyn/values/struct.LargeBytes.html" title="struct holmes::pg::dyn::values::LargeBytes">LargeBytes</a></code></li>
+</ul><script type="text/javascript" async
+                         src="../../../../implementors/holmes/pg/dyn/values/trait.ValueT.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../../";
+        window.currentCrate = "holmes";
+    </script>
+    <script src="../../../../main.js"></script>
+    <script defer src="../../../../search-index.js"></script>
+</body>
+</html>

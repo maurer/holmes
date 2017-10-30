@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `types` mod in crate `postgres`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, types">
+
+    <title>postgres::types - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Module types</p><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#constants">Constants</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'><a href='../index.html'>postgres</a></p><script>window.sidebarCurrent = {name: 'types', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>postgres</a>::<wbr><a class="mod" href=''>types</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/postgres_shared/lib.rs.html#10' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Types.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Field.html"
+                                  title='struct postgres::types::Field'>Field</a></td>
+                           <td class='docblock-short'>
+                                <p>Information about a field of a composite type.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Type.html"
+                                  title='struct postgres::types::Type'>Type</a></td>
+                           <td class='docblock-short'>
+                                <p>A Postgres type.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.WasNull.html"
+                                  title='struct postgres::types::WasNull'>WasNull</a></td>
+                           <td class='docblock-short'>
+                                <p>An error indicating that a <code>NULL</code> Postgres value was passed to a <code>FromSql</code>
+implementation that does not support <code>NULL</code> values.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.WrongType.html"
+                                  title='struct postgres::types::WrongType'>WrongType</a></td>
+                           <td class='docblock-short'>
+                                <p>An error indicating that a conversion was attempted between incompatible
+Rust and Postgres types.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Date.html"
+                                  title='enum postgres::types::Date'>Date</a></td>
+                           <td class='docblock-short'>
+                                <p>A wrapper that can be used to represent infinity with <code>Type::Date</code> types.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.IsNull.html"
+                                  title='enum postgres::types::IsNull'>IsNull</a></td>
+                           <td class='docblock-short'>
+                                <p>An enum representing the nullability of a Postgres value.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Kind.html"
+                                  title='enum postgres::types::Kind'>Kind</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents the kind of a Postgres type.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Timestamp.html"
+                                  title='enum postgres::types::Timestamp'>Timestamp</a></td>
+                           <td class='docblock-short'>
+                                <p>A wrapper that can be used to represent infinity with <code>Type::Timestamp</code> and <code>Type::Timestamptz</code>
+types.</p>
+                           </td>
+                       </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ABSTIME.html"
+                                  title='constant postgres::types::ABSTIME'>ABSTIME</a></td>
+                           <td class='docblock-short'>
+                                <p>ABSTIME - absolute, limited-range date and time &#40;Unix system time&#41;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ABSTIME_ARRAY.html"
+                                  title='constant postgres::types::ABSTIME_ARRAY'>ABSTIME_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>ABSTIME&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ACLITEM.html"
+                                  title='constant postgres::types::ACLITEM'>ACLITEM</a></td>
+                           <td class='docblock-short'>
+                                <p>ACLITEM - access control list</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ACLITEM_ARRAY.html"
+                                  title='constant postgres::types::ACLITEM_ARRAY'>ACLITEM_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>ACLITEM&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ANY.html"
+                                  title='constant postgres::types::ANY'>ANY</a></td>
+                           <td class='docblock-short'>
+                                <p>ANY</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ANYARRAY.html"
+                                  title='constant postgres::types::ANYARRAY'>ANYARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>ANYARRAY</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ANYELEMENT.html"
+                                  title='constant postgres::types::ANYELEMENT'>ANYELEMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>ANYELEMENT</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ANYENUM.html"
+                                  title='constant postgres::types::ANYENUM'>ANYENUM</a></td>
+                           <td class='docblock-short'>
+                                <p>ANYENUM</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ANYNONARRAY.html"
+                                  title='constant postgres::types::ANYNONARRAY'>ANYNONARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>ANYNONARRAY</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ANY_RANGE.html"
+                                  title='constant postgres::types::ANY_RANGE'>ANY_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>ANYRANGE</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BIT.html"
+                                  title='constant postgres::types::BIT'>BIT</a></td>
+                           <td class='docblock-short'>
+                                <p>BIT - fixed-length bit string</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BIT_ARRAY.html"
+                                  title='constant postgres::types::BIT_ARRAY'>BIT_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>BIT&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BOOL.html"
+                                  title='constant postgres::types::BOOL'>BOOL</a></td>
+                           <td class='docblock-short'>
+                                <p>BOOL - boolean, &#39;true&#39;/&#39;false&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BOOL_ARRAY.html"
+                                  title='constant postgres::types::BOOL_ARRAY'>BOOL_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>BOOL&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BOX.html"
+                                  title='constant postgres::types::BOX'>BOX</a></td>
+                           <td class='docblock-short'>
+                                <p>BOX - geometric box &#39;&#40;lower left,upper right&#41;&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BOX_ARRAY.html"
+                                  title='constant postgres::types::BOX_ARRAY'>BOX_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>BOX&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BPCHAR.html"
+                                  title='constant postgres::types::BPCHAR'>BPCHAR</a></td>
+                           <td class='docblock-short'>
+                                <p>BPCHAR - char&#40;length&#41;, blank-padded string, fixed storage length</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BPCHAR_ARRAY.html"
+                                  title='constant postgres::types::BPCHAR_ARRAY'>BPCHAR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>BPCHAR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BYTEA.html"
+                                  title='constant postgres::types::BYTEA'>BYTEA</a></td>
+                           <td class='docblock-short'>
+                                <p>BYTEA - variable-length string, binary values escaped</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BYTEA_ARRAY.html"
+                                  title='constant postgres::types::BYTEA_ARRAY'>BYTEA_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>BYTEA&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CHAR.html"
+                                  title='constant postgres::types::CHAR'>CHAR</a></td>
+                           <td class='docblock-short'>
+                                <p>CHAR - single character</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CHAR_ARRAY.html"
+                                  title='constant postgres::types::CHAR_ARRAY'>CHAR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>CHAR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CID.html"
+                                  title='constant postgres::types::CID'>CID</a></td>
+                           <td class='docblock-short'>
+                                <p>CID - command identifier type, sequence in transaction id</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CIDR.html"
+                                  title='constant postgres::types::CIDR'>CIDR</a></td>
+                           <td class='docblock-short'>
+                                <p>CIDR - network IP address/netmask, network address</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CIDR_ARRAY.html"
+                                  title='constant postgres::types::CIDR_ARRAY'>CIDR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>CIDR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CID_ARRAY.html"
+                                  title='constant postgres::types::CID_ARRAY'>CID_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>CID&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CIRCLE.html"
+                                  title='constant postgres::types::CIRCLE'>CIRCLE</a></td>
+                           <td class='docblock-short'>
+                                <p>CIRCLE - geometric circle &#39;&#40;center,radius&#41;&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CIRCLE_ARRAY.html"
+                                  title='constant postgres::types::CIRCLE_ARRAY'>CIRCLE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>CIRCLE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CSTRING.html"
+                                  title='constant postgres::types::CSTRING'>CSTRING</a></td>
+                           <td class='docblock-short'>
+                                <p>CSTRING</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CSTRING_ARRAY.html"
+                                  title='constant postgres::types::CSTRING_ARRAY'>CSTRING_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>CSTRING&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATE.html"
+                                  title='constant postgres::types::DATE'>DATE</a></td>
+                           <td class='docblock-short'>
+                                <p>DATE - date</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATE_ARRAY.html"
+                                  title='constant postgres::types::DATE_ARRAY'>DATE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>DATE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATE_RANGE.html"
+                                  title='constant postgres::types::DATE_RANGE'>DATE_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>DATERANGE - range of dates</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATE_RANGE_ARRAY.html"
+                                  title='constant postgres::types::DATE_RANGE_ARRAY'>DATE_RANGE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>DATERANGE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.EVENT_TRIGGER.html"
+                                  title='constant postgres::types::EVENT_TRIGGER'>EVENT_TRIGGER</a></td>
+                           <td class='docblock-short'>
+                                <p>EVENT_TRIGGER</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_HANDLER.html"
+                                  title='constant postgres::types::FDW_HANDLER'>FDW_HANDLER</a></td>
+                           <td class='docblock-short'>
+                                <p>FDW_HANDLER</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FLOAT4.html"
+                                  title='constant postgres::types::FLOAT4'>FLOAT4</a></td>
+                           <td class='docblock-short'>
+                                <p>FLOAT4 - single-precision floating point number, 4-byte storage</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FLOAT8.html"
+                                  title='constant postgres::types::FLOAT8'>FLOAT8</a></td>
+                           <td class='docblock-short'>
+                                <p>FLOAT8 - double-precision floating point number, 8-byte storage</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FLOAT4_ARRAY.html"
+                                  title='constant postgres::types::FLOAT4_ARRAY'>FLOAT4_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>FLOAT4&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FLOAT8_ARRAY.html"
+                                  title='constant postgres::types::FLOAT8_ARRAY'>FLOAT8_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>FLOAT8&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.GTS_VECTOR.html"
+                                  title='constant postgres::types::GTS_VECTOR'>GTS_VECTOR</a></td>
+                           <td class='docblock-short'>
+                                <p>GTSVECTOR - GiST index internal text representation for text search</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.GTS_VECTOR_ARRAY.html"
+                                  title='constant postgres::types::GTS_VECTOR_ARRAY'>GTS_VECTOR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>GTSVECTOR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INDEX_AM_HANDLER.html"
+                                  title='constant postgres::types::INDEX_AM_HANDLER'>INDEX_AM_HANDLER</a></td>
+                           <td class='docblock-short'>
+                                <p>INDEX_AM_HANDLER</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INET.html"
+                                  title='constant postgres::types::INET'>INET</a></td>
+                           <td class='docblock-short'>
+                                <p>INET - IP address/netmask, host address, netmask optional</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INET_ARRAY.html"
+                                  title='constant postgres::types::INET_ARRAY'>INET_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INET&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT2.html"
+                                  title='constant postgres::types::INT2'>INT2</a></td>
+                           <td class='docblock-short'>
+                                <p>INT2 - -32 thousand to 32 thousand, 2-byte storage</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT4.html"
+                                  title='constant postgres::types::INT4'>INT4</a></td>
+                           <td class='docblock-short'>
+                                <p>INT4 - -2 billion to 2 billion integer, 4-byte storage</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT8.html"
+                                  title='constant postgres::types::INT8'>INT8</a></td>
+                           <td class='docblock-short'>
+                                <p>INT8 - ~18 digit integer, 8-byte storage</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT2_ARRAY.html"
+                                  title='constant postgres::types::INT2_ARRAY'>INT2_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INT2&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT2_VECTOR.html"
+                                  title='constant postgres::types::INT2_VECTOR'>INT2_VECTOR</a></td>
+                           <td class='docblock-short'>
+                                <p>INT2VECTOR - array of int2, used in system tables</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT2_VECTOR_ARRAY.html"
+                                  title='constant postgres::types::INT2_VECTOR_ARRAY'>INT2_VECTOR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INT2VECTOR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT4_ARRAY.html"
+                                  title='constant postgres::types::INT4_ARRAY'>INT4_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INT4&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT4_RANGE.html"
+                                  title='constant postgres::types::INT4_RANGE'>INT4_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>INT4RANGE - range of integers</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT4_RANGE_ARRAY.html"
+                                  title='constant postgres::types::INT4_RANGE_ARRAY'>INT4_RANGE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INT4RANGE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT8_ARRAY.html"
+                                  title='constant postgres::types::INT8_ARRAY'>INT8_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INT8&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT8_RANGE.html"
+                                  title='constant postgres::types::INT8_RANGE'>INT8_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>INT8RANGE - range of bigints</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INT8_RANGE_ARRAY.html"
+                                  title='constant postgres::types::INT8_RANGE_ARRAY'>INT8_RANGE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INT8RANGE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INTERNAL.html"
+                                  title='constant postgres::types::INTERNAL'>INTERNAL</a></td>
+                           <td class='docblock-short'>
+                                <p>INTERNAL</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INTERVAL.html"
+                                  title='constant postgres::types::INTERVAL'>INTERVAL</a></td>
+                           <td class='docblock-short'>
+                                <p>INTERVAL - &#64; &lt;number&gt; &lt;units&gt;, time interval</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INTERVAL_ARRAY.html"
+                                  title='constant postgres::types::INTERVAL_ARRAY'>INTERVAL_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>INTERVAL&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.JSON.html"
+                                  title='constant postgres::types::JSON'>JSON</a></td>
+                           <td class='docblock-short'>
+                                <p>JSON</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.JSONB.html"
+                                  title='constant postgres::types::JSONB'>JSONB</a></td>
+                           <td class='docblock-short'>
+                                <p>JSONB - Binary JSON</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.JSONB_ARRAY.html"
+                                  title='constant postgres::types::JSONB_ARRAY'>JSONB_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>JSONB&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.JSON_ARRAY.html"
+                                  title='constant postgres::types::JSON_ARRAY'>JSON_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>JSON&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LANGUAGE_HANDLER.html"
+                                  title='constant postgres::types::LANGUAGE_HANDLER'>LANGUAGE_HANDLER</a></td>
+                           <td class='docblock-short'>
+                                <p>LANGUAGE_HANDLER</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LINE.html"
+                                  title='constant postgres::types::LINE'>LINE</a></td>
+                           <td class='docblock-short'>
+                                <p>LINE - geometric line</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LINE_ARRAY.html"
+                                  title='constant postgres::types::LINE_ARRAY'>LINE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>LINE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LSEG.html"
+                                  title='constant postgres::types::LSEG'>LSEG</a></td>
+                           <td class='docblock-short'>
+                                <p>LSEG - geometric line segment &#39;&#40;pt1,pt2&#41;&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LSEG_ARRAY.html"
+                                  title='constant postgres::types::LSEG_ARRAY'>LSEG_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>LSEG&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MACADDR.html"
+                                  title='constant postgres::types::MACADDR'>MACADDR</a></td>
+                           <td class='docblock-short'>
+                                <p>MACADDR - XX:XX:XX:XX:XX:XX, MAC address</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MACADDR8.html"
+                                  title='constant postgres::types::MACADDR8'>MACADDR8</a></td>
+                           <td class='docblock-short'>
+                                <p>MACADDR8 - XX:XX:XX:XX:XX:XX:XX:XX, MAC address</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MACADDR8_ARRAY.html"
+                                  title='constant postgres::types::MACADDR8_ARRAY'>MACADDR8_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>MACADDR8&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MACADDR_ARRAY.html"
+                                  title='constant postgres::types::MACADDR_ARRAY'>MACADDR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>MACADDR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MONEY.html"
+                                  title='constant postgres::types::MONEY'>MONEY</a></td>
+                           <td class='docblock-short'>
+                                <p>MONEY - monetary amounts, &#36;d,ddd.cc</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MONEY_ARRAY.html"
+                                  title='constant postgres::types::MONEY_ARRAY'>MONEY_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>MONEY&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NAME.html"
+                                  title='constant postgres::types::NAME'>NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>NAME - 63-byte type for storing system identifiers</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NAME_ARRAY.html"
+                                  title='constant postgres::types::NAME_ARRAY'>NAME_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>NAME&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUMERIC.html"
+                                  title='constant postgres::types::NUMERIC'>NUMERIC</a></td>
+                           <td class='docblock-short'>
+                                <p>NUMERIC - numeric&#40;precision, decimal&#41;, arbitrary precision number</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUMERIC_ARRAY.html"
+                                  title='constant postgres::types::NUMERIC_ARRAY'>NUMERIC_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>NUMERIC&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUM_RANGE.html"
+                                  title='constant postgres::types::NUM_RANGE'>NUM_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>NUMRANGE - range of numerics</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUM_RANGE_ARRAY.html"
+                                  title='constant postgres::types::NUM_RANGE_ARRAY'>NUM_RANGE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>NUMRANGE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OID.html"
+                                  title='constant postgres::types::OID'>OID</a></td>
+                           <td class='docblock-short'>
+                                <p>OID - object identifier&#40;oid&#41;, maximum 4 billion</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OID_ARRAY.html"
+                                  title='constant postgres::types::OID_ARRAY'>OID_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>OID&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OID_VECTOR.html"
+                                  title='constant postgres::types::OID_VECTOR'>OID_VECTOR</a></td>
+                           <td class='docblock-short'>
+                                <p>OIDVECTOR - array of oids, used in system tables</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OID_VECTOR_ARRAY.html"
+                                  title='constant postgres::types::OID_VECTOR_ARRAY'>OID_VECTOR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>OIDVECTOR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OPAQUE.html"
+                                  title='constant postgres::types::OPAQUE'>OPAQUE</a></td>
+                           <td class='docblock-short'>
+                                <p>OPAQUE</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PATH.html"
+                                  title='constant postgres::types::PATH'>PATH</a></td>
+                           <td class='docblock-short'>
+                                <p>PATH - geometric path &#39;&#40;pt1,...&#41;&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PATH_ARRAY.html"
+                                  title='constant postgres::types::PATH_ARRAY'>PATH_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>PATH&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PG_DDL_COMMAND.html"
+                                  title='constant postgres::types::PG_DDL_COMMAND'>PG_DDL_COMMAND</a></td>
+                           <td class='docblock-short'>
+                                <p>PG_DDL_COMMAND - internal type for passing CollectedCommand</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PG_DEPENDENCIES.html"
+                                  title='constant postgres::types::PG_DEPENDENCIES'>PG_DEPENDENCIES</a></td>
+                           <td class='docblock-short'>
+                                <p>PG_DEPENDENCIES - multivariate dependencies</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PG_LSN.html"
+                                  title='constant postgres::types::PG_LSN'>PG_LSN</a></td>
+                           <td class='docblock-short'>
+                                <p>PG_LSN - PostgreSQL LSN datatype</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PG_LSN_ARRAY.html"
+                                  title='constant postgres::types::PG_LSN_ARRAY'>PG_LSN_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>PG_LSN&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PG_NDISTINCT.html"
+                                  title='constant postgres::types::PG_NDISTINCT'>PG_NDISTINCT</a></td>
+                           <td class='docblock-short'>
+                                <p>PG_NDISTINCT - multivariate ndistinct coefficients</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PG_NODE_TREE.html"
+                                  title='constant postgres::types::PG_NODE_TREE'>PG_NODE_TREE</a></td>
+                           <td class='docblock-short'>
+                                <p>PG_NODE_TREE - string representing an internal node tree</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.POINT.html"
+                                  title='constant postgres::types::POINT'>POINT</a></td>
+                           <td class='docblock-short'>
+                                <p>POINT - geometric point &#39;&#40;x, y&#41;&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.POINT_ARRAY.html"
+                                  title='constant postgres::types::POINT_ARRAY'>POINT_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>POINT&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.POLYGON.html"
+                                  title='constant postgres::types::POLYGON'>POLYGON</a></td>
+                           <td class='docblock-short'>
+                                <p>POLYGON - geometric polygon &#39;&#40;pt1,...&#41;&#39;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.POLYGON_ARRAY.html"
+                                  title='constant postgres::types::POLYGON_ARRAY'>POLYGON_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>POLYGON&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RECORD.html"
+                                  title='constant postgres::types::RECORD'>RECORD</a></td>
+                           <td class='docblock-short'>
+                                <p>RECORD</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RECORD_ARRAY.html"
+                                  title='constant postgres::types::RECORD_ARRAY'>RECORD_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>RECORD&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REFCURSOR.html"
+                                  title='constant postgres::types::REFCURSOR'>REFCURSOR</a></td>
+                           <td class='docblock-short'>
+                                <p>REFCURSOR - reference to cursor &#40;portal name&#41;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REFCURSOR_ARRAY.html"
+                                  title='constant postgres::types::REFCURSOR_ARRAY'>REFCURSOR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REFCURSOR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGCLASS.html"
+                                  title='constant postgres::types::REGCLASS'>REGCLASS</a></td>
+                           <td class='docblock-short'>
+                                <p>REGCLASS - registered class</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGCLASS_ARRAY.html"
+                                  title='constant postgres::types::REGCLASS_ARRAY'>REGCLASS_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGCLASS&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGCONFIG.html"
+                                  title='constant postgres::types::REGCONFIG'>REGCONFIG</a></td>
+                           <td class='docblock-short'>
+                                <p>REGCONFIG - registered text search configuration</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGCONFIG_ARRAY.html"
+                                  title='constant postgres::types::REGCONFIG_ARRAY'>REGCONFIG_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGCONFIG&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGDICTIONARY.html"
+                                  title='constant postgres::types::REGDICTIONARY'>REGDICTIONARY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGDICTIONARY - registered text search dictionary</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGDICTIONARY_ARRAY.html"
+                                  title='constant postgres::types::REGDICTIONARY_ARRAY'>REGDICTIONARY_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGDICTIONARY&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGNAMESPACE.html"
+                                  title='constant postgres::types::REGNAMESPACE'>REGNAMESPACE</a></td>
+                           <td class='docblock-short'>
+                                <p>REGNAMESPACE - registered namespace</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGNAMESPACE_ARRAY.html"
+                                  title='constant postgres::types::REGNAMESPACE_ARRAY'>REGNAMESPACE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGNAMESPACE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGOPER.html"
+                                  title='constant postgres::types::REGOPER'>REGOPER</a></td>
+                           <td class='docblock-short'>
+                                <p>REGOPER - registered operator</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGOPERATOR.html"
+                                  title='constant postgres::types::REGOPERATOR'>REGOPERATOR</a></td>
+                           <td class='docblock-short'>
+                                <p>REGOPERATOR - registered operator &#40;with args&#41;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGOPERATOR_ARRAY.html"
+                                  title='constant postgres::types::REGOPERATOR_ARRAY'>REGOPERATOR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGOPERATOR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGOPER_ARRAY.html"
+                                  title='constant postgres::types::REGOPER_ARRAY'>REGOPER_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGOPER&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGPROC.html"
+                                  title='constant postgres::types::REGPROC'>REGPROC</a></td>
+                           <td class='docblock-short'>
+                                <p>REGPROC - registered procedure</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGPROCEDURE.html"
+                                  title='constant postgres::types::REGPROCEDURE'>REGPROCEDURE</a></td>
+                           <td class='docblock-short'>
+                                <p>REGPROCEDURE - registered procedure &#40;with args&#41;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGPROCEDURE_ARRAY.html"
+                                  title='constant postgres::types::REGPROCEDURE_ARRAY'>REGPROCEDURE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGPROCEDURE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGPROC_ARRAY.html"
+                                  title='constant postgres::types::REGPROC_ARRAY'>REGPROC_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGPROC&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGROLE.html"
+                                  title='constant postgres::types::REGROLE'>REGROLE</a></td>
+                           <td class='docblock-short'>
+                                <p>REGROLE - registered role</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGROLE_ARRAY.html"
+                                  title='constant postgres::types::REGROLE_ARRAY'>REGROLE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGROLE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGTYPE.html"
+                                  title='constant postgres::types::REGTYPE'>REGTYPE</a></td>
+                           <td class='docblock-short'>
+                                <p>REGTYPE - registered type</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.REGTYPE_ARRAY.html"
+                                  title='constant postgres::types::REGTYPE_ARRAY'>REGTYPE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>REGTYPE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RELTIME.html"
+                                  title='constant postgres::types::RELTIME'>RELTIME</a></td>
+                           <td class='docblock-short'>
+                                <p>RELTIME - relative, limited-range time interval &#40;Unix delta time&#41;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RELTIME_ARRAY.html"
+                                  title='constant postgres::types::RELTIME_ARRAY'>RELTIME_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>RELTIME&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SMGR.html"
+                                  title='constant postgres::types::SMGR'>SMGR</a></td>
+                           <td class='docblock-short'>
+                                <p>SMGR - storage manager</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TEXT.html"
+                                  title='constant postgres::types::TEXT'>TEXT</a></td>
+                           <td class='docblock-short'>
+                                <p>TEXT - variable-length string, no limit specified</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TEXT_ARRAY.html"
+                                  title='constant postgres::types::TEXT_ARRAY'>TEXT_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TEXT&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TID.html"
+                                  title='constant postgres::types::TID'>TID</a></td>
+                           <td class='docblock-short'>
+                                <p>TID - &#40;block, offset&#41;, physical location of tuple</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TID_ARRAY.html"
+                                  title='constant postgres::types::TID_ARRAY'>TID_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TID&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIME.html"
+                                  title='constant postgres::types::TIME'>TIME</a></td>
+                           <td class='docblock-short'>
+                                <p>TIME - time of day</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIMESTAMP.html"
+                                  title='constant postgres::types::TIMESTAMP'>TIMESTAMP</a></td>
+                           <td class='docblock-short'>
+                                <p>TIMESTAMP - date and time</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIMESTAMPTZ.html"
+                                  title='constant postgres::types::TIMESTAMPTZ'>TIMESTAMPTZ</a></td>
+                           <td class='docblock-short'>
+                                <p>TIMESTAMPTZ - date and time with time zone</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIMESTAMPTZ_ARRAY.html"
+                                  title='constant postgres::types::TIMESTAMPTZ_ARRAY'>TIMESTAMPTZ_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TIMESTAMPTZ&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIMESTAMP_ARRAY.html"
+                                  title='constant postgres::types::TIMESTAMP_ARRAY'>TIMESTAMP_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TIMESTAMP&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIMETZ.html"
+                                  title='constant postgres::types::TIMETZ'>TIMETZ</a></td>
+                           <td class='docblock-short'>
+                                <p>TIMETZ - time of day with time zone</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIMETZ_ARRAY.html"
+                                  title='constant postgres::types::TIMETZ_ARRAY'>TIMETZ_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TIMETZ&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TIME_ARRAY.html"
+                                  title='constant postgres::types::TIME_ARRAY'>TIME_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TIME&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TINTERVAL.html"
+                                  title='constant postgres::types::TINTERVAL'>TINTERVAL</a></td>
+                           <td class='docblock-short'>
+                                <p>TINTERVAL - &#40;abstime,abstime&#41;, time interval</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TINTERVAL_ARRAY.html"
+                                  title='constant postgres::types::TINTERVAL_ARRAY'>TINTERVAL_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TINTERVAL&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TRIGGER.html"
+                                  title='constant postgres::types::TRIGGER'>TRIGGER</a></td>
+                           <td class='docblock-short'>
+                                <p>TRIGGER</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TSM_HANDLER.html"
+                                  title='constant postgres::types::TSM_HANDLER'>TSM_HANDLER</a></td>
+                           <td class='docblock-short'>
+                                <p>TSM_HANDLER</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TSQUERY.html"
+                                  title='constant postgres::types::TSQUERY'>TSQUERY</a></td>
+                           <td class='docblock-short'>
+                                <p>TSQUERY - query representation for text search</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TSQUERY_ARRAY.html"
+                                  title='constant postgres::types::TSQUERY_ARRAY'>TSQUERY_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TSQUERY&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TSTZ_RANGE.html"
+                                  title='constant postgres::types::TSTZ_RANGE'>TSTZ_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>TSTZRANGE - range of timestamps with time zone</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TSTZ_RANGE_ARRAY.html"
+                                  title='constant postgres::types::TSTZ_RANGE_ARRAY'>TSTZ_RANGE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TSTZRANGE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TS_RANGE.html"
+                                  title='constant postgres::types::TS_RANGE'>TS_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>TSRANGE - range of timestamps without time zone</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TS_RANGE_ARRAY.html"
+                                  title='constant postgres::types::TS_RANGE_ARRAY'>TS_RANGE_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TSRANGE&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TS_VECTOR.html"
+                                  title='constant postgres::types::TS_VECTOR'>TS_VECTOR</a></td>
+                           <td class='docblock-short'>
+                                <p>TSVECTOR - text representation for text search</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TS_VECTOR_ARRAY.html"
+                                  title='constant postgres::types::TS_VECTOR_ARRAY'>TS_VECTOR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TSVECTOR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TXID_SNAPSHOT.html"
+                                  title='constant postgres::types::TXID_SNAPSHOT'>TXID_SNAPSHOT</a></td>
+                           <td class='docblock-short'>
+                                <p>TXID_SNAPSHOT - txid snapshot</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TXID_SNAPSHOT_ARRAY.html"
+                                  title='constant postgres::types::TXID_SNAPSHOT_ARRAY'>TXID_SNAPSHOT_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>TXID_SNAPSHOT&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNKNOWN.html"
+                                  title='constant postgres::types::UNKNOWN'>UNKNOWN</a></td>
+                           <td class='docblock-short'>
+                                <p>UNKNOWN</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UUID.html"
+                                  title='constant postgres::types::UUID'>UUID</a></td>
+                           <td class='docblock-short'>
+                                <p>UUID - UUID datatype</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UUID_ARRAY.html"
+                                  title='constant postgres::types::UUID_ARRAY'>UUID_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>UUID&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.VARBIT.html"
+                                  title='constant postgres::types::VARBIT'>VARBIT</a></td>
+                           <td class='docblock-short'>
+                                <p>VARBIT - variable-length bit string</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.VARBIT_ARRAY.html"
+                                  title='constant postgres::types::VARBIT_ARRAY'>VARBIT_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>VARBIT&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.VARCHAR.html"
+                                  title='constant postgres::types::VARCHAR'>VARCHAR</a></td>
+                           <td class='docblock-short'>
+                                <p>VARCHAR - varchar&#40;length&#41;, non-blank-padded string, variable storage length</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.VARCHAR_ARRAY.html"
+                                  title='constant postgres::types::VARCHAR_ARRAY'>VARCHAR_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>VARCHAR&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.VOID.html"
+                                  title='constant postgres::types::VOID'>VOID</a></td>
+                           <td class='docblock-short'>
+                                <p>VOID</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.XID.html"
+                                  title='constant postgres::types::XID'>XID</a></td>
+                           <td class='docblock-short'>
+                                <p>XID - transaction id</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.XID_ARRAY.html"
+                                  title='constant postgres::types::XID_ARRAY'>XID_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>XID&#91;&#93;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.XML.html"
+                                  title='constant postgres::types::XML'>XML</a></td>
+                           <td class='docblock-short'>
+                                <p>XML - XML content</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.XML_ARRAY.html"
+                                  title='constant postgres::types::XML_ARRAY'>XML_ARRAY</a></td>
+                           <td class='docblock-short'>
+                                <p>XML&#91;&#93;</p>
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.FromSql.html"
+                                  title='trait postgres::types::FromSql'>FromSql</a></td>
+                           <td class='docblock-short'>
+                                <p>A trait for types that can be created from a Postgres value.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.ToSql.html"
+                                  title='trait postgres::types::ToSql'>ToSql</a></td>
+                           <td class='docblock-short'>
+                                <p>A trait for types that can be converted into Postgres values.</p>
+                           </td>
+                       </tr></table><h2 id='types-2' class='section-header'><a href="#types-2">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.Oid.html"
+                                  title='type postgres::types::Oid'>Oid</a></td>
+                           <td class='docblock-short'>
+                                <p>A Postgres OID.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "postgres";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

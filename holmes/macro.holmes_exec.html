@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `holmes_exec` macro in crate `holmes`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, holmes_exec">
+
+    <title>holmes::holmes_exec - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc macro">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>holmes</a></p><script>window.sidebarCurrent = {name: 'holmes_exec', ty: 'macro', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Macro <a href='index.html'>holmes</a>::<wbr><a class="macro" href=''>holmes_exec</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/holmes/edsl.rs.html#48-53' title='goto source code'>[src]</a></span></h1>
+<pre class="rust macro">
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">holmes_exec</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">holmes</span>:<span class="ident">ident</span>, { $( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">action</span>:<span class="ident">expr</span> );<span class="op">*</span> }) <span class="op">=&gt;</span> { ... };
+}</pre>
+<div class='docblock'><p>Shorthand notation for performing many actions with the same holmes context
+Analogous to a weaker version of the <code>Reader</code> monad which cannot return
+values.</p>
+
+<p>The first parameter is the holmes object to be used, and the second is
+a list of the actions to be performed, e.g.</p>
+
+<pre><code class="language-c">holmes_exec!(holmes, {
+  predicate!(foo(string, uint64));
+  fact!(foo(&quot;bar&quot;, 3));
+});
+</code></pre>
+
+<p>If any of the actions would error, the <em>enclosing function</em> will error out.
+This is due to a limitation in how the <code>try!</code> macro works. (It uses return
+to error out, rather than a bind-like mechanism).</p>
+
+<p>This only works because the other macros have both an explicit ident form,
+and one which generates a function taking a <code>holmes</code> parameter instead.</p>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "holmes";
+    </script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

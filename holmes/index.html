@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `holmes` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, holmes">
+
+    <title>holmes - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Crate holmes</p><div class="block items"><ul><li><a href="#reexports">Reexports</a></li><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'holmes', ty: 'mod', relpath: '../'};</script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>holmes</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../src/holmes/lib.rs.html#1-31' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Holmes</p>
+
+<p>Holmes is a Datalog inspired system for binding codependent analyses
+together.</p>
+</div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
+<table><tr><td><code>pub use engine::<a class="struct" href="../holmes/engine/struct.Engine.html" title="struct holmes::engine::Engine">Engine</a>;</code></td></tr><tr><td><code>pub use pg::<a class="struct" href="../holmes/pg/struct.PgDB.html" title="struct holmes::pg::PgDB">PgDB</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="edsl/index.html"
+                                  title='mod holmes::edsl'>edsl</a></td>
+                           <td class='docblock-short'>
+                                <p>Holmes EDSL</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="engine/index.html"
+                                  title='mod holmes::engine'>engine</a></td>
+                           <td class='docblock-short'>
+                                <p>Holmes/Datalog Execution Engine</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="pg/index.html"
+                                  title='mod holmes::pg'>pg</a></td>
+                           <td class='docblock-short'>
+                                <p>Postgres-based Fact Database</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="mod" href="simple/index.html"
+                                  title='mod holmes::simple'>simple</a></td>
+                           <td class='docblock-short'>
+                                <p>You likely don&#39;t want to use this module - its primary purpose is to make
+benchmarking and testing easier to do in practice.</p>
+                           </td>
+                       </tr></table><h2 id='macros' class='section-header'><a href="#macros">Macros</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.bind_match.html"
+                                  title='macro holmes::bind_match'>bind_match</a></td>
+                           <td class='docblock-short'>
+                                <p>Constructs a bind match outer object.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.clause.html"
+                                  title='macro holmes::clause'>clause</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.clause_match.html"
+                                  title='macro holmes::clause_match'>clause_match</a></td>
+                           <td class='docblock-short'>
+                                <p>Generates a <code>MatchExpr</code> from a representation</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.fact.html"
+                                  title='macro holmes::fact'>fact</a></td>
+                           <td class='docblock-short'>
+                                <p>Stores a fact with the <code>Holmes</code> context.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.field.html"
+                                  title='macro holmes::field'>field</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.func.html"
+                                  title='macro holmes::func'>func</a></td>
+                           <td class='docblock-short'>
+                                <p>Registers a native rust function with the <code>Holmes</code> object for use in rules.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.hexpr.html"
+                                  title='macro holmes::hexpr'>hexpr</a></td>
+                           <td class='docblock-short'>
+                                <p>Generates an expression structure</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.holmes_exec.html"
+                                  title='macro holmes::holmes_exec'>holmes_exec</a></td>
+                           <td class='docblock-short'>
+                                <p>Shorthand notation for performing many actions with the same holmes context
+Analogous to a weaker version of the <code>Reader</code> monad which cannot return
+values.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.htype.html"
+                                  title='macro holmes::htype'>htype</a></td>
+                           <td class='docblock-short'>
+                                <p>Converts an EDSL type specification into a Holmes type object
+Takes the name of a variable containing a holmes object as the first
+parameter, and a type description as the second.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.predicate.html"
+                                  title='macro holmes::predicate'>predicate</a></td>
+                           <td class='docblock-short'>
+                                <p>Registers a predicate with the <code>Holmes</code> context.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.query.html"
+                                  title='macro holmes::query'>query</a></td>
+                           <td class='docblock-short'>
+                                <p>Runs a datalog query against the <code>Holmes</code> context</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.rule.html"
+                                  title='macro holmes::rule'>rule</a></td>
+                           <td class='docblock-short'>
+                                <p>Adds a Holmes rule to the system</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.typed_unpack.html"
+                                  title='macro holmes::typed_unpack'>typed_unpack</a></td>
+                           <td class='docblock-short'>
+                                <p>Given a value and a type it is believed to be, unpack it to the greatest
+extent possible (e.g. unpack through tupling and lists)</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.typet_boiler.html"
+                                  title='macro holmes::typet_boiler'>typet_boiler</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.typet_inner.html"
+                                  title='macro holmes::typet_inner'>typet_inner</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.typet_inner_eq.html"
+                                  title='macro holmes::typet_inner_eq'>typet_inner_eq</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="macro" href="macro.valuet_boiler.html"
+                                  title='macro holmes::valuet_boiler'>valuet_boiler</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Error.html"
+                                  title='struct holmes::Error'>Error</a></td>
+                           <td class='docblock-short'>
+                                <p>The Error type.</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ErrorKind.html"
+                                  title='enum holmes::ErrorKind'>ErrorKind</a></td>
+                           <td class='docblock-short'>
+                                <p>The kind of an error.</p>
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.Result.html"
+                                  title='type holmes::Result'>Result</a></td>
+                           <td class='docblock-short'>
+                                <p>Convenient wrapper around <code>std::Result</code>.</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "holmes";
+    </script>
+    <script src="../main.js"></script>
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

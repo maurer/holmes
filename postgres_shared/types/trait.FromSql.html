@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `FromSql` trait in crate `postgres_shared`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, FromSql">
+
+    <title>postgres_shared::types::FromSql - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc trait">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Trait FromSql</p><div class="block items"><ul><li><a href="#required-methods">Required Methods</a></li><li><a href="#provided-methods">Provided Methods</a></li><li><a href="#implementors">Implementors</a></li></ul></div><p class='location'><a href='../index.html'>postgres_shared</a>::<wbr><a href='index.html'>types</a></p><script>window.sidebarCurrent = {name: 'FromSql', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Trait <a href='../index.html'>postgres_shared</a>::<wbr><a href='index.html'>types</a>::<wbr><a class="trait" href=''>FromSql</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/postgres_shared/types/mod.rs.html#292-324' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait FromSql: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> {
+    fn <a href='#tymethod.from_sql' class='fnname'>from_sql</a>(ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>, raw: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;;
+<div class='item-spacer'></div>    fn <a href='#tymethod.accepts' class='fnname'>accepts</a>(ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>;
+
+    fn <a href='#method.from_sql_null' class='fnname'>from_sql_null</a>(ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt; { ... }
+<div class='item-spacer'></div>    fn <a href='#method.from_sql_nullable' class='fnname'>from_sql_nullable</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;raw: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt; { ... }
+}</pre><div class='docblock'><p>A trait for types that can be created from a Postgres value.</p>
+
+<h1 id='types' class='section-header'><a href='#types'>Types</a></h1>
+<p>The following implementations are provided by this crate, along with the
+corresponding Postgres types:</p>
+
+<table>
+<thead>
+<tr>
+<th>Rust type</th>
+<th>Postgres type(s)</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td><code>bool</code></td>
+<td>BOOL</td>
+</tr>
+<tr>
+<td><code>i8</code></td>
+<td>&quot;char&quot;</td>
+</tr>
+<tr>
+<td><code>i16</code></td>
+<td>SMALLINT, SMALLSERIAL</td>
+</tr>
+<tr>
+<td><code>i32</code></td>
+<td>INT, SERIAL</td>
+</tr>
+<tr>
+<td><code>u32</code></td>
+<td>OID</td>
+</tr>
+<tr>
+<td><code>i64</code></td>
+<td>BIGINT, BIGSERIAL</td>
+</tr>
+<tr>
+<td><code>f32</code></td>
+<td>REAL</td>
+</tr>
+<tr>
+<td><code>f64</code></td>
+<td>DOUBLE PRECISION</td>
+</tr>
+<tr>
+<td><code>String</code></td>
+<td>VARCHAR, CHAR(n), TEXT, CITEXT, NAME, UNKNOWN</td>
+</tr>
+<tr>
+<td><code>Vec&lt;u8&gt;</code></td>
+<td>BYTEA</td>
+</tr>
+<tr>
+<td><code>HashMap&lt;String, Option&lt;String&gt;&gt;</code></td>
+<td>HSTORE</td>
+</tr>
+</tbody>
+</table>
+
+<p>In addition, some implementations are provided for types in third party
+crates. These are disabled by default; to opt into one of these
+implementations, activate the Cargo feature corresponding to the crate&#39;s
+name prefixed by <code>with-</code>. For example, the <code>with-serde_json</code> feature enables
+the implementation for the <code>serde_json::Value</code> type.</p>
+
+<table>
+<thead>
+<tr>
+<th>Rust type</th>
+<th>Postgres type(s)</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td><code>serialize::json::Json</code></td>
+<td>JSON, JSONB</td>
+</tr>
+<tr>
+<td><code>serde_json::Value</code></td>
+<td>JSON, JSONB</td>
+</tr>
+<tr>
+<td><code>time::Timespec</code></td>
+<td>TIMESTAMP, TIMESTAMP WITH TIME ZONE</td>
+</tr>
+<tr>
+<td><code>chrono::NaiveDateTime</code></td>
+<td>TIMESTAMP</td>
+</tr>
+<tr>
+<td><code>chrono::DateTime&lt;Utc&gt;</code></td>
+<td>TIMESTAMP WITH TIME ZONE</td>
+</tr>
+<tr>
+<td><code>chrono::DateTime&lt;Local&gt;</code></td>
+<td>TIMESTAMP WITH TIME ZONE</td>
+</tr>
+<tr>
+<td><code>chrono::DateTime&lt;FixedOffset&gt;</code></td>
+<td>TIMESTAMP WITH TIME ZONE</td>
+</tr>
+<tr>
+<td><code>chrono::NaiveDate</code></td>
+<td>DATE</td>
+</tr>
+<tr>
+<td><code>chrono::NaiveTime</code></td>
+<td>TIME</td>
+</tr>
+<tr>
+<td><code>eui48::MacAddress</code></td>
+<td>MACADDR</td>
+</tr>
+<tr>
+<td><code>uuid::Uuid</code></td>
+<td>UUID</td>
+</tr>
+<tr>
+<td><code>bit_vec::BitVec</code></td>
+<td>BIT, VARBIT</td>
+</tr>
+<tr>
+<td><code>eui48::MacAddress</code></td>
+<td>MACADDR</td>
+</tr>
+</tbody>
+</table>
+
+<h1 id='nullability' class='section-header'><a href='#nullability'>Nullability</a></h1>
+<p>In addition to the types listed above, <code>FromSql</code> is implemented for
+<code>Option&lt;T&gt;</code> where <code>T</code> implements <code>FromSql</code>. An <code>Option&lt;T&gt;</code> represents a
+nullable Postgres value.</p>
+
+<h1 id='arrays' class='section-header'><a href='#arrays'>Arrays</a></h1>
+<p><code>FromSql</code> is implemented for <code>Vec&lt;T&gt;</code> where <code>T</code> implements <code>FromSql</code>, and
+corresponds to one-dimensional Postgres arrays.</p>
+</div>
+            <h2 id='required-methods' class='small-section-header'>
+              Required Methods<a href='#required-methods' class='anchor'></a>
+            </h2>
+            <div class='methods'>
+        <h3 id='tymethod.from_sql' class='method'><span id='from_sql.v' class='invisible'><code>fn <a href='#tymethod.from_sql' class='fnname'>from_sql</a>(ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>, raw: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</code></span></h3><div class='docblock'><p>Creates a new value of this type from a buffer of data of the specified
+Postgres <code>Type</code> in its binary format.</p>
+
+<p>The caller of this method is responsible for ensuring that this type
+is compatible with the Postgres <code>Type</code>.</p>
+</div><h3 id='tymethod.accepts' class='method'><span id='accepts.v' class='invisible'><code>fn <a href='#tymethod.accepts' class='fnname'>accepts</a>(ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></h3><div class='docblock'><p>Determines if a value of this type can be created from the specified
+Postgres <code>Type</code>.</p>
+</div></div>
+            <h2 id='provided-methods' class='small-section-header'>
+              Provided Methods<a href='#provided-methods' class='anchor'></a>
+            </h2>
+            <div class='methods'>
+        <h3 id='method.from_sql_null' class='method'><span id='from_sql_null.v' class='invisible'><code>fn <a href='#method.from_sql_null' class='fnname'>from_sql_null</a>(ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</code></span></h3><div class='docblock'><p>Creates a new value of this type from a <code>NULL</code> SQL value.</p>
+
+<p>The caller of this method is responsible for ensuring that this type
+is compatible with the Postgres <code>Type</code>.</p>
+
+<p>The default implementation returns
+<code>Err(Box::new(WasNull))</code>.</p>
+</div><h3 id='method.from_sql_nullable' class='method'><span id='from_sql_nullable.v' class='invisible'><code>fn <a href='#method.from_sql_nullable' class='fnname'>from_sql_nullable</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;ty: &amp;<a class="struct" href="../../postgres_shared/types/struct.Type.html" title="struct postgres_shared::types::Type">Type</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;raw: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>&gt;<br>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;Self, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;<a class="trait" href="https://doc.rust-lang.org/nightly/std/error/trait.Error.html" title="trait std::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</code></span></h3><div class='docblock'><p>A convenience function that delegates to <code>from_sql</code> and <code>from_sql_null</code> depending on the
+value of <code>raw</code>.</p>
+</div></div>
+        <h2 id='implementors' class='small-section-header'>
+          Implementors<a href='#implementors' class='anchor'></a>
+        </h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl&lt;T:&nbsp;<a class="trait" href="../../postgres_shared/types/trait.FromSql.html" title="trait postgres_shared::types::FromSql">FromSql</a>&gt; FromSql for <a class="enum" href="../../postgres_shared/types/enum.Date.html" title="enum postgres_shared::types::Date">Date</a>&lt;T&gt;</code></li>
+<li><code>impl&lt;T:&nbsp;<a class="trait" href="../../postgres_shared/types/trait.FromSql.html" title="trait postgres_shared::types::FromSql">FromSql</a>&gt; FromSql for <a class="enum" href="../../postgres_shared/types/enum.Timestamp.html" title="enum postgres_shared::types::Timestamp">Timestamp</a>&lt;T&gt;</code></li>
+<li><code>impl&lt;T:&nbsp;<a class="trait" href="../../postgres_shared/types/trait.FromSql.html" title="trait postgres_shared::types::FromSql">FromSql</a>&gt; FromSql for <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;T&gt;</code></li>
+<li><code>impl&lt;T:&nbsp;<a class="trait" href="../../postgres_shared/types/trait.FromSql.html" title="trait postgres_shared::types::FromSql">FromSql</a>&gt; FromSql for <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;T&gt;</code></li>
+<li><code>impl FromSql for <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a>&gt;</code></li>
+<li><code>impl FromSql for <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i8.html">i8</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i16.html">i16</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i32.html">i32</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u32.html">u32</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i64.html">i64</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.f32.html">f32</a></code></li>
+<li><code>impl FromSql for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.f64.html">f64</a></code></li>
+<li><code>impl FromSql for <a class="struct" href="https://doc.rust-lang.org/nightly/std/collections/hash/map/struct.HashMap.html" title="struct std::collections::hash::map::HashMap">HashMap</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>, <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;</code></li>
+</ul><script type="text/javascript" async
+                         src="../../implementors/postgres_shared/types/trait.FromSql.js">
+                 </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "postgres_shared";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

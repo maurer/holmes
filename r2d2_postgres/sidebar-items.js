@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["TlsMode","Like `postgres::TlsMode` except that it owns its `TlsHandshake` instance."]],"struct":[["PostgresConnectionManager","An `r2d2::ManageConnection` for `postgres::Connection`s."]]});

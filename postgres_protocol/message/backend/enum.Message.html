@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Message` enum in crate `postgres_protocol`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Message">
+
+    <title>postgres_protocol::message::backend::Message - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc enum">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Enum Message</p><div class="block items"><ul><li><a href="#variants">Variants</a></li><li><a href="#methods">Methods</a></li></ul></div><p class='location'><a href='../../index.html'>postgres_protocol</a>::<wbr><a href='../index.html'>message</a>::<wbr><a href='index.html'>backend</a></p><script>window.sidebarCurrent = {name: 'Message', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Enum <a href='../../index.html'>postgres_protocol</a>::<wbr><a href='../index.html'>message</a>::<wbr><a href='index.html'>backend</a>::<wbr><a class="enum" href=''>Message</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../../src/postgres_protocol/message/backend.rs.html#15-49' title='goto source code'>[src]</a></span></h1>
+<pre class='rust enum'>pub enum Message {
+    AuthenticationCleartextPassword,
+    AuthenticationGss,
+    AuthenticationKerberosV5,
+    AuthenticationMd5Password(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationMd5PasswordBody.html" title="struct postgres_protocol::message::backend::AuthenticationMd5PasswordBody">AuthenticationMd5PasswordBody</a>),
+    AuthenticationOk,
+    AuthenticationScmCredential,
+    AuthenticationSspi,
+    AuthenticationGssContinue(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationGssContinueBody.html" title="struct postgres_protocol::message::backend::AuthenticationGssContinueBody">AuthenticationGssContinueBody</a>),
+    AuthenticationSasl(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationSaslBody.html" title="struct postgres_protocol::message::backend::AuthenticationSaslBody">AuthenticationSaslBody</a>),
+    AuthenticationSaslContinue(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationSaslContinueBody.html" title="struct postgres_protocol::message::backend::AuthenticationSaslContinueBody">AuthenticationSaslContinueBody</a>),
+    AuthenticationSaslFinal(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationSaslFinalBody.html" title="struct postgres_protocol::message::backend::AuthenticationSaslFinalBody">AuthenticationSaslFinalBody</a>),
+    BackendKeyData(<a class="struct" href="../../../postgres_protocol/message/backend/struct.BackendKeyDataBody.html" title="struct postgres_protocol::message::backend::BackendKeyDataBody">BackendKeyDataBody</a>),
+    BindComplete,
+    CloseComplete,
+    CommandComplete(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CommandCompleteBody.html" title="struct postgres_protocol::message::backend::CommandCompleteBody">CommandCompleteBody</a>),
+    CopyData(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CopyDataBody.html" title="struct postgres_protocol::message::backend::CopyDataBody">CopyDataBody</a>),
+    CopyDone,
+    CopyInResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CopyInResponseBody.html" title="struct postgres_protocol::message::backend::CopyInResponseBody">CopyInResponseBody</a>),
+    CopyOutResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CopyOutResponseBody.html" title="struct postgres_protocol::message::backend::CopyOutResponseBody">CopyOutResponseBody</a>),
+    DataRow(<a class="struct" href="../../../postgres_protocol/message/backend/struct.DataRowBody.html" title="struct postgres_protocol::message::backend::DataRowBody">DataRowBody</a>),
+    EmptyQueryResponse,
+    ErrorResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ErrorResponseBody.html" title="struct postgres_protocol::message::backend::ErrorResponseBody">ErrorResponseBody</a>),
+    NoData,
+    NoticeResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.NoticeResponseBody.html" title="struct postgres_protocol::message::backend::NoticeResponseBody">NoticeResponseBody</a>),
+    NotificationResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.NotificationResponseBody.html" title="struct postgres_protocol::message::backend::NotificationResponseBody">NotificationResponseBody</a>),
+    ParameterDescription(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ParameterDescriptionBody.html" title="struct postgres_protocol::message::backend::ParameterDescriptionBody">ParameterDescriptionBody</a>),
+    ParameterStatus(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ParameterStatusBody.html" title="struct postgres_protocol::message::backend::ParameterStatusBody">ParameterStatusBody</a>),
+    ParseComplete,
+    PortalSuspended,
+    ReadyForQuery(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ReadyForQueryBody.html" title="struct postgres_protocol::message::backend::ReadyForQueryBody">ReadyForQueryBody</a>),
+    RowDescription(<a class="struct" href="../../../postgres_protocol/message/backend/struct.RowDescriptionBody.html" title="struct postgres_protocol::message::backend::RowDescriptionBody">RowDescriptionBody</a>),
+    // some variants omitted
+}</pre><div class='docblock'><p>An enum representing Postgres backend messages.</p>
+</div><h2 id='variants' class='variants small-section-header'>
+                   Variants<a href='#variants' class='anchor'></a></h2>
+<span id='variant.AuthenticationCleartextPassword' class='variant'><span id='AuthenticationCleartextPassword.v' class='invisible'><code>AuthenticationCleartextPassword</code></span></span><span id='variant.AuthenticationGss' class='variant'><span id='AuthenticationGss.v' class='invisible'><code>AuthenticationGss</code></span></span><span id='variant.AuthenticationKerberosV5' class='variant'><span id='AuthenticationKerberosV5.v' class='invisible'><code>AuthenticationKerberosV5</code></span></span><span id='variant.AuthenticationMd5Password' class='variant'><span id='AuthenticationMd5Password.v' class='invisible'><code>AuthenticationMd5Password(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationMd5PasswordBody.html" title="struct postgres_protocol::message::backend::AuthenticationMd5PasswordBody">AuthenticationMd5PasswordBody</a>)</code></span></span><span id='variant.AuthenticationOk' class='variant'><span id='AuthenticationOk.v' class='invisible'><code>AuthenticationOk</code></span></span><span id='variant.AuthenticationScmCredential' class='variant'><span id='AuthenticationScmCredential.v' class='invisible'><code>AuthenticationScmCredential</code></span></span><span id='variant.AuthenticationSspi' class='variant'><span id='AuthenticationSspi.v' class='invisible'><code>AuthenticationSspi</code></span></span><span id='variant.AuthenticationGssContinue' class='variant'><span id='AuthenticationGssContinue.v' class='invisible'><code>AuthenticationGssContinue(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationGssContinueBody.html" title="struct postgres_protocol::message::backend::AuthenticationGssContinueBody">AuthenticationGssContinueBody</a>)</code></span></span><span id='variant.AuthenticationSasl' class='variant'><span id='AuthenticationSasl.v' class='invisible'><code>AuthenticationSasl(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationSaslBody.html" title="struct postgres_protocol::message::backend::AuthenticationSaslBody">AuthenticationSaslBody</a>)</code></span></span><span id='variant.AuthenticationSaslContinue' class='variant'><span id='AuthenticationSaslContinue.v' class='invisible'><code>AuthenticationSaslContinue(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationSaslContinueBody.html" title="struct postgres_protocol::message::backend::AuthenticationSaslContinueBody">AuthenticationSaslContinueBody</a>)</code></span></span><span id='variant.AuthenticationSaslFinal' class='variant'><span id='AuthenticationSaslFinal.v' class='invisible'><code>AuthenticationSaslFinal(<a class="struct" href="../../../postgres_protocol/message/backend/struct.AuthenticationSaslFinalBody.html" title="struct postgres_protocol::message::backend::AuthenticationSaslFinalBody">AuthenticationSaslFinalBody</a>)</code></span></span><span id='variant.BackendKeyData' class='variant'><span id='BackendKeyData.v' class='invisible'><code>BackendKeyData(<a class="struct" href="../../../postgres_protocol/message/backend/struct.BackendKeyDataBody.html" title="struct postgres_protocol::message::backend::BackendKeyDataBody">BackendKeyDataBody</a>)</code></span></span><span id='variant.BindComplete' class='variant'><span id='BindComplete.v' class='invisible'><code>BindComplete</code></span></span><span id='variant.CloseComplete' class='variant'><span id='CloseComplete.v' class='invisible'><code>CloseComplete</code></span></span><span id='variant.CommandComplete' class='variant'><span id='CommandComplete.v' class='invisible'><code>CommandComplete(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CommandCompleteBody.html" title="struct postgres_protocol::message::backend::CommandCompleteBody">CommandCompleteBody</a>)</code></span></span><span id='variant.CopyData' class='variant'><span id='CopyData.v' class='invisible'><code>CopyData(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CopyDataBody.html" title="struct postgres_protocol::message::backend::CopyDataBody">CopyDataBody</a>)</code></span></span><span id='variant.CopyDone' class='variant'><span id='CopyDone.v' class='invisible'><code>CopyDone</code></span></span><span id='variant.CopyInResponse' class='variant'><span id='CopyInResponse.v' class='invisible'><code>CopyInResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CopyInResponseBody.html" title="struct postgres_protocol::message::backend::CopyInResponseBody">CopyInResponseBody</a>)</code></span></span><span id='variant.CopyOutResponse' class='variant'><span id='CopyOutResponse.v' class='invisible'><code>CopyOutResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.CopyOutResponseBody.html" title="struct postgres_protocol::message::backend::CopyOutResponseBody">CopyOutResponseBody</a>)</code></span></span><span id='variant.DataRow' class='variant'><span id='DataRow.v' class='invisible'><code>DataRow(<a class="struct" href="../../../postgres_protocol/message/backend/struct.DataRowBody.html" title="struct postgres_protocol::message::backend::DataRowBody">DataRowBody</a>)</code></span></span><span id='variant.EmptyQueryResponse' class='variant'><span id='EmptyQueryResponse.v' class='invisible'><code>EmptyQueryResponse</code></span></span><span id='variant.ErrorResponse' class='variant'><span id='ErrorResponse.v' class='invisible'><code>ErrorResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ErrorResponseBody.html" title="struct postgres_protocol::message::backend::ErrorResponseBody">ErrorResponseBody</a>)</code></span></span><span id='variant.NoData' class='variant'><span id='NoData.v' class='invisible'><code>NoData</code></span></span><span id='variant.NoticeResponse' class='variant'><span id='NoticeResponse.v' class='invisible'><code>NoticeResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.NoticeResponseBody.html" title="struct postgres_protocol::message::backend::NoticeResponseBody">NoticeResponseBody</a>)</code></span></span><span id='variant.NotificationResponse' class='variant'><span id='NotificationResponse.v' class='invisible'><code>NotificationResponse(<a class="struct" href="../../../postgres_protocol/message/backend/struct.NotificationResponseBody.html" title="struct postgres_protocol::message::backend::NotificationResponseBody">NotificationResponseBody</a>)</code></span></span><span id='variant.ParameterDescription' class='variant'><span id='ParameterDescription.v' class='invisible'><code>ParameterDescription(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ParameterDescriptionBody.html" title="struct postgres_protocol::message::backend::ParameterDescriptionBody">ParameterDescriptionBody</a>)</code></span></span><span id='variant.ParameterStatus' class='variant'><span id='ParameterStatus.v' class='invisible'><code>ParameterStatus(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ParameterStatusBody.html" title="struct postgres_protocol::message::backend::ParameterStatusBody">ParameterStatusBody</a>)</code></span></span><span id='variant.ParseComplete' class='variant'><span id='ParseComplete.v' class='invisible'><code>ParseComplete</code></span></span><span id='variant.PortalSuspended' class='variant'><span id='PortalSuspended.v' class='invisible'><code>PortalSuspended</code></span></span><span id='variant.ReadyForQuery' class='variant'><span id='ReadyForQuery.v' class='invisible'><code>ReadyForQuery(<a class="struct" href="../../../postgres_protocol/message/backend/struct.ReadyForQueryBody.html" title="struct postgres_protocol::message::backend::ReadyForQueryBody">ReadyForQueryBody</a>)</code></span></span><span id='variant.RowDescription' class='variant'><span id='RowDescription.v' class='invisible'><code>RowDescription(<a class="struct" href="../../../postgres_protocol/message/backend/struct.RowDescriptionBody.html" title="struct postgres_protocol::message::backend::RowDescriptionBody">RowDescriptionBody</a>)</code></span></span>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="enum" href="../../../postgres_protocol/message/backend/enum.Message.html" title="enum postgres_protocol::message::backend::Message">Message</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/postgres_protocol/message/backend.rs.html#51-236' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.parse' class="method"><span id='parse.v' class='invisible'><code>fn <a href='#method.parse' class='fnname'>parse</a>(buf: &amp;mut <a class="struct" href="../../../bytes/bytes/struct.BytesMut.html" title="struct bytes::bytes::BytesMut">BytesMut</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/std/io/error/type.Result.html" title="type std::io::error::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="../../../postgres_protocol/message/backend/enum.Message.html" title="enum postgres_protocol::message::backend::Message">Message</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../../src/postgres_protocol/message/backend.rs.html#53-235' title='goto source code'>[src]</a></span></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "postgres_protocol";
+    </script>
+    <script src="../../../main.js"></script>
+    <script defer src="../../../search-index.js"></script>
+</body>
+</html>

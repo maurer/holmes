@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `error` mod in crate `postgres_shared`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, error">
+
+    <title>postgres_shared::error - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Module error</p><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#constants">Constants</a></li></ul></div><p class='location'><a href='../index.html'>postgres_shared</a></p><script>window.sidebarCurrent = {name: 'error', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>postgres_shared</a>::<wbr><a class="mod" href=''>error</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/postgres_shared/error/mod.rs.html#1-439' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Errors.</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DbError.html"
+                                  title='struct postgres_shared::error::DbError'>DbError</a></td>
+                           <td class='docblock-short'>
+                                <p>A Postgres error or notice.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Error.html"
+                                  title='struct postgres_shared::error::Error'>Error</a></td>
+                           <td class='docblock-short'>
+                                <p>An error communicating with the Postgres server.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.SqlState.html"
+                                  title='struct postgres_shared::error::SqlState'>SqlState</a></td>
+                           <td class='docblock-short'>
+                                <p>A SQLSTATE error code</p>
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.ErrorPosition.html"
+                                  title='enum postgres_shared::error::ErrorPosition'>ErrorPosition</a></td>
+                           <td class='docblock-short'>
+                                <p>Represents the position of an error in a query.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.Severity.html"
+                                  title='enum postgres_shared::error::Severity'>Severity</a></td>
+                           <td class='docblock-short'>
+                                <p>The severity of a Postgres error or notice.</p>
+                           </td>
+                       </tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ACTIVE_SQL_TRANSACTION.html"
+                                  title='constant postgres_shared::error::ACTIVE_SQL_TRANSACTION'>ACTIVE_SQL_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ADMIN_SHUTDOWN.html"
+                                  title='constant postgres_shared::error::ADMIN_SHUTDOWN'>ADMIN_SHUTDOWN</a></td>
+                           <td class='docblock-short'>
+                                <p>57P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.AMBIGUOUS_ALIAS.html"
+                                  title='constant postgres_shared::error::AMBIGUOUS_ALIAS'>AMBIGUOUS_ALIAS</a></td>
+                           <td class='docblock-short'>
+                                <p>42P09</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.AMBIGUOUS_COLUMN.html"
+                                  title='constant postgres_shared::error::AMBIGUOUS_COLUMN'>AMBIGUOUS_COLUMN</a></td>
+                           <td class='docblock-short'>
+                                <p>42702</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.AMBIGUOUS_FUNCTION.html"
+                                  title='constant postgres_shared::error::AMBIGUOUS_FUNCTION'>AMBIGUOUS_FUNCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>42725</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.AMBIGUOUS_PARAMETER.html"
+                                  title='constant postgres_shared::error::AMBIGUOUS_PARAMETER'>AMBIGUOUS_PARAMETER</a></td>
+                           <td class='docblock-short'>
+                                <p>42P08</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ARRAY_ELEMENT_ERROR.html"
+                                  title='constant postgres_shared::error::ARRAY_ELEMENT_ERROR'>ARRAY_ELEMENT_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>2202E</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ARRAY_SUBSCRIPT_ERROR.html"
+                                  title='constant postgres_shared::error::ARRAY_SUBSCRIPT_ERROR'>ARRAY_SUBSCRIPT_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>2202E</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ASSERT_FAILURE.html"
+                                  title='constant postgres_shared::error::ASSERT_FAILURE'>ASSERT_FAILURE</a></td>
+                           <td class='docblock-short'>
+                                <p>P0004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BAD_COPY_FILE_FORMAT.html"
+                                  title='constant postgres_shared::error::BAD_COPY_FILE_FORMAT'>BAD_COPY_FILE_FORMAT</a></td>
+                           <td class='docblock-short'>
+                                <p>22P04</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.BRANCH_TRANSACTION_ALREADY_ACTIVE.html"
+                                  title='constant postgres_shared::error::BRANCH_TRANSACTION_ALREADY_ACTIVE'>BRANCH_TRANSACTION_ALREADY_ACTIVE</a></td>
+                           <td class='docblock-short'>
+                                <p>25002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CANNOT_COERCE.html"
+                                  title='constant postgres_shared::error::CANNOT_COERCE'>CANNOT_COERCE</a></td>
+                           <td class='docblock-short'>
+                                <p>42846</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CANNOT_CONNECT_NOW.html"
+                                  title='constant postgres_shared::error::CANNOT_CONNECT_NOW'>CANNOT_CONNECT_NOW</a></td>
+                           <td class='docblock-short'>
+                                <p>57P03</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CANT_CHANGE_RUNTIME_PARAM.html"
+                                  title='constant postgres_shared::error::CANT_CHANGE_RUNTIME_PARAM'>CANT_CHANGE_RUNTIME_PARAM</a></td>
+                           <td class='docblock-short'>
+                                <p>55P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CARDINALITY_VIOLATION.html"
+                                  title='constant postgres_shared::error::CARDINALITY_VIOLATION'>CARDINALITY_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>21000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CASE_NOT_FOUND.html"
+                                  title='constant postgres_shared::error::CASE_NOT_FOUND'>CASE_NOT_FOUND</a></td>
+                           <td class='docblock-short'>
+                                <p>20000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CHARACTER_NOT_IN_REPERTOIRE.html"
+                                  title='constant postgres_shared::error::CHARACTER_NOT_IN_REPERTOIRE'>CHARACTER_NOT_IN_REPERTOIRE</a></td>
+                           <td class='docblock-short'>
+                                <p>22021</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CHECK_VIOLATION.html"
+                                  title='constant postgres_shared::error::CHECK_VIOLATION'>CHECK_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23514</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.COLLATION_MISMATCH.html"
+                                  title='constant postgres_shared::error::COLLATION_MISMATCH'>COLLATION_MISMATCH</a></td>
+                           <td class='docblock-short'>
+                                <p>42P21</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CONFIGURATION_LIMIT_EXCEEDED.html"
+                                  title='constant postgres_shared::error::CONFIGURATION_LIMIT_EXCEEDED'>CONFIGURATION_LIMIT_EXCEEDED</a></td>
+                           <td class='docblock-short'>
+                                <p>53400</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CONFIG_FILE_ERROR.html"
+                                  title='constant postgres_shared::error::CONFIG_FILE_ERROR'>CONFIG_FILE_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>F0000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CONNECTION_DOES_NOT_EXIST.html"
+                                  title='constant postgres_shared::error::CONNECTION_DOES_NOT_EXIST'>CONNECTION_DOES_NOT_EXIST</a></td>
+                           <td class='docblock-short'>
+                                <p>08003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CONNECTION_EXCEPTION.html"
+                                  title='constant postgres_shared::error::CONNECTION_EXCEPTION'>CONNECTION_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>08000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CONNECTION_FAILURE.html"
+                                  title='constant postgres_shared::error::CONNECTION_FAILURE'>CONNECTION_FAILURE</a></td>
+                           <td class='docblock-short'>
+                                <p>08006</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.CRASH_SHUTDOWN.html"
+                                  title='constant postgres_shared::error::CRASH_SHUTDOWN'>CRASH_SHUTDOWN</a></td>
+                           <td class='docblock-short'>
+                                <p>57P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATABASE_DROPPED.html"
+                                  title='constant postgres_shared::error::DATABASE_DROPPED'>DATABASE_DROPPED</a></td>
+                           <td class='docblock-short'>
+                                <p>57P04</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATATYPE_MISMATCH.html"
+                                  title='constant postgres_shared::error::DATATYPE_MISMATCH'>DATATYPE_MISMATCH</a></td>
+                           <td class='docblock-short'>
+                                <p>42804</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATA_CORRUPTED.html"
+                                  title='constant postgres_shared::error::DATA_CORRUPTED'>DATA_CORRUPTED</a></td>
+                           <td class='docblock-short'>
+                                <p>XX001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATA_EXCEPTION.html"
+                                  title='constant postgres_shared::error::DATA_EXCEPTION'>DATA_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>22000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATETIME_FIELD_OVERFLOW.html"
+                                  title='constant postgres_shared::error::DATETIME_FIELD_OVERFLOW'>DATETIME_FIELD_OVERFLOW</a></td>
+                           <td class='docblock-short'>
+                                <p>22008</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DATETIME_VALUE_OUT_OF_RANGE.html"
+                                  title='constant postgres_shared::error::DATETIME_VALUE_OUT_OF_RANGE'>DATETIME_VALUE_OUT_OF_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>22008</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DEPENDENT_OBJECTS_STILL_EXIST.html"
+                                  title='constant postgres_shared::error::DEPENDENT_OBJECTS_STILL_EXIST'>DEPENDENT_OBJECTS_STILL_EXIST</a></td>
+                           <td class='docblock-short'>
+                                <p>2BP01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DEPENDENT_PRIVILEGE_DESCRIPTORS_STILL_EXIST.html"
+                                  title='constant postgres_shared::error::DEPENDENT_PRIVILEGE_DESCRIPTORS_STILL_EXIST'>DEPENDENT_PRIVILEGE_DESCRIPTORS_STILL_EXIST</a></td>
+                           <td class='docblock-short'>
+                                <p>2B000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DIAGNOSTICS_EXCEPTION.html"
+                                  title='constant postgres_shared::error::DIAGNOSTICS_EXCEPTION'>DIAGNOSTICS_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>0Z000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DISK_FULL.html"
+                                  title='constant postgres_shared::error::DISK_FULL'>DISK_FULL</a></td>
+                           <td class='docblock-short'>
+                                <p>53100</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DIVISION_BY_ZERO.html"
+                                  title='constant postgres_shared::error::DIVISION_BY_ZERO'>DIVISION_BY_ZERO</a></td>
+                           <td class='docblock-short'>
+                                <p>22012</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_ALIAS.html"
+                                  title='constant postgres_shared::error::DUPLICATE_ALIAS'>DUPLICATE_ALIAS</a></td>
+                           <td class='docblock-short'>
+                                <p>42712</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_COLUMN.html"
+                                  title='constant postgres_shared::error::DUPLICATE_COLUMN'>DUPLICATE_COLUMN</a></td>
+                           <td class='docblock-short'>
+                                <p>42701</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_CURSOR.html"
+                                  title='constant postgres_shared::error::DUPLICATE_CURSOR'>DUPLICATE_CURSOR</a></td>
+                           <td class='docblock-short'>
+                                <p>42P03</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_DATABASE.html"
+                                  title='constant postgres_shared::error::DUPLICATE_DATABASE'>DUPLICATE_DATABASE</a></td>
+                           <td class='docblock-short'>
+                                <p>42P04</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_FILE.html"
+                                  title='constant postgres_shared::error::DUPLICATE_FILE'>DUPLICATE_FILE</a></td>
+                           <td class='docblock-short'>
+                                <p>58P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_FUNCTION.html"
+                                  title='constant postgres_shared::error::DUPLICATE_FUNCTION'>DUPLICATE_FUNCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>42723</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_OBJECT.html"
+                                  title='constant postgres_shared::error::DUPLICATE_OBJECT'>DUPLICATE_OBJECT</a></td>
+                           <td class='docblock-short'>
+                                <p>42710</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_PSTATEMENT.html"
+                                  title='constant postgres_shared::error::DUPLICATE_PSTATEMENT'>DUPLICATE_PSTATEMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>42P05</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_SCHEMA.html"
+                                  title='constant postgres_shared::error::DUPLICATE_SCHEMA'>DUPLICATE_SCHEMA</a></td>
+                           <td class='docblock-short'>
+                                <p>42P06</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.DUPLICATE_TABLE.html"
+                                  title='constant postgres_shared::error::DUPLICATE_TABLE'>DUPLICATE_TABLE</a></td>
+                           <td class='docblock-short'>
+                                <p>42P07</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ERROR_IN_ASSIGNMENT.html"
+                                  title='constant postgres_shared::error::ERROR_IN_ASSIGNMENT'>ERROR_IN_ASSIGNMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>22005</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ESCAPE_CHARACTER_CONFLICT.html"
+                                  title='constant postgres_shared::error::ESCAPE_CHARACTER_CONFLICT'>ESCAPE_CHARACTER_CONFLICT</a></td>
+                           <td class='docblock-short'>
+                                <p>2200B</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.EXCLUSION_VIOLATION.html"
+                                  title='constant postgres_shared::error::EXCLUSION_VIOLATION'>EXCLUSION_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.EXTERNAL_ROUTINE_EXCEPTION.html"
+                                  title='constant postgres_shared::error::EXTERNAL_ROUTINE_EXCEPTION'>EXTERNAL_ROUTINE_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>38000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.EXTERNAL_ROUTINE_INVOCATION_EXCEPTION.html"
+                                  title='constant postgres_shared::error::EXTERNAL_ROUTINE_INVOCATION_EXCEPTION'>EXTERNAL_ROUTINE_INVOCATION_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>39000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_E_CONTAINING_SQL_NOT_PERMITTED.html"
+                                  title='constant postgres_shared::error::E_R_E_CONTAINING_SQL_NOT_PERMITTED'>E_R_E_CONTAINING_SQL_NOT_PERMITTED</a></td>
+                           <td class='docblock-short'>
+                                <p>38001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_E_MODIFYING_SQL_DATA_NOT_PERMITTED.html"
+                                  title='constant postgres_shared::error::E_R_E_MODIFYING_SQL_DATA_NOT_PERMITTED'>E_R_E_MODIFYING_SQL_DATA_NOT_PERMITTED</a></td>
+                           <td class='docblock-short'>
+                                <p>38002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED.html"
+                                  title='constant postgres_shared::error::E_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED'>E_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED</a></td>
+                           <td class='docblock-short'>
+                                <p>38003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_E_READING_SQL_DATA_NOT_PERMITTED.html"
+                                  title='constant postgres_shared::error::E_R_E_READING_SQL_DATA_NOT_PERMITTED'>E_R_E_READING_SQL_DATA_NOT_PERMITTED</a></td>
+                           <td class='docblock-short'>
+                                <p>38004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED.html"
+                                  title='constant postgres_shared::error::E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED'>E_R_I_E_EVENT_TRIGGER_PROTOCOL_VIOLATED</a></td>
+                           <td class='docblock-short'>
+                                <p>39P03</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_I_E_INVALID_SQLSTATE_RETURNED.html"
+                                  title='constant postgres_shared::error::E_R_I_E_INVALID_SQLSTATE_RETURNED'>E_R_I_E_INVALID_SQLSTATE_RETURNED</a></td>
+                           <td class='docblock-short'>
+                                <p>39001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_I_E_NULL_VALUE_NOT_ALLOWED.html"
+                                  title='constant postgres_shared::error::E_R_I_E_NULL_VALUE_NOT_ALLOWED'>E_R_I_E_NULL_VALUE_NOT_ALLOWED</a></td>
+                           <td class='docblock-short'>
+                                <p>39004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_I_E_SRF_PROTOCOL_VIOLATED.html"
+                                  title='constant postgres_shared::error::E_R_I_E_SRF_PROTOCOL_VIOLATED'>E_R_I_E_SRF_PROTOCOL_VIOLATED</a></td>
+                           <td class='docblock-short'>
+                                <p>39P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.E_R_I_E_TRIGGER_PROTOCOL_VIOLATED.html"
+                                  title='constant postgres_shared::error::E_R_I_E_TRIGGER_PROTOCOL_VIOLATED'>E_R_I_E_TRIGGER_PROTOCOL_VIOLATED</a></td>
+                           <td class='docblock-short'>
+                                <p>39P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_COLUMN_NAME_NOT_FOUND.html"
+                                  title='constant postgres_shared::error::FDW_COLUMN_NAME_NOT_FOUND'>FDW_COLUMN_NAME_NOT_FOUND</a></td>
+                           <td class='docblock-short'>
+                                <p>HV005</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_DYNAMIC_PARAMETER_VALUE_NEEDED.html"
+                                  title='constant postgres_shared::error::FDW_DYNAMIC_PARAMETER_VALUE_NEEDED'>FDW_DYNAMIC_PARAMETER_VALUE_NEEDED</a></td>
+                           <td class='docblock-short'>
+                                <p>HV002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_ERROR.html"
+                                  title='constant postgres_shared::error::FDW_ERROR'>FDW_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>HV000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_FUNCTION_SEQUENCE_ERROR.html"
+                                  title='constant postgres_shared::error::FDW_FUNCTION_SEQUENCE_ERROR'>FDW_FUNCTION_SEQUENCE_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>HV010</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INCONSISTENT_DESCRIPTOR_INFORMATION.html"
+                                  title='constant postgres_shared::error::FDW_INCONSISTENT_DESCRIPTOR_INFORMATION'>FDW_INCONSISTENT_DESCRIPTOR_INFORMATION</a></td>
+                           <td class='docblock-short'>
+                                <p>HV021</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_ATTRIBUTE_VALUE.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_ATTRIBUTE_VALUE'>FDW_INVALID_ATTRIBUTE_VALUE</a></td>
+                           <td class='docblock-short'>
+                                <p>HV024</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_COLUMN_NAME.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_COLUMN_NAME'>FDW_INVALID_COLUMN_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>HV007</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_COLUMN_NUMBER.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_COLUMN_NUMBER'>FDW_INVALID_COLUMN_NUMBER</a></td>
+                           <td class='docblock-short'>
+                                <p>HV008</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_DATA_TYPE.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_DATA_TYPE'>FDW_INVALID_DATA_TYPE</a></td>
+                           <td class='docblock-short'>
+                                <p>HV004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_DATA_TYPE_DESCRIPTORS.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_DATA_TYPE_DESCRIPTORS'>FDW_INVALID_DATA_TYPE_DESCRIPTORS</a></td>
+                           <td class='docblock-short'>
+                                <p>HV006</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_DESCRIPTOR_FIELD_IDENTIFIER.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_DESCRIPTOR_FIELD_IDENTIFIER'>FDW_INVALID_DESCRIPTOR_FIELD_IDENTIFIER</a></td>
+                           <td class='docblock-short'>
+                                <p>HV091</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_HANDLE.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_HANDLE'>FDW_INVALID_HANDLE</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00B</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_OPTION_INDEX.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_OPTION_INDEX'>FDW_INVALID_OPTION_INDEX</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00C</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_OPTION_NAME.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_OPTION_NAME'>FDW_INVALID_OPTION_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00D</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_STRING_FORMAT.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_STRING_FORMAT'>FDW_INVALID_STRING_FORMAT</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00A</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_STRING_LENGTH_OR_BUFFER_LENGTH.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_STRING_LENGTH_OR_BUFFER_LENGTH'>FDW_INVALID_STRING_LENGTH_OR_BUFFER_LENGTH</a></td>
+                           <td class='docblock-short'>
+                                <p>HV090</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_INVALID_USE_OF_NULL_POINTER.html"
+                                  title='constant postgres_shared::error::FDW_INVALID_USE_OF_NULL_POINTER'>FDW_INVALID_USE_OF_NULL_POINTER</a></td>
+                           <td class='docblock-short'>
+                                <p>HV009</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_NO_SCHEMAS.html"
+                                  title='constant postgres_shared::error::FDW_NO_SCHEMAS'>FDW_NO_SCHEMAS</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00P</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_OPTION_NAME_NOT_FOUND.html"
+                                  title='constant postgres_shared::error::FDW_OPTION_NAME_NOT_FOUND'>FDW_OPTION_NAME_NOT_FOUND</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00J</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_OUT_OF_MEMORY.html"
+                                  title='constant postgres_shared::error::FDW_OUT_OF_MEMORY'>FDW_OUT_OF_MEMORY</a></td>
+                           <td class='docblock-short'>
+                                <p>HV001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_REPLY_HANDLE.html"
+                                  title='constant postgres_shared::error::FDW_REPLY_HANDLE'>FDW_REPLY_HANDLE</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00K</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_SCHEMA_NOT_FOUND.html"
+                                  title='constant postgres_shared::error::FDW_SCHEMA_NOT_FOUND'>FDW_SCHEMA_NOT_FOUND</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00Q</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_TABLE_NOT_FOUND.html"
+                                  title='constant postgres_shared::error::FDW_TABLE_NOT_FOUND'>FDW_TABLE_NOT_FOUND</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00R</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_TOO_MANY_HANDLES.html"
+                                  title='constant postgres_shared::error::FDW_TOO_MANY_HANDLES'>FDW_TOO_MANY_HANDLES</a></td>
+                           <td class='docblock-short'>
+                                <p>HV014</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_UNABLE_TO_CREATE_EXECUTION.html"
+                                  title='constant postgres_shared::error::FDW_UNABLE_TO_CREATE_EXECUTION'>FDW_UNABLE_TO_CREATE_EXECUTION</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00L</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_UNABLE_TO_CREATE_REPLY.html"
+                                  title='constant postgres_shared::error::FDW_UNABLE_TO_CREATE_REPLY'>FDW_UNABLE_TO_CREATE_REPLY</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00M</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FDW_UNABLE_TO_ESTABLISH_CONNECTION.html"
+                                  title='constant postgres_shared::error::FDW_UNABLE_TO_ESTABLISH_CONNECTION'>FDW_UNABLE_TO_ESTABLISH_CONNECTION</a></td>
+                           <td class='docblock-short'>
+                                <p>HV00N</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FEATURE_NOT_SUPPORTED.html"
+                                  title='constant postgres_shared::error::FEATURE_NOT_SUPPORTED'>FEATURE_NOT_SUPPORTED</a></td>
+                           <td class='docblock-short'>
+                                <p>0A000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FLOATING_POINT_EXCEPTION.html"
+                                  title='constant postgres_shared::error::FLOATING_POINT_EXCEPTION'>FLOATING_POINT_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>22P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.FOREIGN_KEY_VIOLATION.html"
+                                  title='constant postgres_shared::error::FOREIGN_KEY_VIOLATION'>FOREIGN_KEY_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23503</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.GENERATED_ALWAYS.html"
+                                  title='constant postgres_shared::error::GENERATED_ALWAYS'>GENERATED_ALWAYS</a></td>
+                           <td class='docblock-short'>
+                                <p>428C9</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.GROUPING_ERROR.html"
+                                  title='constant postgres_shared::error::GROUPING_ERROR'>GROUPING_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>42803</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.HELD_CURSOR_REQUIRES_SAME_ISOLATION_LEVEL.html"
+                                  title='constant postgres_shared::error::HELD_CURSOR_REQUIRES_SAME_ISOLATION_LEVEL'>HELD_CURSOR_REQUIRES_SAME_ISOLATION_LEVEL</a></td>
+                           <td class='docblock-short'>
+                                <p>25008</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.IDLE_IN_TRANSACTION_SESSION_TIMEOUT.html"
+                                  title='constant postgres_shared::error::IDLE_IN_TRANSACTION_SESSION_TIMEOUT'>IDLE_IN_TRANSACTION_SESSION_TIMEOUT</a></td>
+                           <td class='docblock-short'>
+                                <p>25P03</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INAPPROPRIATE_ACCESS_MODE_FOR_BRANCH_TRANSACTION.html"
+                                  title='constant postgres_shared::error::INAPPROPRIATE_ACCESS_MODE_FOR_BRANCH_TRANSACTION'>INAPPROPRIATE_ACCESS_MODE_FOR_BRANCH_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INAPPROPRIATE_ISOLATION_LEVEL_FOR_BRANCH_TRANSACTION.html"
+                                  title='constant postgres_shared::error::INAPPROPRIATE_ISOLATION_LEVEL_FOR_BRANCH_TRANSACTION'>INAPPROPRIATE_ISOLATION_LEVEL_FOR_BRANCH_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INDETERMINATE_COLLATION.html"
+                                  title='constant postgres_shared::error::INDETERMINATE_COLLATION'>INDETERMINATE_COLLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P22</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INDETERMINATE_DATATYPE.html"
+                                  title='constant postgres_shared::error::INDETERMINATE_DATATYPE'>INDETERMINATE_DATATYPE</a></td>
+                           <td class='docblock-short'>
+                                <p>42P18</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INDEX_CORRUPTED.html"
+                                  title='constant postgres_shared::error::INDEX_CORRUPTED'>INDEX_CORRUPTED</a></td>
+                           <td class='docblock-short'>
+                                <p>XX002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INDICATOR_OVERFLOW.html"
+                                  title='constant postgres_shared::error::INDICATOR_OVERFLOW'>INDICATOR_OVERFLOW</a></td>
+                           <td class='docblock-short'>
+                                <p>22022</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INSUFFICIENT_PRIVILEGE.html"
+                                  title='constant postgres_shared::error::INSUFFICIENT_PRIVILEGE'>INSUFFICIENT_PRIVILEGE</a></td>
+                           <td class='docblock-short'>
+                                <p>42501</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INSUFFICIENT_RESOURCES.html"
+                                  title='constant postgres_shared::error::INSUFFICIENT_RESOURCES'>INSUFFICIENT_RESOURCES</a></td>
+                           <td class='docblock-short'>
+                                <p>53000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INTEGRITY_CONSTRAINT_VIOLATION.html"
+                                  title='constant postgres_shared::error::INTEGRITY_CONSTRAINT_VIOLATION'>INTEGRITY_CONSTRAINT_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INTERNAL_ERROR.html"
+                                  title='constant postgres_shared::error::INTERNAL_ERROR'>INTERNAL_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>XX000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INTERVAL_FIELD_OVERFLOW.html"
+                                  title='constant postgres_shared::error::INTERVAL_FIELD_OVERFLOW'>INTERVAL_FIELD_OVERFLOW</a></td>
+                           <td class='docblock-short'>
+                                <p>22015</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ARGUMENT_FOR_LOG.html"
+                                  title='constant postgres_shared::error::INVALID_ARGUMENT_FOR_LOG'>INVALID_ARGUMENT_FOR_LOG</a></td>
+                           <td class='docblock-short'>
+                                <p>2201E</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ARGUMENT_FOR_NTH_VALUE.html"
+                                  title='constant postgres_shared::error::INVALID_ARGUMENT_FOR_NTH_VALUE'>INVALID_ARGUMENT_FOR_NTH_VALUE</a></td>
+                           <td class='docblock-short'>
+                                <p>22016</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ARGUMENT_FOR_NTILE.html"
+                                  title='constant postgres_shared::error::INVALID_ARGUMENT_FOR_NTILE'>INVALID_ARGUMENT_FOR_NTILE</a></td>
+                           <td class='docblock-short'>
+                                <p>22014</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ARGUMENT_FOR_POWER_FUNCTION.html"
+                                  title='constant postgres_shared::error::INVALID_ARGUMENT_FOR_POWER_FUNCTION'>INVALID_ARGUMENT_FOR_POWER_FUNCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>2201F</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION.html"
+                                  title='constant postgres_shared::error::INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION'>INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>2201G</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_AUTHORIZATION_SPECIFICATION.html"
+                                  title='constant postgres_shared::error::INVALID_AUTHORIZATION_SPECIFICATION'>INVALID_AUTHORIZATION_SPECIFICATION</a></td>
+                           <td class='docblock-short'>
+                                <p>28000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_BINARY_REPRESENTATION.html"
+                                  title='constant postgres_shared::error::INVALID_BINARY_REPRESENTATION'>INVALID_BINARY_REPRESENTATION</a></td>
+                           <td class='docblock-short'>
+                                <p>22P03</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_CATALOG_NAME.html"
+                                  title='constant postgres_shared::error::INVALID_CATALOG_NAME'>INVALID_CATALOG_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>3D000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_CHARACTER_VALUE_FOR_CAST.html"
+                                  title='constant postgres_shared::error::INVALID_CHARACTER_VALUE_FOR_CAST'>INVALID_CHARACTER_VALUE_FOR_CAST</a></td>
+                           <td class='docblock-short'>
+                                <p>22018</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_COLUMN_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_COLUMN_DEFINITION'>INVALID_COLUMN_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42611</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_COLUMN_REFERENCE.html"
+                                  title='constant postgres_shared::error::INVALID_COLUMN_REFERENCE'>INVALID_COLUMN_REFERENCE</a></td>
+                           <td class='docblock-short'>
+                                <p>42P10</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_CURSOR_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_CURSOR_DEFINITION'>INVALID_CURSOR_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P11</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_CURSOR_NAME.html"
+                                  title='constant postgres_shared::error::INVALID_CURSOR_NAME'>INVALID_CURSOR_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>34000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_CURSOR_STATE.html"
+                                  title='constant postgres_shared::error::INVALID_CURSOR_STATE'>INVALID_CURSOR_STATE</a></td>
+                           <td class='docblock-short'>
+                                <p>24000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_DATABASE_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_DATABASE_DEFINITION'>INVALID_DATABASE_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P12</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_DATETIME_FORMAT.html"
+                                  title='constant postgres_shared::error::INVALID_DATETIME_FORMAT'>INVALID_DATETIME_FORMAT</a></td>
+                           <td class='docblock-short'>
+                                <p>22007</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ESCAPE_CHARACTER.html"
+                                  title='constant postgres_shared::error::INVALID_ESCAPE_CHARACTER'>INVALID_ESCAPE_CHARACTER</a></td>
+                           <td class='docblock-short'>
+                                <p>22019</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ESCAPE_OCTET.html"
+                                  title='constant postgres_shared::error::INVALID_ESCAPE_OCTET'>INVALID_ESCAPE_OCTET</a></td>
+                           <td class='docblock-short'>
+                                <p>2200D</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ESCAPE_SEQUENCE.html"
+                                  title='constant postgres_shared::error::INVALID_ESCAPE_SEQUENCE'>INVALID_ESCAPE_SEQUENCE</a></td>
+                           <td class='docblock-short'>
+                                <p>22025</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_FOREIGN_KEY.html"
+                                  title='constant postgres_shared::error::INVALID_FOREIGN_KEY'>INVALID_FOREIGN_KEY</a></td>
+                           <td class='docblock-short'>
+                                <p>42830</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_FUNCTION_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_FUNCTION_DEFINITION'>INVALID_FUNCTION_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P13</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_GRANTOR.html"
+                                  title='constant postgres_shared::error::INVALID_GRANTOR'>INVALID_GRANTOR</a></td>
+                           <td class='docblock-short'>
+                                <p>0L000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_GRANT_OPERATION.html"
+                                  title='constant postgres_shared::error::INVALID_GRANT_OPERATION'>INVALID_GRANT_OPERATION</a></td>
+                           <td class='docblock-short'>
+                                <p>0LP01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_INDICATOR_PARAMETER_VALUE.html"
+                                  title='constant postgres_shared::error::INVALID_INDICATOR_PARAMETER_VALUE'>INVALID_INDICATOR_PARAMETER_VALUE</a></td>
+                           <td class='docblock-short'>
+                                <p>22010</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_NAME.html"
+                                  title='constant postgres_shared::error::INVALID_NAME'>INVALID_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>42602</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_OBJECT_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_OBJECT_DEFINITION'>INVALID_OBJECT_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P17</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_PARAMETER_VALUE.html"
+                                  title='constant postgres_shared::error::INVALID_PARAMETER_VALUE'>INVALID_PARAMETER_VALUE</a></td>
+                           <td class='docblock-short'>
+                                <p>22023</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_PASSWORD.html"
+                                  title='constant postgres_shared::error::INVALID_PASSWORD'>INVALID_PASSWORD</a></td>
+                           <td class='docblock-short'>
+                                <p>28P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_PSTATEMENT_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_PSTATEMENT_DEFINITION'>INVALID_PSTATEMENT_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P14</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_RECURSION.html"
+                                  title='constant postgres_shared::error::INVALID_RECURSION'>INVALID_RECURSION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P19</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_REGULAR_EXPRESSION.html"
+                                  title='constant postgres_shared::error::INVALID_REGULAR_EXPRESSION'>INVALID_REGULAR_EXPRESSION</a></td>
+                           <td class='docblock-short'>
+                                <p>2201B</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ROLE_SPECIFICATION.html"
+                                  title='constant postgres_shared::error::INVALID_ROLE_SPECIFICATION'>INVALID_ROLE_SPECIFICATION</a></td>
+                           <td class='docblock-short'>
+                                <p>0P000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ROW_COUNT_IN_LIMIT_CLAUSE.html"
+                                  title='constant postgres_shared::error::INVALID_ROW_COUNT_IN_LIMIT_CLAUSE'>INVALID_ROW_COUNT_IN_LIMIT_CLAUSE</a></td>
+                           <td class='docblock-short'>
+                                <p>2201W</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE.html"
+                                  title='constant postgres_shared::error::INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE'>INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE</a></td>
+                           <td class='docblock-short'>
+                                <p>2201X</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_SCHEMA_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_SCHEMA_DEFINITION'>INVALID_SCHEMA_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P15</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_SCHEMA_NAME.html"
+                                  title='constant postgres_shared::error::INVALID_SCHEMA_NAME'>INVALID_SCHEMA_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>3F000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_SQL_STATEMENT_NAME.html"
+                                  title='constant postgres_shared::error::INVALID_SQL_STATEMENT_NAME'>INVALID_SQL_STATEMENT_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>26000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TABLESAMPLE_ARGUMENT.html"
+                                  title='constant postgres_shared::error::INVALID_TABLESAMPLE_ARGUMENT'>INVALID_TABLESAMPLE_ARGUMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>2202H</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TABLESAMPLE_REPEAT.html"
+                                  title='constant postgres_shared::error::INVALID_TABLESAMPLE_REPEAT'>INVALID_TABLESAMPLE_REPEAT</a></td>
+                           <td class='docblock-short'>
+                                <p>2202G</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TABLE_DEFINITION.html"
+                                  title='constant postgres_shared::error::INVALID_TABLE_DEFINITION'>INVALID_TABLE_DEFINITION</a></td>
+                           <td class='docblock-short'>
+                                <p>42P16</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TEXT_REPRESENTATION.html"
+                                  title='constant postgres_shared::error::INVALID_TEXT_REPRESENTATION'>INVALID_TEXT_REPRESENTATION</a></td>
+                           <td class='docblock-short'>
+                                <p>22P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TIME_ZONE_DISPLACEMENT_VALUE.html"
+                                  title='constant postgres_shared::error::INVALID_TIME_ZONE_DISPLACEMENT_VALUE'>INVALID_TIME_ZONE_DISPLACEMENT_VALUE</a></td>
+                           <td class='docblock-short'>
+                                <p>22009</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TRANSACTION_INITIATION.html"
+                                  title='constant postgres_shared::error::INVALID_TRANSACTION_INITIATION'>INVALID_TRANSACTION_INITIATION</a></td>
+                           <td class='docblock-short'>
+                                <p>0B000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TRANSACTION_STATE.html"
+                                  title='constant postgres_shared::error::INVALID_TRANSACTION_STATE'>INVALID_TRANSACTION_STATE</a></td>
+                           <td class='docblock-short'>
+                                <p>25000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_TRANSACTION_TERMINATION.html"
+                                  title='constant postgres_shared::error::INVALID_TRANSACTION_TERMINATION'>INVALID_TRANSACTION_TERMINATION</a></td>
+                           <td class='docblock-short'>
+                                <p>2D000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_USE_OF_ESCAPE_CHARACTER.html"
+                                  title='constant postgres_shared::error::INVALID_USE_OF_ESCAPE_CHARACTER'>INVALID_USE_OF_ESCAPE_CHARACTER</a></td>
+                           <td class='docblock-short'>
+                                <p>2200C</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_XML_COMMENT.html"
+                                  title='constant postgres_shared::error::INVALID_XML_COMMENT'>INVALID_XML_COMMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>2200S</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_XML_CONTENT.html"
+                                  title='constant postgres_shared::error::INVALID_XML_CONTENT'>INVALID_XML_CONTENT</a></td>
+                           <td class='docblock-short'>
+                                <p>2200N</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_XML_DOCUMENT.html"
+                                  title='constant postgres_shared::error::INVALID_XML_DOCUMENT'>INVALID_XML_DOCUMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>2200M</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.INVALID_XML_PROCESSING_INSTRUCTION.html"
+                                  title='constant postgres_shared::error::INVALID_XML_PROCESSING_INSTRUCTION'>INVALID_XML_PROCESSING_INSTRUCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>2200T</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.IN_FAILED_SQL_TRANSACTION.html"
+                                  title='constant postgres_shared::error::IN_FAILED_SQL_TRANSACTION'>IN_FAILED_SQL_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.IO_ERROR.html"
+                                  title='constant postgres_shared::error::IO_ERROR'>IO_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>58030</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LOCATOR_EXCEPTION.html"
+                                  title='constant postgres_shared::error::LOCATOR_EXCEPTION'>LOCATOR_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>0F000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LOCK_FILE_EXISTS.html"
+                                  title='constant postgres_shared::error::LOCK_FILE_EXISTS'>LOCK_FILE_EXISTS</a></td>
+                           <td class='docblock-short'>
+                                <p>F0001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.LOCK_NOT_AVAILABLE.html"
+                                  title='constant postgres_shared::error::LOCK_NOT_AVAILABLE'>LOCK_NOT_AVAILABLE</a></td>
+                           <td class='docblock-short'>
+                                <p>55P03</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.L_E_INVALID_SPECIFICATION.html"
+                                  title='constant postgres_shared::error::L_E_INVALID_SPECIFICATION'>L_E_INVALID_SPECIFICATION</a></td>
+                           <td class='docblock-short'>
+                                <p>0F001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.MOST_SPECIFIC_TYPE_MISMATCH.html"
+                                  title='constant postgres_shared::error::MOST_SPECIFIC_TYPE_MISMATCH'>MOST_SPECIFIC_TYPE_MISMATCH</a></td>
+                           <td class='docblock-short'>
+                                <p>2200G</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NAME_TOO_LONG.html"
+                                  title='constant postgres_shared::error::NAME_TOO_LONG'>NAME_TOO_LONG</a></td>
+                           <td class='docblock-short'>
+                                <p>42622</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NONSTANDARD_USE_OF_ESCAPE_CHARACTER.html"
+                                  title='constant postgres_shared::error::NONSTANDARD_USE_OF_ESCAPE_CHARACTER'>NONSTANDARD_USE_OF_ESCAPE_CHARACTER</a></td>
+                           <td class='docblock-short'>
+                                <p>22P06</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NOT_AN_XML_DOCUMENT.html"
+                                  title='constant postgres_shared::error::NOT_AN_XML_DOCUMENT'>NOT_AN_XML_DOCUMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>2200L</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NOT_NULL_VIOLATION.html"
+                                  title='constant postgres_shared::error::NOT_NULL_VIOLATION'>NOT_NULL_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23502</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NO_ACTIVE_SQL_TRANSACTION.html"
+                                  title='constant postgres_shared::error::NO_ACTIVE_SQL_TRANSACTION'>NO_ACTIVE_SQL_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NO_ACTIVE_SQL_TRANSACTION_FOR_BRANCH_TRANSACTION.html"
+                                  title='constant postgres_shared::error::NO_ACTIVE_SQL_TRANSACTION_FOR_BRANCH_TRANSACTION'>NO_ACTIVE_SQL_TRANSACTION_FOR_BRANCH_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25005</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NO_ADDITIONAL_DYNAMIC_RESULT_SETS_RETURNED.html"
+                                  title='constant postgres_shared::error::NO_ADDITIONAL_DYNAMIC_RESULT_SETS_RETURNED'>NO_ADDITIONAL_DYNAMIC_RESULT_SETS_RETURNED</a></td>
+                           <td class='docblock-short'>
+                                <p>02001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NO_DATA.html"
+                                  title='constant postgres_shared::error::NO_DATA'>NO_DATA</a></td>
+                           <td class='docblock-short'>
+                                <p>02000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NO_DATA_FOUND.html"
+                                  title='constant postgres_shared::error::NO_DATA_FOUND'>NO_DATA_FOUND</a></td>
+                           <td class='docblock-short'>
+                                <p>P0002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NULL_VALUE_NOT_ALLOWED.html"
+                                  title='constant postgres_shared::error::NULL_VALUE_NOT_ALLOWED'>NULL_VALUE_NOT_ALLOWED</a></td>
+                           <td class='docblock-short'>
+                                <p>22004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NULL_VALUE_NO_INDICATOR_PARAMETER.html"
+                                  title='constant postgres_shared::error::NULL_VALUE_NO_INDICATOR_PARAMETER'>NULL_VALUE_NO_INDICATOR_PARAMETER</a></td>
+                           <td class='docblock-short'>
+                                <p>22002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.NUMERIC_VALUE_OUT_OF_RANGE.html"
+                                  title='constant postgres_shared::error::NUMERIC_VALUE_OUT_OF_RANGE'>NUMERIC_VALUE_OUT_OF_RANGE</a></td>
+                           <td class='docblock-short'>
+                                <p>22003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OBJECT_IN_USE.html"
+                                  title='constant postgres_shared::error::OBJECT_IN_USE'>OBJECT_IN_USE</a></td>
+                           <td class='docblock-short'>
+                                <p>55006</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OBJECT_NOT_IN_PREREQUISITE_STATE.html"
+                                  title='constant postgres_shared::error::OBJECT_NOT_IN_PREREQUISITE_STATE'>OBJECT_NOT_IN_PREREQUISITE_STATE</a></td>
+                           <td class='docblock-short'>
+                                <p>55000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OPERATOR_INTERVENTION.html"
+                                  title='constant postgres_shared::error::OPERATOR_INTERVENTION'>OPERATOR_INTERVENTION</a></td>
+                           <td class='docblock-short'>
+                                <p>57000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.OUT_OF_MEMORY.html"
+                                  title='constant postgres_shared::error::OUT_OF_MEMORY'>OUT_OF_MEMORY</a></td>
+                           <td class='docblock-short'>
+                                <p>53200</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PLPGSQL_ERROR.html"
+                                  title='constant postgres_shared::error::PLPGSQL_ERROR'>PLPGSQL_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>P0000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PROGRAM_LIMIT_EXCEEDED.html"
+                                  title='constant postgres_shared::error::PROGRAM_LIMIT_EXCEEDED'>PROGRAM_LIMIT_EXCEEDED</a></td>
+                           <td class='docblock-short'>
+                                <p>54000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.PROTOCOL_VIOLATION.html"
+                                  title='constant postgres_shared::error::PROTOCOL_VIOLATION'>PROTOCOL_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>08P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.QUERY_CANCELED.html"
+                                  title='constant postgres_shared::error::QUERY_CANCELED'>QUERY_CANCELED</a></td>
+                           <td class='docblock-short'>
+                                <p>57014</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RAISE_EXCEPTION.html"
+                                  title='constant postgres_shared::error::RAISE_EXCEPTION'>RAISE_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>P0001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.READ_ONLY_SQL_TRANSACTION.html"
+                                  title='constant postgres_shared::error::READ_ONLY_SQL_TRANSACTION'>READ_ONLY_SQL_TRANSACTION</a></td>
+                           <td class='docblock-short'>
+                                <p>25006</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RESERVED_NAME.html"
+                                  title='constant postgres_shared::error::RESERVED_NAME'>RESERVED_NAME</a></td>
+                           <td class='docblock-short'>
+                                <p>42939</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.RESTRICT_VIOLATION.html"
+                                  title='constant postgres_shared::error::RESTRICT_VIOLATION'>RESTRICT_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SAVEPOINT_EXCEPTION.html"
+                                  title='constant postgres_shared::error::SAVEPOINT_EXCEPTION'>SAVEPOINT_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>3B000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SCHEMA_AND_DATA_STATEMENT_MIXING_NOT_SUPPORTED.html"
+                                  title='constant postgres_shared::error::SCHEMA_AND_DATA_STATEMENT_MIXING_NOT_SUPPORTED'>SCHEMA_AND_DATA_STATEMENT_MIXING_NOT_SUPPORTED</a></td>
+                           <td class='docblock-short'>
+                                <p>25007</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SEQUENCE_GENERATOR_LIMIT_EXCEEDED.html"
+                                  title='constant postgres_shared::error::SEQUENCE_GENERATOR_LIMIT_EXCEEDED'>SEQUENCE_GENERATOR_LIMIT_EXCEEDED</a></td>
+                           <td class='docblock-short'>
+                                <p>2200H</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SNAPSHOT_TOO_OLD.html"
+                                  title='constant postgres_shared::error::SNAPSHOT_TOO_OLD'>SNAPSHOT_TOO_OLD</a></td>
+                           <td class='docblock-short'>
+                                <p>72000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION.html"
+                                  title='constant postgres_shared::error::SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION'>SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION</a></td>
+                           <td class='docblock-short'>
+                                <p>08001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION.html"
+                                  title='constant postgres_shared::error::SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION'>SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION</a></td>
+                           <td class='docblock-short'>
+                                <p>08004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SQL_ROUTINE_EXCEPTION.html"
+                                  title='constant postgres_shared::error::SQL_ROUTINE_EXCEPTION'>SQL_ROUTINE_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>2F000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SQL_STATEMENT_NOT_YET_COMPLETE.html"
+                                  title='constant postgres_shared::error::SQL_STATEMENT_NOT_YET_COMPLETE'>SQL_STATEMENT_NOT_YET_COMPLETE</a></td>
+                           <td class='docblock-short'>
+                                <p>03000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.STACKED_DIAGNOSTICS_ACCESSED_WITHOUT_ACTIVE_HANDLER.html"
+                                  title='constant postgres_shared::error::STACKED_DIAGNOSTICS_ACCESSED_WITHOUT_ACTIVE_HANDLER'>STACKED_DIAGNOSTICS_ACCESSED_WITHOUT_ACTIVE_HANDLER</a></td>
+                           <td class='docblock-short'>
+                                <p>0Z002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.STATEMENT_TOO_COMPLEX.html"
+                                  title='constant postgres_shared::error::STATEMENT_TOO_COMPLEX'>STATEMENT_TOO_COMPLEX</a></td>
+                           <td class='docblock-short'>
+                                <p>54001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.STRING_DATA_LENGTH_MISMATCH.html"
+                                  title='constant postgres_shared::error::STRING_DATA_LENGTH_MISMATCH'>STRING_DATA_LENGTH_MISMATCH</a></td>
+                           <td class='docblock-short'>
+                                <p>22026</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.STRING_DATA_RIGHT_TRUNCATION.html"
+                                  title='constant postgres_shared::error::STRING_DATA_RIGHT_TRUNCATION'>STRING_DATA_RIGHT_TRUNCATION</a></td>
+                           <td class='docblock-short'>
+                                <p>22001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SUBSTRING_ERROR.html"
+                                  title='constant postgres_shared::error::SUBSTRING_ERROR'>SUBSTRING_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>22011</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SUCCESSFUL_COMPLETION.html"
+                                  title='constant postgres_shared::error::SUCCESSFUL_COMPLETION'>SUCCESSFUL_COMPLETION</a></td>
+                           <td class='docblock-short'>
+                                <p>00000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SYNTAX_ERROR.html"
+                                  title='constant postgres_shared::error::SYNTAX_ERROR'>SYNTAX_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>42601</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION.html"
+                                  title='constant postgres_shared::error::SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION'>SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>42000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.SYSTEM_ERROR.html"
+                                  title='constant postgres_shared::error::SYSTEM_ERROR'>SYSTEM_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>58000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.S_E_INVALID_SPECIFICATION.html"
+                                  title='constant postgres_shared::error::S_E_INVALID_SPECIFICATION'>S_E_INVALID_SPECIFICATION</a></td>
+                           <td class='docblock-short'>
+                                <p>3B001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.S_R_E_FUNCTION_EXECUTED_NO_RETURN_STATEMENT.html"
+                                  title='constant postgres_shared::error::S_R_E_FUNCTION_EXECUTED_NO_RETURN_STATEMENT'>S_R_E_FUNCTION_EXECUTED_NO_RETURN_STATEMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>2F005</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.S_R_E_MODIFYING_SQL_DATA_NOT_PERMITTED.html"
+                                  title='constant postgres_shared::error::S_R_E_MODIFYING_SQL_DATA_NOT_PERMITTED'>S_R_E_MODIFYING_SQL_DATA_NOT_PERMITTED</a></td>
+                           <td class='docblock-short'>
+                                <p>2F002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.S_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED.html"
+                                  title='constant postgres_shared::error::S_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED'>S_R_E_PROHIBITED_SQL_STATEMENT_ATTEMPTED</a></td>
+                           <td class='docblock-short'>
+                                <p>2F003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.S_R_E_READING_SQL_DATA_NOT_PERMITTED.html"
+                                  title='constant postgres_shared::error::S_R_E_READING_SQL_DATA_NOT_PERMITTED'>S_R_E_READING_SQL_DATA_NOT_PERMITTED</a></td>
+                           <td class='docblock-short'>
+                                <p>2F004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TOO_MANY_ARGUMENTS.html"
+                                  title='constant postgres_shared::error::TOO_MANY_ARGUMENTS'>TOO_MANY_ARGUMENTS</a></td>
+                           <td class='docblock-short'>
+                                <p>54023</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TOO_MANY_COLUMNS.html"
+                                  title='constant postgres_shared::error::TOO_MANY_COLUMNS'>TOO_MANY_COLUMNS</a></td>
+                           <td class='docblock-short'>
+                                <p>54011</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TOO_MANY_CONNECTIONS.html"
+                                  title='constant postgres_shared::error::TOO_MANY_CONNECTIONS'>TOO_MANY_CONNECTIONS</a></td>
+                           <td class='docblock-short'>
+                                <p>53300</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TOO_MANY_ROWS.html"
+                                  title='constant postgres_shared::error::TOO_MANY_ROWS'>TOO_MANY_ROWS</a></td>
+                           <td class='docblock-short'>
+                                <p>P0003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TRANSACTION_RESOLUTION_UNKNOWN.html"
+                                  title='constant postgres_shared::error::TRANSACTION_RESOLUTION_UNKNOWN'>TRANSACTION_RESOLUTION_UNKNOWN</a></td>
+                           <td class='docblock-short'>
+                                <p>08007</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TRANSACTION_ROLLBACK.html"
+                                  title='constant postgres_shared::error::TRANSACTION_ROLLBACK'>TRANSACTION_ROLLBACK</a></td>
+                           <td class='docblock-short'>
+                                <p>40000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TRIGGERED_ACTION_EXCEPTION.html"
+                                  title='constant postgres_shared::error::TRIGGERED_ACTION_EXCEPTION'>TRIGGERED_ACTION_EXCEPTION</a></td>
+                           <td class='docblock-short'>
+                                <p>09000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TRIGGERED_DATA_CHANGE_VIOLATION.html"
+                                  title='constant postgres_shared::error::TRIGGERED_DATA_CHANGE_VIOLATION'>TRIGGERED_DATA_CHANGE_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>27000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.TRIM_ERROR.html"
+                                  title='constant postgres_shared::error::TRIM_ERROR'>TRIM_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>22027</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.T_R_DEADLOCK_DETECTED.html"
+                                  title='constant postgres_shared::error::T_R_DEADLOCK_DETECTED'>T_R_DEADLOCK_DETECTED</a></td>
+                           <td class='docblock-short'>
+                                <p>40P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.T_R_INTEGRITY_CONSTRAINT_VIOLATION.html"
+                                  title='constant postgres_shared::error::T_R_INTEGRITY_CONSTRAINT_VIOLATION'>T_R_INTEGRITY_CONSTRAINT_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>40002</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.T_R_SERIALIZATION_FAILURE.html"
+                                  title='constant postgres_shared::error::T_R_SERIALIZATION_FAILURE'>T_R_SERIALIZATION_FAILURE</a></td>
+                           <td class='docblock-short'>
+                                <p>40001</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.T_R_STATEMENT_COMPLETION_UNKNOWN.html"
+                                  title='constant postgres_shared::error::T_R_STATEMENT_COMPLETION_UNKNOWN'>T_R_STATEMENT_COMPLETION_UNKNOWN</a></td>
+                           <td class='docblock-short'>
+                                <p>40003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_COLUMN.html"
+                                  title='constant postgres_shared::error::UNDEFINED_COLUMN'>UNDEFINED_COLUMN</a></td>
+                           <td class='docblock-short'>
+                                <p>42703</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_CURSOR.html"
+                                  title='constant postgres_shared::error::UNDEFINED_CURSOR'>UNDEFINED_CURSOR</a></td>
+                           <td class='docblock-short'>
+                                <p>34000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_DATABASE.html"
+                                  title='constant postgres_shared::error::UNDEFINED_DATABASE'>UNDEFINED_DATABASE</a></td>
+                           <td class='docblock-short'>
+                                <p>3D000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_FILE.html"
+                                  title='constant postgres_shared::error::UNDEFINED_FILE'>UNDEFINED_FILE</a></td>
+                           <td class='docblock-short'>
+                                <p>58P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_FUNCTION.html"
+                                  title='constant postgres_shared::error::UNDEFINED_FUNCTION'>UNDEFINED_FUNCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>42883</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_OBJECT.html"
+                                  title='constant postgres_shared::error::UNDEFINED_OBJECT'>UNDEFINED_OBJECT</a></td>
+                           <td class='docblock-short'>
+                                <p>42704</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_PARAMETER.html"
+                                  title='constant postgres_shared::error::UNDEFINED_PARAMETER'>UNDEFINED_PARAMETER</a></td>
+                           <td class='docblock-short'>
+                                <p>42P02</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_PSTATEMENT.html"
+                                  title='constant postgres_shared::error::UNDEFINED_PSTATEMENT'>UNDEFINED_PSTATEMENT</a></td>
+                           <td class='docblock-short'>
+                                <p>26000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_SCHEMA.html"
+                                  title='constant postgres_shared::error::UNDEFINED_SCHEMA'>UNDEFINED_SCHEMA</a></td>
+                           <td class='docblock-short'>
+                                <p>3F000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNDEFINED_TABLE.html"
+                                  title='constant postgres_shared::error::UNDEFINED_TABLE'>UNDEFINED_TABLE</a></td>
+                           <td class='docblock-short'>
+                                <p>42P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNIQUE_VIOLATION.html"
+                                  title='constant postgres_shared::error::UNIQUE_VIOLATION'>UNIQUE_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>23505</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNSAFE_NEW_ENUM_VALUE_USAGE.html"
+                                  title='constant postgres_shared::error::UNSAFE_NEW_ENUM_VALUE_USAGE'>UNSAFE_NEW_ENUM_VALUE_USAGE</a></td>
+                           <td class='docblock-short'>
+                                <p>55P04</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNTERMINATED_C_STRING.html"
+                                  title='constant postgres_shared::error::UNTERMINATED_C_STRING'>UNTERMINATED_C_STRING</a></td>
+                           <td class='docblock-short'>
+                                <p>22024</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.UNTRANSLATABLE_CHARACTER.html"
+                                  title='constant postgres_shared::error::UNTRANSLATABLE_CHARACTER'>UNTRANSLATABLE_CHARACTER</a></td>
+                           <td class='docblock-short'>
+                                <p>22P05</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING.html"
+                                  title='constant postgres_shared::error::WARNING'>WARNING</a></td>
+                           <td class='docblock-short'>
+                                <p>01000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_DEPRECATED_FEATURE.html"
+                                  title='constant postgres_shared::error::WARNING_DEPRECATED_FEATURE'>WARNING_DEPRECATED_FEATURE</a></td>
+                           <td class='docblock-short'>
+                                <p>01P01</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_DYNAMIC_RESULT_SETS_RETURNED.html"
+                                  title='constant postgres_shared::error::WARNING_DYNAMIC_RESULT_SETS_RETURNED'>WARNING_DYNAMIC_RESULT_SETS_RETURNED</a></td>
+                           <td class='docblock-short'>
+                                <p>0100C</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_IMPLICIT_ZERO_BIT_PADDING.html"
+                                  title='constant postgres_shared::error::WARNING_IMPLICIT_ZERO_BIT_PADDING'>WARNING_IMPLICIT_ZERO_BIT_PADDING</a></td>
+                           <td class='docblock-short'>
+                                <p>01008</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_NULL_VALUE_ELIMINATED_IN_SET_FUNCTION.html"
+                                  title='constant postgres_shared::error::WARNING_NULL_VALUE_ELIMINATED_IN_SET_FUNCTION'>WARNING_NULL_VALUE_ELIMINATED_IN_SET_FUNCTION</a></td>
+                           <td class='docblock-short'>
+                                <p>01003</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_PRIVILEGE_NOT_GRANTED.html"
+                                  title='constant postgres_shared::error::WARNING_PRIVILEGE_NOT_GRANTED'>WARNING_PRIVILEGE_NOT_GRANTED</a></td>
+                           <td class='docblock-short'>
+                                <p>01007</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_PRIVILEGE_NOT_REVOKED.html"
+                                  title='constant postgres_shared::error::WARNING_PRIVILEGE_NOT_REVOKED'>WARNING_PRIVILEGE_NOT_REVOKED</a></td>
+                           <td class='docblock-short'>
+                                <p>01006</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WARNING_STRING_DATA_RIGHT_TRUNCATION.html"
+                                  title='constant postgres_shared::error::WARNING_STRING_DATA_RIGHT_TRUNCATION'>WARNING_STRING_DATA_RIGHT_TRUNCATION</a></td>
+                           <td class='docblock-short'>
+                                <p>01004</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WINDOWING_ERROR.html"
+                                  title='constant postgres_shared::error::WINDOWING_ERROR'>WINDOWING_ERROR</a></td>
+                           <td class='docblock-short'>
+                                <p>42P20</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WITH_CHECK_OPTION_VIOLATION.html"
+                                  title='constant postgres_shared::error::WITH_CHECK_OPTION_VIOLATION'>WITH_CHECK_OPTION_VIOLATION</a></td>
+                           <td class='docblock-short'>
+                                <p>44000</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.WRONG_OBJECT_TYPE.html"
+                                  title='constant postgres_shared::error::WRONG_OBJECT_TYPE'>WRONG_OBJECT_TYPE</a></td>
+                           <td class='docblock-short'>
+                                <p>42809</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="constant" href="constant.ZERO_LENGTH_CHARACTER_STRING.html"
+                                  title='constant postgres_shared::error::ZERO_LENGTH_CHARACTER_STRING'>ZERO_LENGTH_CHARACTER_STRING</a></td>
+                           <td class='docblock-short'>
+                                <p>2200F</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "postgres_shared";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

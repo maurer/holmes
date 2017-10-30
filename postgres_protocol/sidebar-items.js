@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["IsNull","An enum indicating if a value is `NULL` or not."]],"mod":[["authentication","Authentication protocol support."],["message","Postgres message protocol support."],["types","Conversions to and from Postgres's binary format for various types."]],"type":[["Oid","A Postgres OID."]]});

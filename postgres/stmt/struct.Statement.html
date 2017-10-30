@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Statement` struct in crate `postgres`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Statement">
+
+    <title>postgres::stmt::Statement - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Struct Statement</p><div class="block items"><ul><li><a href="#methods">Methods</a></li><li><a href="#implementations">Trait Implementations</a></li></ul></div><p class='location'><a href='../index.html'>postgres</a>::<wbr><a href='index.html'>stmt</a></p><script>window.sidebarCurrent = {name: 'Statement', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>postgres</a>::<wbr><a href='index.html'>stmt</a>::<wbr><a class="struct" href=''>Statement</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/postgres/stmt.rs.html#21-26' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Statement&lt;'conn&gt; { /* fields omitted */ }</pre><div class='docblock'><p>A prepared statement.</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl&lt;'conn&gt; <a class="struct" href="../../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'conn&gt;</code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#40-545' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.param_types' class="method"><span id='param_types.v' class='invisible'><code>fn <a href='#method.param_types' class='fnname'>param_types</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="struct" href="../../postgres/types/struct.Type.html" title="struct postgres::types::Type">Type</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#106-108' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a slice containing the expected parameter types.</p>
+</div><h4 id='method.columns' class="method"><span id='columns.v' class='invisible'><code>fn <a href='#method.columns' class='fnname'>columns</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a><a class="struct" href="../../postgres/stmt/struct.Column.html" title="struct postgres::stmt::Column">Column</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#111-113' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns a slice describing the columns of the result of the query.</p>
+</div><h4 id='method.execute' class="method"><span id='execute.v' class='invisible'><code>fn <a href='#method.execute' class='fnname'>execute</a>(&amp;self, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#135-194' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes the prepared statement, returning the number of rows modified.</p>
+
+<p>If the statement does not modify any rows (e.g. SELECT), 0 is returned.</p>
+
+<h1 id='panics' class='section-header'><a href='#panics'>Panics</a></h1>
+<p>Panics if the number of parameters provided does not match the number
+expected.</p>
+
+<h1 id='example' class='section-header'><a href='#example'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">stmt</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">prepare</span>(<span class="string">&quot;UPDATE foo SET bar = $1 WHERE baz = $2&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">let</span> <span class="ident">rows_updated</span> <span class="op">=</span> <span class="ident">stmt</span>.<span class="ident">execute</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">bar</span>, <span class="kw-2">&amp;</span><span class="ident">baz</span>]).<span class="ident">unwrap</span>();
+<span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{} rows updated&quot;</span>, <span class="ident">rows_updated</span>);</pre>
+</div><h4 id='method.query' class="method"><span id='query.v' class='invisible'><code>fn <a href='#method.query' class='fnname'>query</a>(&amp;self, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>) -&gt; <a class="type" href="../../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../../postgres/rows/struct.Rows.html" title="struct postgres::rows::Rows">Rows</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#215-220' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes the prepared statement, returning the resulting rows.</p>
+
+<h1 id='panics-1' class='section-header'><a href='#panics-1'>Panics</a></h1>
+<p>Panics if the number of parameters provided does not match the number
+expected.</p>
+
+<h1 id='example-1' class='section-header'><a href='#example-1'>Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">stmt</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">prepare</span>(<span class="string">&quot;SELECT foo FROM bar WHERE baz = $1&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">stmt</span>.<span class="ident">query</span>(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">baz</span>]).<span class="ident">unwrap</span>() {
+    <span class="kw">let</span> <span class="ident">foo</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="string">&quot;foo&quot;</span>);
+    <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;foo: {}&quot;</span>, <span class="ident">foo</span>);
+}</pre>
+</div><h4 id='method.lazy_query' class="method"><span id='lazy_query.v' class='invisible'><code>fn <a href='#method.lazy_query' class='fnname'>lazy_query</a>&lt;'trans, 'stmt&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;'stmt self, <br>&nbsp;&nbsp;&nbsp;&nbsp;trans: &amp;'trans <a class="struct" href="../../postgres/transaction/struct.Transaction.html" title="struct postgres::transaction::Transaction">Transaction</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;row_limit: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i32.html">i32</a><br>) -&gt; <a class="type" href="../../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="struct" href="../../postgres/rows/struct.LazyRows.html" title="struct postgres::rows::LazyRows">LazyRows</a>&lt;'trans, 'stmt&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#240-279' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes the prepared statement, returning a lazily loaded iterator
+over the resulting rows.</p>
+
+<p>No more than <code>row_limit</code> rows will be stored in memory at a time. Rows
+will be pulled from the database in batches of <code>row_limit</code> as needed.
+If <code>row_limit</code> is less than or equal to 0, <code>lazy_query</code> is equivalent
+to <code>query</code>.</p>
+
+<p>This can only be called inside of a transaction, and the <code>Transaction</code>
+object representing the active transaction must be passed to
+<code>lazy_query</code>.</p>
+
+<h1 id='panics-2' class='section-header'><a href='#panics-2'>Panics</a></h1>
+<p>Panics if the provided <code>Transaction</code> is not associated with the same
+<code>Connection</code> as this <code>Statement</code>, if the <code>Transaction</code> is not
+active, or if the number of parameters provided does not match the
+number of parameters expected.</p>
+</div><h4 id='method.copy_in' class="method"><span id='copy_in.v' class='invisible'><code>fn <a href='#method.copy_in' class='fnname'>copy_in</a>&lt;R:&nbsp;<a class="trait" href="../../postgres/stmt/trait.ReadWithInfo.html" title="trait postgres::stmt::ReadWithInfo">ReadWithInfo</a>&gt;(&amp;self, params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>, r: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>R) -&gt; <a class="type" href="../../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#302-398' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes a <code>COPY FROM STDIN</code> statement, returning the number of rows
+added.</p>
+
+<p>The contents of the provided reader are passed to the Postgres server
+verbatim; it is the caller&#39;s responsibility to ensure it uses the
+proper format. See the
+<a href="http://www.postgresql.org/docs/9.4/static/sql-copy.html">Postgres documentation</a>
+for details.</p>
+
+<p>If the statement is not a <code>COPY FROM STDIN</code> statement it will still be
+executed and this method will return an error.</p>
+
+<h1 id='examples' class='section-header'><a href='#examples'>Examples</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="ident">conn</span>.<span class="ident">batch_execute</span>(<span class="string">&quot;CREATE TABLE people (id INT PRIMARY KEY, name VARCHAR)&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">let</span> <span class="ident">stmt</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">prepare</span>(<span class="string">&quot;COPY people FROM STDIN&quot;</span>).<span class="ident">unwrap</span>();
+<span class="ident">stmt</span>.<span class="ident">copy_in</span>(<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="string">&quot;1\tjohn\n2\tjane\n&quot;</span>.<span class="ident">as_bytes</span>()).<span class="ident">unwrap</span>();</pre>
+</div><h4 id='method.copy_out' class="method"><span id='copy_out.v' class='invisible'><code>fn <a href='#method.copy_out' class='fnname'>copy_out</a>&lt;'a, W:&nbsp;<a class="trait" href="../../postgres/stmt/trait.WriteWithInfo.html" title="trait postgres::stmt::WriteWithInfo">WriteWithInfo</a>&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;'a self, <br>&nbsp;&nbsp;&nbsp;&nbsp;params: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;[</a>&amp;<a class="trait" href="../../postgres/types/trait.ToSql.html" title="trait postgres::types::ToSql">ToSql</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;w: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>W<br>) -&gt; <a class="type" href="../../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#422-533' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes a <code>COPY TO STDOUT</code> statement, passing the resulting data to
+the provided writer and returning the number of rows received.</p>
+
+<p>See the <a href="http://www.postgresql.org/docs/9.4/static/sql-copy.html">Postgres documentation</a>
+for details on the data format.</p>
+
+<p>If the statement is not a <code>COPY TO STDOUT</code> statement it will still be
+executed and this method will return an error.</p>
+
+<h1 id='examples-1' class='section-header'><a href='#examples-1'>Examples</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="ident">conn</span>.<span class="ident">batch_execute</span>(<span class="string">&quot;
+        CREATE TABLE people (id INT PRIMARY KEY, name VARCHAR);
+        INSERT INTO people (id, name) VALUES (1, &#39;john&#39;), (2, &#39;jane&#39;);&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">let</span> <span class="ident">stmt</span> <span class="op">=</span> <span class="ident">conn</span>.<span class="ident">prepare</span>(<span class="string">&quot;COPY people TO STDOUT&quot;</span>).<span class="ident">unwrap</span>();
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+<span class="ident">stmt</span>.<span class="ident">copy_out</span>(<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>).<span class="ident">unwrap</span>();
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">buf</span>, <span class="string">b&quot;1\tjohn\n2\tjane\n&quot;</span>);</pre>
+</div><h4 id='method.finish' class="method"><span id='finish.v' class='invisible'><code>fn <a href='#method.finish' class='fnname'>finish</a>(self) -&gt; <a class="type" href="../../postgres/type.Result.html" title="type postgres::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#542-544' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Consumes the statement, clearing it from the Postgres session.</p>
+
+<p>If this statement was created via the <code>prepare_cached</code> method, <code>finish</code>
+does nothing.</p>
+
+<p>Functionally identical to the <code>Drop</code> implementation of the
+<code>Statement</code> except that it returns any error to the caller.</p>
+</div></div>
+            <h2 id='implementations' class='small-section-header'>
+              Trait Implementations<a href='#implementations' class='anchor'></a>
+            </h2>
+        <h3 id='impl-Debug' class='impl'><span class='in-band'><code>impl&lt;'a&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a> for <a class="struct" href="../../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'a&gt;</code><a href='#impl-Debug' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#28-32' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.fmt' class="method"><span id='fmt.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#tymethod.fmt' class='fnname'>fmt</a>(&amp;self, fmt: &amp;mut <a class="struct" href="https://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html" title="struct core::fmt::Formatter">Formatter</a>) -&gt; <a class="type" href="https://doc.rust-lang.org/nightly/core/fmt/type.Result.html" title="type core::fmt::Result">Result</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#29-31' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Formats the value using the given formatter.</p>
+</div></div><h3 id='impl-Drop' class='impl'><span class='in-band'><code>impl&lt;'conn&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html" title="trait core::ops::drop::Drop">Drop</a> for <a class="struct" href="../../postgres/stmt/struct.Statement.html" title="struct postgres::stmt::Statement">Statement</a>&lt;'conn&gt;</code><a href='#impl-Drop' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#34-38' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.drop' class="method"><span id='drop.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html#tymethod.drop' class='fnname'>drop</a>(&amp;mut self)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/postgres/stmt.rs.html#35-37' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Executes the destructor for this type. <a href="https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html#tymethod.drop">Read more</a></p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "postgres";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

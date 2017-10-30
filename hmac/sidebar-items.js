@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Hmac","The `Hmac` struct represents an HMAC using a given hash function `D`."],["MacResult","`MacResult` wraps a Mac code and provides a safe Eq implementation that runs in fixed time."]],"trait":[["Mac","The Mac trait defines methods for a Message Authentication function."]]});

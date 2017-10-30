@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Engine` struct in crate `holmes`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Engine">
+
+    <title>holmes::engine::Engine - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc struct">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Struct Engine</p><div class="block items"><ul><li><a href="#methods">Methods</a></li></ul></div><p class='location'><a href='../index.html'>holmes</a>::<wbr><a href='index.html'>engine</a></p><script>window.sidebarCurrent = {name: 'Engine', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>holmes</a>::<wbr><a href='index.html'>engine</a>::<wbr><a class="struct" href=''>Engine</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/holmes/engine/mod.rs.html#211-220' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Engine { /* fields omitted */ }</pre><div class='docblock'><p>The <code>Engine</code> type contains the context necessary to run a Holmes program</p>
+</div>
+                    <h2 id='methods' class='small-section-header'>
+                      Methods<a href='#methods' class='anchor'></a>
+                    </h2>
+                <h3 id='impl' class='impl'><span class='in-band'><code>impl <a class="struct" href="../../holmes/engine/struct.Engine.html" title="struct holmes::engine::Engine">Engine</a></code><a href='#impl' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#266-562' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class="method"><span id='new.v' class='invisible'><code>fn <a href='#method.new' class='fnname'>new</a>(db: <a class="struct" href="../../holmes/pg/struct.PgDB.html" title="struct holmes::pg::PgDB">PgDB</a>, handle: <a class="struct" href="../../tokio_core/reactor/struct.Handle.html" title="struct tokio_core::reactor::Handle">Handle</a>) -&gt; Self</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#268-279' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Create a fresh engine by handing it a fact database to use</p>
+</div><h4 id='method.run_sql' class="method"><span id='run_sql.v' class='invisible'><code>fn <a href='#method.run_sql' class='fnname'>run_sql</a>(&amp;self, path: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#281-288' title='goto source code'>[src]</a></span></h4>
+<h4 id='method.limit_time' class="method"><span id='limit_time.v' class='invisible'><code>fn <a href='#method.limit_time' class='fnname'>limit_time</a>(&amp;mut self, limiter: <a class="struct" href="https://doc.rust-lang.org/nightly/std/time/duration/struct.Duration.html" title="struct std::time::duration::Duration">Duration</a>)</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#292-294' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>For correct operation, limit_time must be called before the installation of
+any rules</p>
+</div><h4 id='method.dump_profile' class="method"><span id='dump_profile.v' class='invisible'><code>fn <a href='#method.dump_profile' class='fnname'>dump_profile</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../../holmes/engine/struct.RuleProfile.html" title="struct holmes::engine::RuleProfile">RuleProfile</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#297-299' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Dump profiling information for how much time was spent in each rule</p>
+</div><h4 id='method.get_type' class="method"><span id='get_type.v' class='invisible'><code>fn <a href='#method.get_type' class='fnname'>get_type</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="type" href="../../holmes/pg/dyn/type.Type.html" title="type holmes::pg::dyn::Type">Type</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#303-305' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Seach the type registry for a named type
+If present, it returns <code>Some(type)</code>, otherwise <code>None</code></p>
+</div><h4 id='method.add_type' class="method"><span id='add_type.v' class='invisible'><code>fn <a href='#method.add_type' class='fnname'>add_type</a>(&amp;self, type_: <a class="type" href="../../holmes/pg/dyn/type.Type.html" title="type holmes::pg::dyn::Type">Type</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#308-310' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Register a new type
+This type must be a named type (e.g. type.name() should return <code>Some</code>)</p>
+</div><h4 id='method.new_predicate' class="method"><span id='new_predicate.v' class='invisible'><code>fn <a href='#method.new_predicate' class='fnname'>new_predicate</a>(&amp;self, pred: &amp;<a class="struct" href="../../holmes/engine/types/struct.Predicate.html" title="struct holmes::engine::types::Predicate">Predicate</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#317-342' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Register a new predicate
+This defines the type signature of a predicate and persists it</p>
+
+<ul>
+<li>Predicates must have at least one argument</li>
+<li>Predicates must have a unique name</li>
+<li>While using the <code>pg</code> backend, their name must be lowercase ascii or &#39;_&#39;</li>
+</ul>
+</div><h4 id='method.get_predicate' class="method"><span id='get_predicate.v' class='invisible'><code>fn <a href='#method.get_predicate' class='fnname'>get_predicate</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../holmes/engine/types/struct.Predicate.html" title="struct holmes::engine::types::Predicate">Predicate</a>&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#346-348' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Retrieves a named predicate from the database. This is primarily of use for
+retrieving metadata about a predicate for display.</p>
+</div><h4 id='method.new_fact' class="method"><span id='new_fact.v' class='invisible'><code>fn <a href='#method.new_fact' class='fnname'>new_fact</a>(&amp;mut self, fact: &amp;<a class="struct" href="../../holmes/engine/types/struct.Fact.html" title="struct holmes::engine::types::Fact">Fact</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#362-391' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Adds a new fact to the database
+If the fact is already present, a new copy will not be added.</p>
+
+<ul>
+<li>The relevant predicate must already be registered</li>
+<li>The fact must be correctly typed</li>
+</ul>
+</div><h4 id='method.nop' class="method"><span id='nop.v' class='invisible'><code>fn <a href='#method.nop' class='fnname'>nop</a>(&amp;self) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#395-397' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Returns success in the appropriate type. This helper function is to
+support the EDSL, and it is not anticipated to be useful normally.</p>
+</div><h4 id='method.derive' class="method"><span id='derive.v' class='invisible'><code>fn <a href='#method.derive' class='fnname'>derive</a>(&amp;self, query: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../../holmes/engine/types/struct.Clause.html" title="struct holmes::engine::types::Clause">Clause</a>&gt;) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="type" href="../../holmes/pg/dyn/type.Value.html" title="type holmes::pg::dyn::Value">Value</a>&gt;&gt;&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#401-405' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Given a query (similar to the rhs of a rule in Datalog), provide the set
+of satisfying answers in the database.</p>
+</div><h4 id='method.render' class="method"><span id='render.v' class='invisible'><code>fn <a href='#method.render' class='fnname'>render</a>(&amp;self, pred_name: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#408-447' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Render a predicate as an html table</p>
+</div><h4 id='method.new_rule' class="method"><span id='new_rule.v' class='invisible'><code>fn <a href='#method.new_rule' class='fnname'>new_rule</a>(&amp;mut self, rule: &amp;<a class="struct" href="../../holmes/engine/types/struct.Rule.html" title="struct holmes::engine::types::Rule">Rule</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#450-544' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Register a new rule with the database</p>
+</div><h4 id='method.reg_func' class="method"><span id='reg_func.v' class='invisible'><code>fn <a href='#method.reg_func' class='fnname'>reg_func</a>(&amp;mut self, name: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>, func: <a class="struct" href="../../holmes/engine/types/struct.Func.html" title="struct holmes::engine::types::Func">Func</a>) -&gt; <a class="type" href="../../holmes/engine/type.Result.html" title="type holmes::engine::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.tuple.html">()</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#551-554' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Register a new function with the database, to be called from within a
+rule</p>
+
+<p>Do not attempt to register a function name multiple times.</p>
+</div><h4 id='method.quiesce' class="method"><span id='quiesce.v' class='invisible'><code>fn <a href='#method.quiesce' class='fnname'>quiesce</a>(&amp;self) -&gt; <a class="struct" href="../../holmes/engine/struct.Quiescence.html" title="struct holmes::engine::Quiescence">Quiescence</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../../src/holmes/engine/mod.rs.html#559-561' title='goto source code'>[src]</a></span></h4>
+<div class='docblock'><p>Creates a quiescence future to be run on the event loop provided when
+the engine was created. The future will only gaurantee quiescence upon
+completion so long as no new rules have been added.</p>
+</div></div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "holmes";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>

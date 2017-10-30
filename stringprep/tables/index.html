@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `tables` mod in crate `stringprep`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, tables">
+
+    <title>stringprep::tables - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../normalize.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+    
+
+    
+    
+</head>
+<body class="rustdoc mod">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'>Module tables</p><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#functions">Functions</a></li></ul></div><p class='location'><a href='../index.html'>stringprep</a></p><script>window.sidebarCurrent = {name: 'tables', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>stringprep</a>::<wbr><a class="mod" href=''>tables</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/stringprep/tables.rs.html#1-201' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>Character Tables</p>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.CaseFoldForNfkc.html"
+                                  title='struct stringprep::tables::CaseFoldForNfkc'>CaseFoldForNfkc</a></td>
+                           <td class='docblock-short'>
+                                <p>The iterator returned by <code>case_fold_for_nfkc</code>.</p>
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.ascii_control_character.html"
+                                  title='fn stringprep::tables::ascii_control_character'>ascii_control_character</a></td>
+                           <td class='docblock-short'>
+                                <p>C.2.1 ASCII control characters</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.ascii_space_character.html"
+                                  title='fn stringprep::tables::ascii_space_character'>ascii_space_character</a></td>
+                           <td class='docblock-short'>
+                                <p>C.1.1 ASCII space characters</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.bidi_l.html"
+                                  title='fn stringprep::tables::bidi_l'>bidi_l</a></td>
+                           <td class='docblock-short'>
+                                <p>D.2 Characters with bidirectional property &quot;L&quot;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.bidi_r_or_al.html"
+                                  title='fn stringprep::tables::bidi_r_or_al'>bidi_r_or_al</a></td>
+                           <td class='docblock-short'>
+                                <p>D.1 Characters with bidirectional property &quot;R&quot; or &quot;AL&quot;</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.case_fold_for_nfkc.html"
+                                  title='fn stringprep::tables::case_fold_for_nfkc'>case_fold_for_nfkc</a></td>
+                           <td class='docblock-short'>
+                                <p>B.2 Mapping for case-folding used with NFKC.</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.change_display_properties_or_deprecated.html"
+                                  title='fn stringprep::tables::change_display_properties_or_deprecated'>change_display_properties_or_deprecated</a></td>
+                           <td class='docblock-short'>
+                                <p>C.8 Change display properties or are deprecated</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.commonly_mapped_to_nothing.html"
+                                  title='fn stringprep::tables::commonly_mapped_to_nothing'>commonly_mapped_to_nothing</a></td>
+                           <td class='docblock-short'>
+                                <p>B.1 Commonly mapped to nothing</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.inappropriate_for_canonical_representation.html"
+                                  title='fn stringprep::tables::inappropriate_for_canonical_representation'>inappropriate_for_canonical_representation</a></td>
+                           <td class='docblock-short'>
+                                <p>C.7 Inappropriate for canonical representation</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.inappropriate_for_plain_text.html"
+                                  title='fn stringprep::tables::inappropriate_for_plain_text'>inappropriate_for_plain_text</a></td>
+                           <td class='docblock-short'>
+                                <p>C.6 Inappropriate for plain text</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.non_ascii_control_character.html"
+                                  title='fn stringprep::tables::non_ascii_control_character'>non_ascii_control_character</a></td>
+                           <td class='docblock-short'>
+                                <p>C.2.2 Non-ASCII control characters</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.non_ascii_space_character.html"
+                                  title='fn stringprep::tables::non_ascii_space_character'>non_ascii_space_character</a></td>
+                           <td class='docblock-short'>
+                                <p>C.1.2 Non-ASCII space characters</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.non_character_code_point.html"
+                                  title='fn stringprep::tables::non_character_code_point'>non_character_code_point</a></td>
+                           <td class='docblock-short'>
+                                <p>C.4 Non-character code points</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.private_use.html"
+                                  title='fn stringprep::tables::private_use'>private_use</a></td>
+                           <td class='docblock-short'>
+                                <p>C.3 Private use</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.surrogate_code.html"
+                                  title='fn stringprep::tables::surrogate_code'>surrogate_code</a></td>
+                           <td class='docblock-short'>
+                                <p>C.5 Surrogate codes</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.tagging_character.html"
+                                  title='fn stringprep::tables::tagging_character'>tagging_character</a></td>
+                           <td class='docblock-short'>
+                                <p>C.9 Tagging characters</p>
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.unassigned_code_point.html"
+                                  title='fn stringprep::tables::unassigned_code_point'>unassigned_code_point</a></td>
+                           <td class='docblock-short'>
+                                <p>A.1 Unassigned code points in Unicode 3.2</p>
+                           </td>
+                       </tr></table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "stringprep";
+    </script>
+    <script src="../../main.js"></script>
+    <script defer src="../../search-index.js"></script>
+</body>
+</html>
