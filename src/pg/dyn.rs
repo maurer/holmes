@@ -249,6 +249,7 @@ pub mod types {
             Arc::new(String),
             Arc::new(Bytes),
             Arc::new(LargeBytes),
+            Arc::new(LargeString),
             Arc::new(Bool),
         ]
     }
@@ -297,6 +298,26 @@ pub mod types {
         typet_boiler!();
         fn name(&self) -> Option<&'static str> {
             Some("string")
+        }
+        fn extract(&self, rows: &mut RowIter) -> Option<Value> {
+            rows.next().map(|s| values::String::new(s) as Value)
+        }
+        fn repr(&self) -> &'static str {
+            "varchar"
+        }
+    }
+
+    #[derive(Debug, Clone, Hash, PartialEq)]
+    pub struct LargeString;
+
+    impl TypeT for LargeString {
+        typet_inner!();
+        typet_inner_eq!();
+        fn large(&self) -> bool {
+            true
+        }
+        fn name(&self) -> Option<&'static str> {
+            Some("largestring")
         }
         fn extract(&self, rows: &mut RowIter) -> Option<Value> {
             rows.next().map(|s| values::String::new(s) as Value)
@@ -831,30 +852,31 @@ pub mod values {
     fn cached_open(hash: &str) -> Rc<File> {
         {
             use std::ops::DerefMut;
-            FILE_CACHE.with(|cache|
-            if cache.borrow().len() > 100 {
+            FILE_CACHE.with(|cache| if cache.borrow().len() > 100 {
                 // We're thrashing on file descriptors, drop the cache
                 trace!("FILE_CACHE THRASHING");
                 *cache.borrow_mut() = HashMap::new()
-            }
-            )
-        }
-        let file = FILE_CACHE.with(|cache|
-            cache.borrow_mut().entry(hash.to_owned())
-            .or_insert_with(|| {
-                let mut path = match ::std::env::var("HOLMES_STORAGE") {
-                    Ok(dir) => ::std::path::PathBuf::from(dir),
-                    _ => {
-                        let mut path = ::std::env::home_dir().unwrap();
-                        path.push(".holmes");
-                        path
-                    }
-                };
-
-                path.push(hash);
-                Rc::new(File::open(path).unwrap())
             })
-            .clone());
+        }
+        let file = FILE_CACHE.with(|cache| {
+            cache
+                .borrow_mut()
+                .entry(hash.to_owned())
+                .or_insert_with(|| {
+                    let mut path = match ::std::env::var("HOLMES_STORAGE") {
+                        Ok(dir) => ::std::path::PathBuf::from(dir),
+                        _ => {
+                            let mut path = ::std::env::home_dir().unwrap();
+                            path.push(".holmes");
+                            path
+                        }
+                    };
+
+                    path.push(hash);
+                    Rc::new(File::open(path).unwrap())
+                })
+                .clone()
+        });
         file
     }
 }
